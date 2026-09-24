@@ -710,11 +710,19 @@ export const alturaDoVoo = (
     if (frame < t.de || frame > t.ate) continue;
     const dur = Math.max(1, t.ate - t.de);
     const p = (frame - t.de) / dur;
-    // parabola com o topo em 0,45: sobe rapido, desce mais devagar
-    return Math.sin(Math.PI * Math.min(1, p / 0.9)) * alturaMaxima;
+    // PARABOLA DE VERDADE, com a altura dada pelo TEMPO no ar: H = g T^2 / 8.
+    // Antes a altura era fixa (520) para qualquer voo: um pulo curto de ataque
+    // subia tanto quanto um arremesso, e o corpo ainda ficava parado no chao
+    // nos ultimos 10% do trecho. Com gravidade constante, voo curto e baixo e
+    // voo longo e alto, que e o que o olho espera.
+    const altura = Math.min(alturaMaxima, (GRAVIDADE * dur * dur) / 8);
+    return 4 * altura * p * (1 - p);
   }
   return 0;
 };
+
+/** Gravidade do mundo, em unidades de mundo por quadro ao quadrado. */
+export const GRAVIDADE = 1.0;
 
 export const alturaNoAr = (
   track: FighterTrack,

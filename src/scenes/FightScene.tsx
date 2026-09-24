@@ -259,20 +259,26 @@ export const FightScene: React.FC<FightSceneProps> = ({
           </g>
         )}
 
-        {lutadores.map(({ id, corpo, preset, tremor }) => (
-          <Stickman
-            key={id}
-            preset={preset}
-            pose={corpo.pose}
-            baseX={corpo.x + (fx ? tremor : 0)}
-            baseY={corpo.baseY}
-            facing={corpo.facing}
-            scaleExtra={corpo.scale / preset.scale}
-            spin={corpo.spin}
-            giro={corpo.giro}
-            contorno={!limpo}
-          />
-        ))}
+        {/* quem esta mais perto da camera (maior) e desenhado por ultimo */}
+        {[...lutadores]
+          .sort(
+            (a, b) =>
+              a.corpo.scale / a.preset.scale - b.corpo.scale / b.preset.scale,
+          )
+          .map(({ id, corpo, preset, tremor }) => (
+            <Stickman
+              key={id}
+              preset={preset}
+              pose={corpo.pose}
+              baseX={corpo.x + (fx ? tremor : 0)}
+              baseY={corpo.baseY}
+              facing={corpo.facing}
+              scaleExtra={corpo.scale / preset.scale}
+              spin={corpo.spin}
+              giro={corpo.giro}
+              contorno={!limpo}
+            />
+          ))}
 
         {fx && (
           <Particulas

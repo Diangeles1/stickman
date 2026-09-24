@@ -260,11 +260,41 @@ const respirar = (pose: Pose, frame: number, defasagem: number): Pose => {
  */
 const GIRO_DA_QUEDA = 52;
 
+/** Poses de corpo lancado por um golpe: so elas recebem o giro da queda. */
+const POSES_ARREMESSADAS = new Set<PoseName>(["launched", "airborne", "knockback"]);
+
 /** Em quantos quadros o membro completa o avanco e volta. */
 const QUADROS_DO_AVANCO = 6;
 
 /** Duracao da absorcao do impacto, em quadros logicos. */
 const DUR_COMPRESSAO = 5;
+
+/**
+ * ARREMESSO NA DIRECAO DA CAMERA: quanto o corpo cresce na tela.
+ *
+ * O finalizador pede o corpo voando para perto de quem assiste. Num plano
+ * lateral isso e ESCALA: o corpo cresce durante o voo (acelerando no fim,
+ * como tudo que se aproxima) e continua grande depois de cair, em primeiro
+ * plano. 1,8 e o teto: o suficiente para dominar o quadro sem sair dele.
+ */
+const MAXIMO_DA_APROXIMACAO = 1.8;
+/** Quanto o chao do primeiro plano desce na tela, por unidade de escala. */
+const CHAO_DO_PRIMEIRO_PLANO = 140;
+
+const aproximacaoDaCamera = (
+  timeline: Timeline,
+  id: FighterId,
+  frame: number,
+): number => {
+  for (const r of timeline.rumoACamera ?? []) {
+    if (r.who !== id || frame < r.de) continue;
+    const p = Math.min(1, (frame - r.de) / Math.max(1, r.ate - r.de));
+    // cresce acelerando mas sem salto no fim (com p^2 quase todo o
+    // crescimento cabia nos ultimos quadros do voo)
+    return 1 + (MAXIMO_DA_APROXIMACAO - 1) * suave(p);
+  }
+  return 1;
+};
 
 /**
  * ABSORCAO DO IMPACTO: o corpo do atingido comprime por alguns quadros.
@@ -396,13 +426,19 @@ const corpoBase = (
 
   // GIRO DA QUEDA. Sobe e volta a zero ao longo do arco (meia volta de seno),
   // no sentido em que o corpo esta viajando.
-  const arco = progressoDoVoo(timeline.tracks[id], frame);
+  // So corpo ARREMESSADO rola no ar. Quem pula para golpear controla o
+  // proprio corpo: aplicado a ele, o giro tombava o atacante 52 graus para
+  // frente e o pulo terminava com ele deitado em cima do outro.
+  const arco = POSES_ARREMESSADAS.has(a.poseNome)
+    ? progressoDoVoo(timeline.tracks[id], frame)
+    : -1;
   if (arco >= 0) {
     spin += Math.sin(arco * Math.PI) * GIRO_DA_QUEDA * Math.sign(a.velocidade || 1);
   }
 
   const compressao = compressaoDe(timeline, id, frame);
   const escala = escalaDoMundo(preset.scale);
+  const perto = aproximacaoDaCamera(timeline, id, frame);
 
   // PIVO NO PE DE APOIO. Com a base ja fechada (ver giroNoQuadro), girar em
   // volta do quadril ainda arrastava o pe de apoio num arco pelo chao. Aqui o
@@ -423,7 +459,12 @@ const corpoBase = (
     // Entra e sai junto com o giro: aplicado inteiro, o deslocamento sumia
     // de uma vez quando o giro voltava a 1, e o corpo saltava 71 unidades
     // no quadro seguinte ao fim da volta.
-    pivo = (peNoInicio - peAgora - a.x) * Math.min(1, (1 - giro) * 1.5);
+    //
+    // Inteiro enquanto os pes estao soltos (giro < 0,75, ver `girando`), e
+    // so desvanece quando os pes plantados ja voltaram a segurar o apoio:
+    // desvanecendo antes, o pe de apoio deslizava nas duas pontas da volta.
+    const pesoDoPivo = giro < 0.75 ? 1 : (1 - giro) / 0.25;
+    pivo = (peNoInicio - peAgora - a.x) * pesoDoPivo;
   }
 
   // APOIO: o pe mais baixo encosta no chao. Medido no corpo JA INCLINADO E
@@ -453,9 +494,10 @@ const corpoBase = (
 
   return {
     x: a.x + pivo,
-    baseY: (-apoio - voo) * compressao,
+    // mais perto da camera o chao dele fica mais BAIXO na tela (perspectiva)
+    baseY: (-apoio - voo) * compressao * perto + (perto - 1) * CHAO_DO_PRIMEIRO_PLANO,
     facing,
-    scale: preset.scale * compressao,
+    scale: preset.scale * compressao * perto,
     spin,
     giro,
     pose,

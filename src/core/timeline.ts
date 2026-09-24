@@ -100,6 +100,16 @@ const DISTANCIA_NEUTRA = 420;
  */
 export const ALTURA_QUADRIL = -ALTURA_DO_ESQUELETO;
 
+/** Golpes que acontecem no ar: o atacante pula para golpear. */
+const GOLPES_AEREOS = new Set<PoseName>(["airAttack", "diveAttack"]);
+/**
+ * Tempo no ar do pulo de ataque, em quadros. 0,65s da ~190 unidades de
+ * altura com a gravidade do mundo: o golpe vem DE CIMA (com 0,55s o pulo
+ * mal tirava a cabeca da altura da do outro), e o membro ainda alcanca o
+ * peito descendo.
+ */
+const TEMPO_NO_AR = s(0.65);
+
 /**
  * PERSONALIDADE NA FISICA: o mesmo golpe, com outro corpo.
  *
@@ -148,6 +158,7 @@ export const compilar = (spec: FightSpec): Timeline => {
   const aims: AimEvent[] = [];
   const cameraKeys: CameraKey[] = [];
   const slowMo: Timeline["slowMo"] = [];
+  const rumoACamera: NonNullable<Timeline["rumoACamera"]> = [];
 
   let cursor = 0;
 
@@ -306,13 +317,24 @@ export const compilar = (spec: FightSpec): Timeline => {
     } = {},
   ) => {
     const duracoes = duracaoDe(atacante, move);
-    const { strike, recover, contactAt, def } = duracoes;
+    const { recover, contactAt, def } = duracoes;
+    const aereo = GOLPES_AEREOS.has(def.pose);
+    // o golpe aereo dura o pulo inteiro, nao o disparo de um golpe no chao
+    const strike = aereo
+      ? Math.max(duracoes.strike, 3 + TEMPO_NO_AR + 3)
+      : duracoes.strike;
     // COMBO QUE FLUI: o golpe encadeado nao volta a guarda para carregar do
     // zero. Soco, guarda, soco, guarda e o que a diretiva chama de combo
     // robotico; aqui o braco que volta de um golpe ja e a carga do outro.
+    // O FINALIZADOR carrega quase o dobro: e o golpe mais importante da luta,
+    // e a preparacao longa (com a camera lenta que o acompanha) e o que faz
+    // o espectador saber que ele vem. Com a carga de um golpe comum, o giro
+    // do preto cabia em 7 quadros e o finalizador parecia um chute qualquer.
     const windup = opcoes.encadeado
       ? Math.max(3, Math.round(duracoes.windup * 0.45))
-      : duracoes.windup;
+      : opcoes.finalizador
+        ? Math.round(duracoes.windup * 1.8)
+        : duracoes.windup;
 
     // O ponto atingido define a distancia E a reacao. Sem isso o golpe era
     // animado contra uma distancia fixa que o membro nao alcancava.
@@ -366,7 +388,8 @@ export const compilar = (spec: FightSpec): Timeline => {
     const cargaPronta =
       cursor + Math.max(1, Math.min(windup - 1, Math.round(windup * 0.6)));
     chave(atacante, cargaPronta);
-    estado[atacante].x = xNoContato;
+    // golpe AEREO: o corpo fica agachado onde esta; o avanco e o proprio pulo
+    if (!aereo) estado[atacante].x = xNoContato;
     chave(atacante, cursor + windup, windup >= 3 ? perfil.carga : 1);
 
     // O ALVO ENTRA EM GUARDA. Nao e enfeite: distanciaDeCombate() mede o ponto
@@ -386,7 +409,16 @@ export const compilar = (spec: FightSpec): Timeline => {
         center: { x: (estado[atacante].x + estado[alvo].x) / 2, y: ALTURA_QUADRIL - 40 },
         // golpe que vai ser esquivado nao fecha tanto: o quadro precisa caber
         // o corpo que SAI do caminho, senao a esquiva acontece fora da tela
-        zoom: opcoes.finalizador ? 1.7 : opcoes.esquivado ? 1.08 : 1.35,
+        // o finalizador fecha o MAXIMO que ainda cabe os dois: a 1.7 fixo a
+        // preparacao inteira acontecia com o alvo fora do quadro
+        zoom: opcoes.finalizador
+          ? Math.min(
+              1.7,
+              1080 / (Math.abs(estado[atacante].x - estado[alvo].x) + 380),
+            )
+          : opcoes.esquivado
+            ? 1.08
+            : 1.35,
         ease: windup,
       });
       if (opcoes.finalizador) {
@@ -410,9 +442,21 @@ export const compilar = (spec: FightSpec): Timeline => {
     //                                ^ extensao maxima EXATAMENTE no contato
     //
     // Era dai que vinham as 294 unidades que faltavam, e nao da distancia.
-    const frameContato = cursor + contactAt;
+    // GOLPE AEREO: agacha (a carga acima), DECOLA, golpeia ja descendo e
+    // pousa. O golpe acontece depois do topo do pulo: e a queda que da peso a
+    // ele. A altura sai do tempo no ar (ver alturaDoVoo).
+    let frameContato = cursor + contactAt;
+    let pouso = 0;
+    if (aereo) {
+      estado[atacante].pose = "jump";
+      estado[atacante].airborne = true;
+      chave(atacante, cursor + 3);
+      frameContato = cursor + 3 + Math.round(TEMPO_NO_AR * 0.6);
+      pouso = cursor + 3 + TEMPO_NO_AR;
+    }
     const direcao = lado;
     estado[atacante].pose = def.pose;
+    if (aereo) estado[atacante].x = xNoContato;
     chave(atacante, frameContato);
 
     // ---- 3. CONTATO E FOLLOW-THROUGH -------------------------------------
@@ -429,6 +473,13 @@ export const compilar = (spec: FightSpec): Timeline => {
     const alem = opcoes.esquivado ? 2.2 : 1;
     estado[atacante].x += lado * RECUO_DA_CARGA * 0.2 * perfil.seguimento * alem;
     chave(atacante, frameContato + parada, 1 + 0.18 * perfil.seguimento * alem);
+    if (aereo) {
+      // pousa um pouco a frente, agachado: o pouso absorve a queda
+      estado[atacante].pose = "land";
+      estado[atacante].airborne = false;
+      estado[atacante].x += lado * RECUO_DA_CARGA * 0.6;
+      chave(atacante, Math.max(pouso, frameContato + parada + 2));
+    }
 
     // ONDE O MEMBRO REALMENTE CHEGA. O flash, a onda e as particulas nascem
     // daqui, e nao de um deslocamento fixo em relacao ao alvo.
@@ -634,6 +685,10 @@ export const compilar = (spec: FightSpec): Timeline => {
       chave(alvo, fim);
       fimDaReacao = fim;
       fimDoDeslocamento = fim;
+      // O FINALIZADOR joga o corpo na direcao de quem assiste
+      if (opcoes.finalizador && voa) {
+        rumoACamera.push({ who: alvo, de: f3, ate: fim + 2 });
+      }
 
       // FASE 4 - FREADA. Ele planta o pe de tras e para de deslizar. Antes o
       // corpo empurrado voltava direto para a guarda, o que le como
@@ -698,7 +753,9 @@ export const compilar = (spec: FightSpec): Timeline => {
         cameraKeys.push({
           frame: frameContato + Math.round(strike * 0.8),
           center: { x: 0, y: ALTURA_QUADRIL - 80 },
-          zoom: 0.78,
+          // 0.82 e o menor zoom em que o corpo ainda ocupa 25% da altura da
+          // tela (a 0.78 caia para 24%, o piso da diretiva)
+          zoom: 0.82,
           ease: Math.round(strike * 1.6),
           follow: alvo,
         });
@@ -788,7 +845,7 @@ export const compilar = (spec: FightSpec): Timeline => {
         Math.min(fimDaReacao, fimDoDeslocamento + s(0.12)),
       );
       estado[atacante].pose = "walk1";
-      chave(atacante, cursor + QUADROS_DE_TRANSICAO + 2);
+      chave(atacante, cursor + QUADROS_DE_TRANSICAO);
       estado[atacante].x = destinoFinal;
       chave(atacante, chegada);
       estado[atacante].pose = "guard";
@@ -1034,5 +1091,6 @@ export const compilar = (spec: FightSpec): Timeline => {
     cameraKeys,
     tracks,
     slowMo,
+    rumoACamera,
   };
 };

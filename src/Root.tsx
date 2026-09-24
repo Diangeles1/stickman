@@ -18,6 +18,7 @@ import {
 import { PROTOTIPO } from "./data/fights/prototype";
 import { BENCHMARK } from "./data/fights/benchmark";
 import { BENCHMARK2 } from "./data/fights/benchmark2";
+import { LUTA_COMPLETA } from "./data/fights/luta-completa";
 import { gerarLuta } from "./data/gerador";
 import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
@@ -141,6 +142,25 @@ export const RemotionRoot: React.FC = () => {
         width={BENCHMARK.width}
         height={BENCHMARK.height}
         defaultProps={{ spec: BENCHMARK, semEfeitos: true }}
+      />
+      {/* A LUTA COMPLETA: abertura, trocas, aereo, escalada e finalizador */}
+      <Composition
+        id="LutaCompleta"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(LUTA_COMPLETA)}
+        fps={LUTA_COMPLETA.fps}
+        width={LUTA_COMPLETA.width}
+        height={LUTA_COMPLETA.height}
+        defaultProps={{ spec: LUTA_COMPLETA, debug: false }}
+      />
+      <Composition
+        id="LutaCompleta-SemEfeitos"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(LUTA_COMPLETA)}
+        fps={LUTA_COMPLETA.fps}
+        width={LUTA_COMPLETA.width}
+        height={LUTA_COMPLETA.height}
+        defaultProps={{ spec: LUTA_COMPLETA, semEfeitos: true }}
       />
       {/* BENCHMARK #2: combo encadeado, contra-ataque, esquiva e queda */}
       <Composition

@@ -230,7 +230,8 @@ export const distanciaDeCombate = (
     facing: 1,
     scale: PRESETS[atacante].scale,
   });
-  const raiz = juntasAtacante[cadeia[0]];
+  const raizNoChao = juntasAtacante[cadeia[0]];
+  const raiz = { x: raizNoChao.x, y: raizNoChao.y - (golpe.elevacao ?? 0) };
   const R = alcanceDaCadeia(cadeia) * escalaA * (golpe.extensao ?? 1);
 
   const escalaB = escalaDoMundo(PRESETS[alvo].scale);

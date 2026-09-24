@@ -169,6 +169,13 @@ export type AttackDef = {
    * esticava na horizontal e o golpe lia como jab.
    */
   seguimento?: Vec2;
+  /**
+   * Golpe AEREO: quanto o quadril esta acima do apoio normal no quadro do
+   * contato. Sem isto a distancia era calculada como se o golpe fosse dado
+   * do chao, com o pe abaixo do peito do outro e o alcance encurtado, e o
+   * pulo terminava com um corpo em cima do outro.
+   */
+  elevacao?: number;
 };
 
 /** Um beat do roteiro. E isto que vira JSON e o que a geracao aleatoria monta. */
@@ -351,6 +358,12 @@ export type Timeline = {
   cameraKeys: CameraKey[];
   /** trechos em camera lenta */
   slowMo: { from: number; to: number; factor: number }[];
+  /**
+   * Arremessos na direcao da CAMERA (o finalizador): entre `de` e `ate` o
+   * corpo cresce na tela como quem voa para perto de quem assiste, e fica
+   * em primeiro plano depois de cair.
+   */
+  rumoACamera?: { who: FighterId; de: number; ate: number }[];
 };
 
 export type CameraKey = {

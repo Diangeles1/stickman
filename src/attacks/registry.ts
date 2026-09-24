@@ -206,6 +206,9 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     hitStop: 4,
     contactJoint: "handFront",
     sound: "punch",
+    // no quadro do contato o pulo esta a 60% do tempo no ar: H = g T^2 / 8
+    // com T = 0,65 s (39 quadros) da 190, e 4H(0,6)(0,4) = 182 acima do apoio
+    elevacao: 182,
   }),
   diveAttack: def({
     name: "diveAttack",
@@ -220,6 +223,9 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     contactJoint: "footFront",
     sound: "heavyHit",
     cracksGround: true,
+    // no quadro do contato o pulo esta a 60% do tempo no ar: H = g T^2 / 8
+    // com T = 0,65 s (39 quadros) da 190, e 4H(0,6)(0,4) = 182 acima do apoio
+    elevacao: 182,
   }),
   special: def({
     name: "special",
