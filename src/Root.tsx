@@ -10,9 +10,14 @@ import "./index.css";
 import React from "react";
 import { Composition } from "remotion";
 import { PoseSheet } from "./compositions/PoseSheet";
-import { Prototype, duracaoDoPrototipo } from "./compositions/Prototype";
+import {
+  Prototype,
+  duracaoDoPrototipo,
+  type PrototypeProps,
+} from "./compositions/Prototype";
 import { PROTOTIPO } from "./data/fights/prototype";
 import { BENCHMARK } from "./data/fights/benchmark";
+import { gerarLuta } from "./data/gerador";
 import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
 
@@ -76,6 +81,34 @@ export const RemotionRoot: React.FC = () => {
         width={PROTOTIPO.width}
         height={PROTOTIPO.height}
         defaultProps={{ spec: PROTOTIPO }}
+      />
+
+      {/*
+        LUTA GERADA. A duracao nao e fixa na composicao: ela e calculada a
+        partir da semente, porque cada luta tem um numero de golpes diferente.
+        Trocar a semente pela linha de comando gera outra luta:
+
+          node scripts/remotion.mjs render Luta out/luta-7.mp4 --props="{\"seed\":7}"
+      */}
+      <Composition
+        id="Luta"
+        component={Prototype}
+        fps={VIDEO.fps}
+        width={VIDEO.width}
+        height={VIDEO.height}
+        durationInFrames={600}
+        defaultProps={{ seed: 1, segundos: 30, debug: false }}
+        calculateMetadata={({ props }: { props: PrototypeProps }) => {
+          // a luta e montada AQUI, fora do render, e entra nas props ja
+          // pronta: assim o componente nunca gera nada por quadro
+          const spec = gerarLuta(props.seed ?? 1, {
+            segundos: props.segundos ?? 30,
+          });
+          return {
+            durationInFrames: duracaoDoPrototipo(spec),
+            props: { ...props, spec },
+          };
+        }}
       />
 
       {/*

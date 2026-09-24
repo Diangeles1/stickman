@@ -19,6 +19,7 @@ import { corpoNoQuadro, juntasDoCorpo } from "../src/animation/corpo";
 import { amostrar } from "../src/animation/sampler";
 import { compilar } from "../src/core/timeline";
 import { BENCHMARK } from "../src/data/fights/benchmark";
+import { gerarLuta } from "../src/data/gerador";
 import { UM_SOCO } from "../src/data/fights/um-soco";
 import type { FighterId, PoseName } from "../src/core/types";
 
@@ -32,7 +33,18 @@ const NO_AR = new Set<PoseName>([
 const TOLERANCIA = 12;
 
 const qual = process.argv[2] ?? "benchmark";
-const spec = qual === "um-soco" ? UM_SOCO : BENCHMARK;
+/**
+ * Qual luta auditar. "gerada:7" audita a luta que a semente 7 produz.
+ *
+ * E este o ponto de ter auditoria automatica: uma luta gerada pode ser
+ * conferida SEM ninguem assistir a ela. Sem isso, gerar cem lutas seria gerar
+ * cem lutas nao verificadas.
+ */
+const spec = qual.startsWith("gerada:")
+  ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
+  : qual === "um-soco"
+    ? UM_SOCO
+    : BENCHMARK;
 const t = compilar(spec);
 console.log(`luta: ${qual}`);
 
