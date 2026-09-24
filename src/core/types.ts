@@ -224,4 +224,15 @@ export type CameraKey = {
   /** quadros para chegar la; 0 = corte seco */
   ease: number;
   shake?: number;
+  /**
+   * Plano de dois: em vez de usar center/zoom fixos, a camera calcula o
+   * enquadramento a partir da distancia entre os lutadores, para os dois
+   * caberem na tela.
+   *
+   * Existe porque consertar o knockback criou o problema oposto: com os corpos
+   * se separando de verdade, um enquadramento fixo perdia um dos dois fora do
+   * quadro. Close-up continua sendo fit=false, porque ali excluir o outro e
+   * intencional.
+   */
+  fit?: boolean;
 };

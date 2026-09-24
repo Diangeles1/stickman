@@ -13,6 +13,7 @@
 
 import { ATAQUES, escalaDuracao } from "../attacks/registry";
 import { PRESETS } from "../characters/presets";
+import { ALTURA_QUADRIL as ALTURA_DO_ESQUELETO, ESCALA_POSE } from "../characters/skeleton";
 import type {
   AttackName,
   CameraKey,
@@ -25,10 +26,23 @@ import type {
   Timeline,
 } from "./types";
 
-/** Meia-distancia em que os dois ficam quando trocam golpes. */
-const ALCANCE = 190;
-/** Altura do quadril em unidades de mundo (o chao e y = 0). */
-export const ALTURA_QUADRIL = -430;
+/**
+ * Distancia entre os dois na hora do golpe.
+ *
+ * DERIVADA do alcance real do braco, nao um numero solto. A primeira versao
+ * usava 190, escrito em unidades de pose (antes da ESCALA_POSE), e no mundo
+ * isso punha os dois SE SOBREPONDO: a luta parecia dois caras andando juntos.
+ * O 1,8 e a folga para o golpe encostar sem atravessar o outro corpo.
+ */
+const ALCANCE_DA_MAO = 104 * ESCALA_POSE;
+const ALCANCE = Math.round(ALCANCE_DA_MAO * 1.8);
+
+/**
+ * Altura do quadril, em coordenada de mundo (negativo = acima do chao).
+ * Vem do esqueleto para nao existirem dois valores que possam divergir: foi
+ * exatamente esse tipo de duplicacao que deixou o boneco flutuando antes.
+ */
+export const ALTURA_QUADRIL = -ALTURA_DO_ESQUELETO;
 
 type Estado = {
   x: number;
@@ -103,7 +117,7 @@ export const compilar = (spec: FightSpec): Timeline => {
       cameraKeys.push({
         frame: cursor,
         center: { x: (estado[atacante].x + estado[alvo].x) / 2, y: ALTURA_QUADRIL - 40 },
-        zoom: opcoes.finalizador ? 1.45 : 1.15,
+        zoom: opcoes.finalizador ? 1.7 : 1.35,
         ease: windup,
       });
       if (opcoes.finalizador) {
@@ -147,16 +161,21 @@ export const compilar = (spec: FightSpec): Timeline => {
       estado[alvo].pose = def.launches ? "airborne" : "knockback";
       estado[alvo].airborne = Boolean(def.launches);
       chave(alvo, frameContato);
-      const empurrao = (def.knockback / 60) * (1 + preset[atacante].profile.power * 0.6);
+      // knockback em unidades de MUNDO. Dividir por 60 (como se fosse por
+      // segundo) dava ~5 unidades de recuo, imperceptivel numa figura de
+      // 597 unidades de altura.
+      const empurrao = def.knockback * (1 + preset[atacante].profile.power * 0.6);
       estado[alvo].x += direcao * empurrao;
       chave(alvo, frameContato + Math.round(strike * 1.6));
 
       cameraKeys.push({
         frame: frameContato,
         center: { x: estado[alvo].x, y: ALTURA_QUADRIL - 60 },
-        zoom: def.tier === "extreme" ? 0.62 : 0.8,
+        zoom: def.tier === "extreme" ? 0.85 : 1.1,
         ease: def.tier === "extreme" ? 8 : 5,
         shake: def.tier === "extreme" ? 46 : def.tier === "medium" ? 24 : 10,
+        // o corpo voa longe: sem plano de dois o outro sai do quadro
+        fit: true,
       });
     }
 
@@ -192,8 +211,9 @@ export const compilar = (spec: FightSpec): Timeline => {
         cameraKeys.push({
           frame: cursor,
           center: { x: 0, y: ALTURA_QUADRIL - 40 },
-          zoom: 0.68,
+          zoom: 0.92,
           ease: beat.duration,
+          fit: true,
         });
         cursor += beat.duration;
         break;
@@ -225,7 +245,7 @@ export const compilar = (spec: FightSpec): Timeline => {
         cameraKeys.push({
           frame: cursor,
           center: { x: estado[beat.who].x, y: ALTURA_QUADRIL - 70 },
-          zoom: 1.0,
+          zoom: 1.3,
           ease: 4,
         });
         // esquiva extrema em camera lenta: momento de leitura
@@ -254,7 +274,7 @@ export const compilar = (spec: FightSpec): Timeline => {
         cameraKeys.push({
           frame: cursor,
           center: { x: estado[beat.who].x, y: ALTURA_QUADRIL - 60 },
-          zoom: 1.05,
+          zoom: 1.2,
           ease: Math.round(beat.duration * 0.6),
         });
         cursor += beat.duration;

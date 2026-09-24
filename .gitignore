@@ -5,3 +5,7 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+
+# temporarios do render: ficam no mesmo disco do projeto (ver scripts/remotion.mjs)
+.tmp/
+out/

@@ -20,12 +20,12 @@
     "typescript": "5.9.3"
   },
   "scripts": {
-    "dev": "remotion studio",
-    "studio": "remotion studio",
+    "dev": "node scripts/remotion.mjs studio",
+    "studio": "node scripts/remotion.mjs studio",
     "build": "remotion bundle",
-    "render": "remotion render Prototype out/prototype.mp4",
-    "render:still": "remotion still Prototype out/frame.png",
-    "compositions": "remotion compositions",
+    "render": "node scripts/remotion.mjs render Prototype out/prototype.mp4",
+    "render:still": "node scripts/remotion.mjs still Prototype out/frame.png",
+    "compositions": "node scripts/remotion.mjs compositions",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src && tsc --noEmit",
     "upgrade": "remotion upgrade"
