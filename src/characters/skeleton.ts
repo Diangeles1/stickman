@@ -105,12 +105,35 @@ export const poseBase = (): Required<Pose> => ({
   footFront: { ...BASE.footFront },
 });
 
-/** Completa uma pose parcial com os deslocamentos base. */
+/** Comprimento do osso pescoco-cabeca na pose base. Osso nao estica. */
+const PESCOCO = Math.hypot(BASE.head.x - BASE.neck.x, BASE.head.y - BASE.neck.y);
+
+/**
+ * Completa uma pose parcial com os deslocamentos base.
+ *
+ * Alem de completar, IMPOE o comprimento do pescoco. Varias poses escritas a
+ * mao tinham a cabeca longe demais do pescoco (hitHead esticava 50%, downed
+ * 32%) e na tela a cabeca parecia solta do corpo. Corrigir pose por pose nao
+ * resolve: a proxima pose escrita a mao repete o erro.
+ *
+ * A DIRECAO da cabeca continua sendo o que a pose pediu; so a distancia e
+ * travada. Vale tambem para poses MISTURADAS, porque a mistura passa por aqui.
+ */
 export const completar = (pose: Pose): Required<Pose> => {
   const saida = poseBase();
   for (const junta of TODAS_AS_JUNTAS) {
     const v = pose[junta];
     if (v) saida[junta] = v;
+  }
+
+  const dx = saida.head.x - saida.neck.x;
+  const dy = saida.head.y - saida.neck.y;
+  const comprimento = Math.hypot(dx, dy);
+  if (comprimento > 0.001) {
+    saida.head = {
+      x: saida.neck.x + (dx / comprimento) * PESCOCO,
+      y: saida.neck.y + (dy / comprimento) * PESCOCO,
+    };
   }
   return saida;
 };

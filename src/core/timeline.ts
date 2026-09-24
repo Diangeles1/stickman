@@ -201,7 +201,8 @@ export const compilar = (spec: FightSpec): Timeline => {
     const lado: 1 | -1 = estado[atacante].x <= estado[alvo].x ? 1 : -1;
     // ele JA esta na posicao carregada; o passo a frente acontece no disparo
     const xNoContato = estado[atacante].x + lado * RECUO_DA_CARGA;
-    estado[atacante].pose = "guard";
+    // pose de CARGA, nao guarda: e ela que cria o arco que o punho percorre
+    estado[atacante].pose = "coil";
     chave(atacante, cursor);
     // segura a carga ate o fim da preparacao. SEM esta chave o braco ja
     // comecava a se estender durante o windup, e o golpe nao tinha disparo.
@@ -287,6 +288,7 @@ export const compilar = (spec: FightSpec): Timeline => {
         hitStop: Math.max(1, Math.round(def.hitStop * 0.6)),
         cracksGround: false,
         sound: "block",
+        victim: alvo,
       });
     } else {
       impacts.push({
@@ -297,31 +299,10 @@ export const compilar = (spec: FightSpec): Timeline => {
         hitStop: def.hitStop,
         cracksGround: Boolean(def.cracksGround),
         sound: def.sound,
+        victim: alvo,
       });
-      // REACAO PELA REGIAO ATINGIDA, no MESMO quadro do contato. Golpe no
-      // rosto chicoteia a cabeca; no peito dobra o tronco; na perna o joelho
-      // cede. Sem isto o alvo so mudava de posicao depois do golpe.
+
       const voa = Boolean(def.launches) || def.tier === "extreme";
-
-      // O ALVO FICA INTEIRO ATE O CONTATO. Sem esta chave a interpolacao vinha
-      // da ultima chave dele (la atras, antes do golpe) e ele comecava a se
-      // dobrar quase um segundo ANTES de ser atingido: reagia ao golpe que
-      // ainda nao tinha saido.
-      chave(alvo, frameContato);
-
-      // REACAO PELA REGIAO ATINGIDA. Golpe no rosto chicoteia a cabeca; no
-      // peito dobra o tronco; na perna o joelho cede. Dois quadros so: reacao
-      // a impacto e estalo, nao transicao.
-      estado[alvo].pose = POSE_DA_REACAO[REACAO_DO_PONTO[ponto]];
-      chave(alvo, frameContato + QUADROS_DA_REACAO);
-
-      // a reacao fica na tela antes do corpo ser lancado: e o que separa
-      // "sentiu o golpe" de "foi empurrado"
-      chave(alvo, frameContato + s(0.1));
-
-      estado[alvo].pose = voa ? "airborne" : "knockback";
-      estado[alvo].airborne = voa;
-      chave(alvo, frameContato + s(0.14));
 
       // knockback em unidades de MUNDO, cortado no teto da intensidade
       // (ver TETO_KNOCKBACK). Sem o teto o finalizador jogava o alvo para fora
@@ -332,9 +313,50 @@ export const compilar = (spec: FightSpec): Timeline => {
         preset[atacante].profile.power,
       );
       const voo = Math.round(strike * (voa ? 3.2 : 1.6));
-      estado[alvo].x += direcao * empurrao;
+      const xAntes = estado[alvo].x;
+
+      // ==== REACAO EM QUATRO FASES ==========================================
+      // A versao anterior tinha duas: dobrava e depois era empurrada. O corpo
+      // ficava dobrado e PARADO por 0,1s antes de sair, e as duas coisas liam
+      // como eventos separados em vez de uma consequencia da outra.
+
+      // FASE 0 - INTEIRO ate o contato. Sem esta chave a interpolacao vinha da
+      // ultima chave dele, la atras, e ele comecava a se dobrar quase um
+      // segundo ANTES de ser atingido: reagia ao golpe que ainda nao saira.
+      chave(alvo, frameContato);
+
+      // FASE 1 - ABSORCAO. O corpo dobra em torno do golpe e JA comeca a ser
+      // deslocado: o impulso age no contato, nao depois dele. Dois quadros com
+      // curva de estalo (ver curvaPara): reacao a impacto nao e transicao.
+      estado[alvo].pose = POSE_DA_REACAO[REACAO_DO_PONTO[ponto]];
+      estado[alvo].x = xAntes + direcao * empurrao * 0.1;
+      chave(alvo, frameContato + QUADROS_DA_REACAO);
+
+      // FASE 2 - o corpo continua dobrado enquanto escorrega. E o que separa
+      // "sentiu o golpe" de "foi empurrado": ele sente E anda ao mesmo tempo.
+      estado[alvo].x = xAntes + direcao * empurrao * 0.34;
+      chave(alvo, frameContato + s(0.1));
+
+      // FASE 3 - DESLOCAMENTO. Agora sim a pose de empurrado, com o resto do
+      // caminho. A curva saidaRapida da a desaceleracao de corpo com massa.
+      estado[alvo].pose = voa ? "airborne" : "knockback";
+      estado[alvo].airborne = voa;
+      estado[alvo].x = xAntes + direcao * empurrao;
       chave(alvo, frameContato + voo);
       fimDaReacao = frameContato + voo;
+
+      // FASE 4 - FREADA. Ele planta o pe de tras e para de deslizar. Antes o
+      // corpo empurrado voltava direto para a guarda, o que le como
+      // "teleportou de volta ao normal" e joga fora o peso do golpe.
+      if (!voa) {
+        estado[alvo].pose = "stagger";
+        // escorrega um pouco mais enquanto freia: a freada tem custo
+        estado[alvo].x = xAntes + direcao * empurrao * 1.08;
+        chave(alvo, frameContato + voo + s(0.13));
+        // segura a freada: o corpo respira antes de voltar a guarda
+        chave(alvo, frameContato + voo + s(0.3));
+        fimDaReacao = frameContato + voo + s(0.3);
+      }
 
       if (voa) {
         // POUSO EM QUATRO TEMPOS. Trocar direto para "downed" fazia o corpo
@@ -393,7 +415,12 @@ export const compilar = (spec: FightSpec): Timeline => {
       fit: true,
     });
 
+    // O ATACANTE TAMBEM REAGE AO PROPRIO GOLPE. Ele ficava plantado na
+    // posicao do contato enquanto o braco voltava sozinho, o que le como
+    // braco de manequim. Agora o corpo recua junto com o braco: e a
+    // continuacao do passo que ele deu para golpear.
     estado[atacante].pose = "guard";
+    estado[atacante].x -= lado * RECUO_DA_CARGA * 0.55;
     chave(atacante, cursor);
 
     // O alvo so volta a guarda DEPOIS que a reacao termina. A versao anterior
@@ -522,8 +549,19 @@ export const compilar = (spec: FightSpec): Timeline => {
       }
 
       case "recover": {
-        estado[beat.who].pose = "getUp";
-        chave(beat.who, cursor);
+        // LEVANTAR SO SE ELE CAIU. Antes este beat forcava a pose getUp
+        // sempre, e getUp tem o quadril agachado: um lutador que apenas levou
+        // um soco em pe agachava e se levantava, o que conta ao espectador uma
+        // queda que nunca aconteceu.
+        const caido = estado[beat.who].pose === "downed";
+        if (caido) {
+          estado[beat.who].pose = "getUp";
+          chave(beat.who, cursor + Math.round(beat.duration * 0.45));
+        } else {
+          // quem esta de pe apenas se recompoe: segura a pose atual um
+          // instante e volta a guarda. E um respiro, nao uma queda.
+          chave(beat.who, cursor + Math.round(beat.duration * 0.25));
+        }
         estado[beat.who].pose = "guard";
         chave(beat.who, cursor + beat.duration);
         cursor += beat.duration;

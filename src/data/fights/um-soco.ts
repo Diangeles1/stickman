@@ -30,8 +30,11 @@ export const UM_SOCO: FightSpec = {
   intensity: 4,
   scenario: "arena",
   beats: [
-    // entram em distancia de combate, ja em movimento
-    { type: "approach", who: "black", toX: -520, duration: s(0.6) },
+    // Entram em distancia de combate, ja em movimento.
+    //
+    // toX curto de proposito: com -520 a aproximacao levava 1,17s num teste de
+    // 3s, ou seja 37% do video era corrida. O golpe e o assunto.
+    { type: "approach", who: "black", toX: -80, duration: s(0.35) },
 
     // o unico golpe do teste, mirado no PEITO
     {
@@ -42,8 +45,9 @@ export const UM_SOCO: FightSpec = {
       targetPoint: "chest",
     },
 
-    // tempo para a reacao e o knockback terminarem na tela
-    { type: "recover", who: "red", duration: s(0.5) },
-    { type: "hold", duration: s(0.5), label: "respiro para avaliar" },
+    // Tempo para a reacao e o cambaleio terminarem na tela, e nada mais.
+    // Com 0,5 + 0,5 sobrava um segundo inteiro dos dois parados no fim.
+    { type: "recover", who: "red", duration: s(0.3) },
+    { type: "hold", duration: s(0.2), label: "respiro para avaliar" },
   ],
 };

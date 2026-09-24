@@ -50,6 +50,8 @@ export type PoseName =
   | "advance"
   | "retreat"
   | "block"
+  | "stagger"
+  | "coil"
   | "punch"
   | "punchHeavy"
   | "punchFast"
@@ -217,6 +219,11 @@ export type ImpactEvent = {
   hitStop: number;
   cracksGround: boolean;
   sound: string;
+  /**
+   * Quem levou. Sem isto a cena nao sabe em qual dos dois aplicar a
+   * compressao do impacto, e a absorcao do golpe nao existiria.
+   */
+  victim?: FighterId;
 };
 
 /** Onde cada lutador esta e o que faz, num beat. */

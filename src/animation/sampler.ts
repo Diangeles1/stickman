@@ -14,7 +14,7 @@
 
 import { interpolate } from "remotion";
 import { POSES } from "../characters/poses";
-import { misturar } from "../characters/skeleton";
+import { completar, misturar } from "../characters/skeleton";
 import type { FighterTrack, Pose, PoseName, Timeline } from "../core/types";
 
 /** Aceleracao e desaceleracao suaves. Serve para quase tudo. */
@@ -25,6 +25,15 @@ export const saidaRapida = (t: number): number => 1 - (1 - t) * (1 - t);
 
 /** Comeca devagar e acelera: preparacao de golpe, queda. */
 export const entradaLenta = (t: number): number => t * t;
+
+/**
+ * Estalo: quase todo o movimento nos primeiros quadros.
+ *
+ * Mais agressiva que saidaRapida. Serve para o corpo que LEVA o golpe: a
+ * energia chega toda de uma vez e o resto e desaceleracao. E a diferenca entre
+ * "assumiu a pose de quem apanhou" e "foi atingido".
+ */
+export const estalo = (t: number): number => 1 - Math.pow(1 - t, 3.2);
 
 type Amostra = {
   x: number;
@@ -62,25 +71,53 @@ type Amostra = {
 const inclinacaoDoCorpo = (v: number, a: number): number => {
   const porVelocidade = v * 0.34;
   // a aceleracao pesa mais que a velocidade: e ela que da a leitura de esforco
-  const porAceleracao = a * 3.4;
-  return Math.max(-30, Math.min(30, porVelocidade + porAceleracao));
+  const porAceleracao = a * 2.4;
+  // Teto baixado de 30 para 20 graus. 30 graus de rotacao num boneco de traco
+  // e quase um corpo deitado, e era o que o pico do empurrao produzia.
+  return Math.max(-20, Math.min(20, porVelocidade + porAceleracao));
 };
 
 /**
- * Poses em que o corpo NAO recebe inclinacao procedural.
+ * Poses que RECEBEM inclinacao procedural do corpo.
  *
- * A inclinacao derivada da velocidade existe para dar peso a locomocao e ao
- * knockback. Num golpe ela atrapalha duas vezes: a pose do ataque JA tem a
- * inclinacao do corpo desenhada nela (senao nao seria um golpe), e girar o
- * corpo inteiro no quadro do contato tira o punho de onde a geometria calculou
- * que ele estaria. Medido: a distancia punho-alvo pulava de 16 para 79
- * unidades de um quadro para o outro so por causa disso.
+ * E uma lista de PERMISSAO, nao de proibicao, e isso e deliberado: pose nova
+ * entra sem inclinacao por padrao, e pose sem inclinacao nunca quebra contato.
+ * A lista de proibicao ja deixou passar dois bugs.
+ *
+ * O principio: a inclinacao derivada da velocidade existe para dar peso a
+ * LOCOMOCAO. Pose que e resposta a uma forca (golpe, reacao, queda, freada) ja
+ * tem a atitude do corpo desenhada nela; somar a inclinacao derivada conta a
+ * mesma coisa duas vezes e ainda gira o corpo no quadro errado.
+ *
+ * Medido: no quadro do contato, o pico de aceleracao do empurrao virava 30
+ * graus de rotacao do alvo, e o punho que estava a 16 unidades do peito
+ * aparecia a 96 unidades ATRAS dele.
  */
-const POSES_DE_ATAQUE = new Set<PoseName>([
+const POSES_COM_INCLINACAO = new Set<PoseName>([
+  // "idle" e "guard" NAO entram: sao posturas paradas. Elas deixavam vazar
+  // justamente o pico do impacto, porque no quadro do contato o alvo ainda
+  // esta rotulado "guard" enquanto o empurrao ja comecou.
+  "walk1", "walk2", "run1", "run2", "sprint1", "sprint2",
+  "advance", "retreat",
+  "jump", "airborne",
+  "charge", "dodge", "duck",
+]);
+
+/**
+ * Poses de contato: golpe desferido ou golpe recebido.
+ *
+ * Nelas nao entra sujeira por cima da acao (linha de velocidade), porque sao
+ * exatamente os quadros em que o espectador precisa ler o corpo.
+ */
+const POSES_DE_CONTATO = new Set<PoseName>([
   "punch", "punchFast", "punchHeavy", "uppercut",
   "kick", "kickLow", "kickHigh", "spinKick",
   "knee", "elbow", "airAttack", "diveAttack",
+  "hitHead", "hitChest", "hitBody", "hitLeg",
 ]);
+
+export const poseDeContato = (nome: PoseName): boolean =>
+  POSES_DE_CONTATO.has(nome);
 
 /**
  * Inclinacao que de fato vai para a tela.
@@ -92,7 +129,7 @@ const POSES_DE_ATAQUE = new Set<PoseName>([
 export const inclinacaoDesenhada = (a: {
   poseNome: PoseName;
   inclinacao: number;
-}): number => (POSES_DE_ATAQUE.has(a.poseNome) ? 0 : a.inclinacao);
+}): number => (POSES_COM_INCLINACAO.has(a.poseNome) ? a.inclinacao : 0);
 
 /**
  * Curva usada entre duas chaves, escolhida pela pose de DESTINO.
@@ -102,12 +139,34 @@ export const inclinacaoDesenhada = (a: {
  */
 const curvaPara = (destino: PoseName): ((t: number) => number) => {
   switch (destino) {
+    // corpo atingido: o movimento NASCE no impacto. Quase todo o deslocamento
+    // acontece nos primeiros quadros e depois desacelera, que e como massa
+    // empurrada se comporta. Curva suave aqui fazia o alvo "derreter" na pose
+    // de reacao em vez de ser atingido por ela.
+    case "hitHead":
+    case "hitChest":
+    case "hitBody":
+    case "hitLeg":
+      return estalo;
     case "knockback":
     case "downed":
       return saidaRapida;
+    // freada: chega devagar, porque ele esta GASTANDO energia para parar
+    case "stagger":
+    case "land":
+      return saidaRapida;
+    // golpes ACELERAM ate o contato. Antes o soco comum usava a curva suave,
+    // que chega ao alvo ja desacelerando: o oposto do que um soco faz.
+    case "punch":
+    case "punchFast":
     case "punchHeavy":
     case "spinKick":
     case "uppercut":
+    case "kick":
+    case "kickLow":
+    case "kickHigh":
+    case "knee":
+    case "elbow":
     case "charge":
       return entradaLenta;
     default:
@@ -163,16 +222,23 @@ const posicaoEm = (track: FighterTrack, frame: number): number => {
   return keys[keys.length - 1].x;
 };
 
-/** Estado de um lutador no quadro pedido. */
-export const amostrar = (track: FighterTrack, frame: number): Amostra => {
-  // velocidade por diferenca central: mais estavel que olhar so para tras,
-  // e e dela que sai a inclinacao do corpo
-  const velocidade = (posicaoEm(track, frame + 1) - posicaoEm(track, frame - 1)) / 2;
-  // segunda derivada pela mesma diferenca central: p(f+1) - 2p(f) + p(f-1)
+/** Estado de um lutador no quadro pedido, SEM o movimento secundario. */
+const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
+  // Velocidade e aceleracao por diferenca central com JANELA LARGA.
+  //
+  // Com janela de um quadro, um impulso de empurrao aparece como uma
+  // aceleracao gigante num unico quadro, e a inclinacao do corpo saltava para
+  // o teto exatamente no quadro do contato. A janela larga le a TENDENCIA do
+  // movimento, que e o que a atitude do corpo deve seguir.
+  const JV = 2;
+  const JA = 3;
+  const velocidade =
+    (posicaoEm(track, frame + JV) - posicaoEm(track, frame - JV)) / (2 * JV);
   const aceleracao =
-    posicaoEm(track, frame + 1) -
-    2 * posicaoEm(track, frame) +
-    posicaoEm(track, frame - 1);
+    (posicaoEm(track, frame + JA) -
+      2 * posicaoEm(track, frame) +
+      posicaoEm(track, frame - JA)) /
+    (JA * JA);
   const inclinacao = inclinacaoDoCorpo(velocidade, aceleracao);
   const keys = track.keys;
   if (keys.length === 0) {
@@ -235,6 +301,55 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
     poseNome: ultima.pose,
     airborne: ultima.airborne,
     velocidade, aceleracao, inclinacao,
+  };
+};
+
+/**
+ * MOVIMENTO SECUNDARIO: a cabeca chega atrasada.
+ *
+ * Nenhuma parte do corpo comeca e para no mesmo instante. Quando o tronco
+ * dobra por causa de um soco, a cabeca ainda esta onde estava e chega depois:
+ * e esse atraso que o olho le como chicote, e e o que separa "assumiu a pose
+ * de quem apanhou" de "foi atingido".
+ *
+ * Feito por ROTACAO da cabeca em volta do pescoco, nunca por deslocamento:
+ * assim o pescoco nao estica em nenhuma pose nem em nenhuma mistura. Custa uma
+ * amostragem a mais e vale para todas as poses do motor de uma vez.
+ */
+const ATRASO_DA_CABECA = 3;
+/** Quanto do atraso aparece. 1 deixaria a cabeca solta do corpo. */
+const PESO_DO_ATRASO = 0.55;
+
+/** Estado de um lutador no quadro pedido, com movimento secundario. */
+export const amostrar = (track: FighterTrack, frame: number): Amostra => {
+  const agora = amostrarCru(track, frame);
+  const antes = amostrarCru(track, frame - ATRASO_DA_CABECA);
+
+  const c = completar(agora.pose);
+  const p = completar(antes.pose);
+
+  // vetor pescoco->cabeca agora e no passado
+  const vx = c.head.x - c.neck.x;
+  const vy = c.head.y - c.neck.y;
+  const ax = p.head.x - p.neck.x;
+  const ay = p.head.y - p.neck.y;
+
+  // direcao misturada, comprimento preservado: rotaciona, nao estica
+  const mx = vx + (ax - vx) * PESO_DO_ATRASO;
+  const my = vy + (ay - vy) * PESO_DO_ATRASO;
+  const norma = Math.hypot(mx, my);
+  if (norma < 0.001) return agora;
+  const comprimento = Math.hypot(vx, vy);
+
+  return {
+    ...agora,
+    pose: {
+      ...c,
+      head: {
+        x: c.neck.x + (mx / norma) * comprimento,
+        y: c.neck.y + (my / norma) * comprimento,
+      },
+    },
   };
 };
 

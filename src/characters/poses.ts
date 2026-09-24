@@ -192,8 +192,38 @@ export const POSES: Record<PoseName, Pose> = {
     footFront: { x: 38, y: 92 },
   }),
 
+  /**
+   * CARGA: o corpo se enrola antes de golpear.
+   *
+   * A antecipacao era so um passo de 46 unidades para tras, com o corpo na
+   * guarda: nao havia arco nenhum para o punho percorrer, e um golpe sem arco
+   * e um braco que aparece esticado. Aqui o punho recua ate o ombro e o peso
+   * vai para a perna de tras. E o arco entre esta pose e a do golpe que o olho
+   * le como velocidade.
+   *
+   * Uma pose para todos os golpes: o compilador usa esta na preparacao de
+   * qualquer ataque, entao melhorar aqui melhora a luta inteira.
+   */
+  coil: p({
+    hip: { x: -12, y: 6 },
+    neck: { x: -16, y: -70 },
+    head: { x: -22, y: -108 },
+    // o punho volta para junto do ombro
+    elbowFront: { x: -6, y: -52 },
+    handFront: { x: -28, y: -62 },
+    elbowBack: { x: -24, y: -44 },
+    handBack: { x: -6, y: -58 },
+    // peso e joelho na perna de tras: energia guardada
+    kneeBack: { x: -32, y: 50 },
+    footBack: { x: -54, y: 92 },
+    kneeFront: { x: 18, y: 50 },
+    footFront: { x: 30, y: 92 },
+  }),
+
   // --- socos ---------------------------------------------------------------
   punch: p({
+    // o quadril gira para dentro do golpe
+    hip: { x: 8, y: 2 },
     neck: { x: 10, y: -72 },
     head: { x: 16, y: -110 },
     elbowFront: { x: 40, y: -62 },
@@ -202,6 +232,10 @@ export const POSES: Record<PoseName, Pose> = {
     handBack: { x: -26, y: -60 },
     kneeFront: { x: 34, y: 46 },
     footFront: { x: 58, y: 92 },
+    // a perna de tras ESTICA: e ela que empurra o corpo para dentro do soco.
+    // Antes ficava na pose base, e o soco saia so do braco.
+    kneeBack: { x: -36, y: 54 },
+    footBack: { x: -76, y: 92 },
   }),
   punchFast: p({
     neck: { x: 8, y: -72 },
@@ -357,19 +391,28 @@ export const POSES: Record<PoseName, Pose> = {
     footBack: { x: -64, y: 90 },
   }),
 
-  /** Soco no peito: o tronco DOBRA sobre o golpe e os bracos recuam. */
+  /**
+   * Soco no peito: ele DOBRA SOBRE O GOLPE.
+   *
+   * A versao anterior jogava tronco e cabeca para TRAS, que e o que um golpe no
+   * ROSTO faz, e por isso as duas reacoes saiam parecidas. Golpe no peito faz o
+   * contrario: o quadril foge para tras, o peito afunda, e cabeca e ombros caem
+   * para FRENTE, por cima do punho. E a leitura de "ficou sem ar", nao a de
+   * "levou um tapa".
+   */
   hitChest: p({
-    hip: { x: -10, y: 14 },
-    neck: { x: -34, y: -54 },
-    head: { x: -60, y: -84 },
-    elbowFront: { x: -20, y: -36 },
-    handFront: { x: -46, y: -46 },
-    elbowBack: { x: -42, y: -30 },
-    handBack: { x: -70, y: -40 },
-    kneeFront: { x: 32, y: 54 },
-    footFront: { x: 48, y: 92 },
-    kneeBack: { x: -30, y: 56 },
-    footBack: { x: -58, y: 92 },
+    hip: { x: -26, y: 16 },
+    neck: { x: -6, y: -46 },
+    head: { x: 12, y: -78 },
+    // os bracos caem: nao ha ar para segurar a guarda
+    elbowFront: { x: -12, y: -32 },
+    handFront: { x: -28, y: -16 },
+    elbowBack: { x: -40, y: -26 },
+    handBack: { x: -62, y: -10 },
+    kneeFront: { x: 20, y: 56 },
+    footFront: { x: 40, y: 92 },
+    kneeBack: { x: -34, y: 54 },
+    footBack: { x: -66, y: 90 },
   }),
 
   /** Chute no tronco: o corpo GIRA e e deslocado de lado. */
@@ -473,6 +516,30 @@ export const POSES: Record<PoseName, Pose> = {
     kneeBack: { x: -44, y: 60 },
     footBack: { x: -38, y: 92 },
   }),
+  /**
+   * Cambaleio: ele FREIA o proprio deslizamento.
+   *
+   * E a fase que faltava na reacao. Sem ela o corpo empurrado voltava direto
+   * para a guarda, o que le como "teleportou de volta ao normal". Aqui o pe de
+   * tras esta plantado longe, o quadril baixo e os bracos abertos: o corpo
+   * gastou energia para nao cair, e isso e o que conta a forca do golpe depois
+   * que o golpe ja passou.
+   */
+  stagger: p({
+    hip: { x: -14, y: 20 },
+    neck: { x: -8, y: -56 },
+    head: { x: -2, y: -96 },
+    elbowFront: { x: 24, y: -46 },
+    handFront: { x: 46, y: -72 },
+    elbowBack: { x: -36, y: -40 },
+    handBack: { x: -64, y: -60 },
+    kneeFront: { x: 12, y: 54 },
+    footFront: { x: 20, y: 92 },
+    // o pe de tras plantado longe e o que FREIA: o resto do corpo se apoia nele
+    kneeBack: { x: -54, y: 46 },
+    footBack: { x: -96, y: 92 },
+  }),
+
   getUp: p({
     hip: { x: 0, y: 44 },
     neck: { x: -12, y: -18 },

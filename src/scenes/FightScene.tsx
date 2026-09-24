@@ -15,6 +15,7 @@ import {
   alturaNoAr,
   amostrar,
   inclinacaoDesenhada,
+  poseDeContato,
   quadroEfetivo,
 } from "../animation/sampler";
 import { Arena } from "../backgrounds/Arena";
@@ -76,6 +77,32 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
     [seed, frame, fps],
   );
 
+  /**
+   * ABSORCAO DO IMPACTO: o corpo do atingido comprime por alguns quadros.
+   *
+   * E o "squash" da animacao classica aplicado ao corpo inteiro. Sem ele a
+   * reacao era so troca de pose, e troca de pose sozinha nao comunica que uma
+   * forca entrou no corpo. Devolve o fator de escala do lutador.
+   *
+   * A altura do quadril e multiplicada pelo MESMO fator na hora de desenhar,
+   * senao o corpo encolheria e os pes sairiam do chao: aqui ele comprime
+   * CONTRA o chao, que e o que acontece de verdade.
+   */
+  const compressaoDe = (id: string): number => {
+    const DUR = 5;
+    let fator = 1;
+    for (const imp of timeline.impacts) {
+      if (imp.victim !== id) continue;
+      const idade = frame - imp.frame;
+      if (idade < 0 || idade > DUR) continue;
+      const forca = 1 - idade / DUR;
+      const fundo =
+        imp.tier === "extreme" ? 0.11 : imp.tier === "medium" ? 0.065 : 0.03;
+      fator = Math.min(fator, 1 - fundo * forca);
+    }
+    return fator;
+  };
+
   /** Forca da aura de um lutador neste quadro, vinda dos beats de powerUp. */
   const auraDe = (id: string): number => {
     let forca = 0;
@@ -106,11 +133,13 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
       facing: (a.x <= outro.x ? 1 : -1) as 1 | -1,
       baseY: alturaNoAr(track, frame, ALTURA_QUADRIL),
       preset: PRESETS[id],
-      // Em pose de ataque nao ha linha de velocidade: ela sujava justamente o
-      // quadro do golpe. A mesma regra do spin (ver inclinacaoDesenhada).
+      compressao: compressaoDe(id),
+      // Em pose de contato (golpe dado ou recebido) nao ha linha de
+      // velocidade: ela sujava justamente os quadros em que o corpo precisa
+      // ser lido. No knockback ela continua, que e onde ela ganha o seu
+      // salario.
       rapido:
-        Math.abs(a.velocidade) > LIMITE_LINHAS &&
-        inclinacaoDesenhada(a) === a.inclinacao,
+        Math.abs(a.velocidade) > LIMITE_LINHAS && !poseDeContato(a.poseNome),
     };
   });
 
@@ -147,11 +176,16 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
         </g>
 
         {/*
-          O clarao de contato vai ATRAS dos lutadores. Na frente ele cobriria
-          exatamente o punho e o peito, que sao as duas coisas que o
-          espectador precisa ver no quadro do golpe. Atras, ele recorta a
-          silhueta dos dois contra a luz, que e o efeito que se quer.
+          Onda de choque e clarao vao ATRAS dos lutadores. Na frente eles
+          cobriam exatamente o punho e o peito, que sao as duas coisas que o
+          espectador precisa ver no quadro do golpe: o traco da onda passava
+          por cima do corpo e clareava o vermelho. Atras, recortam a silhueta
+          dos dois contra a luz, que e o efeito que se quer.
+
+          So as PARTICULAS ficam na frente: estilhaco voando na frente do
+          corpo e correto, e sao poucos e pequenos.
         */}
+        <Ondas impactos={timeline.impacts} frame={frame} />
         <Clarao impactos={timeline.impacts} frame={frame} />
 
         {/* aura e linhas de velocidade FICAM ATRAS dos dois corpos. A linha de
@@ -184,14 +218,17 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
           ))}
         </g>
 
-        {lutadores.map(({ id, a, baseY, facing, preset }) => (
+        {lutadores.map(({ id, a, baseY, facing, preset, compressao }) => (
           <Stickman
             key={id}
             preset={preset}
             pose={a.pose}
             baseX={a.x}
-            baseY={baseY}
+            // o quadril desce junto com a compressao, para o pe nao sair do
+            // chao: o corpo afunda CONTRA o chao em vez de encolher no ar
+            baseY={baseY * compressao}
             facing={facing}
+            scaleExtra={compressao}
             // a inclinacao vem da velocidade: e o movimento corporal
             // integrado. O sinal acompanha o lado para o qual ele olha.
             // Em pose de ataque ela e zerada, senao o giro do corpo tira o
@@ -206,7 +243,6 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
           seed={seed}
           fps={fps}
         />
-        <Ondas impactos={timeline.impacts} frame={frame} />
 
         {debug && <DebugOverlay timeline={timeline} frame={frame} />}
       </g>
