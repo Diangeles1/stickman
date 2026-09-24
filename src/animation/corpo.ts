@@ -274,10 +274,10 @@ const DUR_COMPRESSAO = 5;
  *
  * O finalizador pede o corpo voando para perto de quem assiste. Num plano
  * lateral isso e ESCALA: o corpo cresce na primeira metade do voo, passa
- * perto de quem assiste, e volta ao tamanho normal ao cair. 1,6 e o pico:
- * o suficiente para dominar o quadro sem sair dele.
+ * perto de quem assiste, e volta ao tamanho normal ao cair. 1,3 e o pico:
+ * a 1,6 o corpo no meio do voo ficava gigante ao lado do outro lutador.
  */
-const MAXIMO_DA_APROXIMACAO = 1.6;
+const MAXIMO_DA_APROXIMACAO = 1.3;
 /** Quanto o chao do primeiro plano desce na tela, por unidade de escala. */
 const CHAO_DO_PRIMEIRO_PLANO = 140;
 

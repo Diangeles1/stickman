@@ -131,7 +131,16 @@ export const cameraNoQuadro = (
     if (k.follow && timeline.tracks[k.follow]) {
       // posicao REAL no quadro, nao a congelada na compilacao
       const alvo = amostrar(timeline.tracks[k.follow], frame);
-      return { center: { x: alvo.x, y: k.center.y }, zoom: k.zoom };
+      const { fighterA, fighterB } = timeline.spec;
+      const outroId = k.follow === fighterA ? fighterB : fighterA;
+      const outro = amostrar(timeline.tracks[outroId], frame);
+      // Segue quem voa, mas puxado na direcao do outro: centrada so em quem
+      // voa, a camera deixava o outro lutador meio cortado na borda durante
+      // o voo inteiro (a 0.72 ainda cortava o comeco do voo).
+      return {
+        center: { x: alvo.x * 0.58 + outro.x * 0.42, y: k.center.y },
+        zoom: k.zoom,
+      };
     }
     return { center: k.center, zoom: k.zoom };
   };
