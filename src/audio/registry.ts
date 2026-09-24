@@ -230,3 +230,6 @@ export const TRILHA = {
   /** quadros para voltar ao volume normal depois do golpe */
   retorno: 24,
 };
+
+/** volume do narrador e quanto a trilha abaixa enquanto ele fala */
+export const NARRADOR = { volume: 0.6, trilhaSobFala: 0.45 };

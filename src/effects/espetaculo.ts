@@ -19,6 +19,8 @@
  */
 
 import { corpoNoQuadro } from "../animation/corpo";
+import { PUXA } from "../animation/placa";
+import { FALAS, type Fala } from "../audio/falas";
 import { logicoParaReal } from "../core/tempo";
 import { s } from "../core/time";
 import type { FighterId, Timeline, Vec2 } from "../core/types";
@@ -77,6 +79,8 @@ export type Espetaculo = {
   entradaDoPlacar: number;
   /** quando a placa do vencedor comeca: o placar e os letreiros saem */
   saidaDoPlacar: number;
+  /** o que o narrador fala e quando (quadro real), sem uma fala encavalar */
+  falas: { real: number; fala: Fala }[];
 };
 
 /** Dano por golpe limpo. Bloqueio so arranha. */
@@ -312,6 +316,7 @@ const montar = (t: Timeline): Espetaculo => {
     abertura,
     entradaDoPlacar: abertura.lute,
     saidaDoPlacar: ateAPlaca,
+    falas: narrar(t, rotulos, abertura.lute, real),
   };
 };
 
@@ -355,4 +360,64 @@ const atingidoAnterior = (e: Espetaculo, id: FighterId, r: number): number => {
     ultimo = g.real;
   }
   return ultimo;
+};
+
+// ---- narrador ---------------------------------------------------------------
+
+/** a fala entra logo DEPOIS do golpe: o impacto soa limpo e o locutor reage */
+const REACAO = 8;
+/** folga minima entre o fim de uma fala e o comeco da proxima */
+const RESPIRO = 8;
+/** falas que nunca sao cortadas por outra: os momentos da historia */
+const IMPORTANTES = new Set<Fala>(["agora", "nocaute", "venceu_black", "venceu_red", "like"]);
+
+/**
+ * Escolhe as falas do narrador a partir dos letreiros. Ele nao comenta tudo:
+ * so a primeira de cada coisa e os momentos grandes, e nunca fala por cima
+ * de si mesmo. Locutor que fala sem parar vira ruido.
+ */
+const narrar = (
+  t: Timeline,
+  rotulos: Rotulo[],
+  lute: number,
+  real: (logico: number) => number,
+): { real: number; fala: Fala }[] => {
+  const candidatas: { real: number; fala: Fala }[] = [{ real: lute + 2, fala: "lutem" }];
+  const ja = new Set<Fala>();
+  for (const r of [...rotulos].sort((a, b) => a.inicio - b.inicio)) {
+    let fala: Fala | null = null;
+    if (r.texto === "3 HITS") fala = "combo";
+    else if (r.texto === "ESQUIVA!") fala = "desviou";
+    else if (r.texto === "CONTRA-ATAQUE!") fala = "contra";
+    else if (r.texto === "BRUTAL!") fala = "pancada";
+    else if (r.texto === "GOLPE FINAL") fala = "agora";
+    else if (r.texto === "K.O.!") fala = "nocaute";
+    else if (r.texto.endsWith("VENCE!")) {
+      const vencedor = Object.entries(NOMES).find(([, n]) => r.texto.startsWith(n))?.[0];
+      fala = vencedor === "red" ? "venceu_red" : "venceu_black";
+    }
+    if (!fala) continue;
+    // combo e esquiva: so na primeira vez, senao o narrador se repete
+    if ((fala === "combo" || fala === "desviou") && ja.has(fala)) continue;
+    ja.add(fala);
+    candidatas.push({ real: r.inicio + REACAO, fala });
+  }
+  const placa = t.scheduled.find((b) => b.beat.type === "placa");
+  if (placa) candidatas.push({ real: real(placa.from + PUXA) + 4, fala: "like" });
+
+  candidatas.sort((a, b) => a.real - b.real);
+  const fim = (c: { real: number; fala: Fala }) =>
+    c.real + Math.ceil(FALAS[c.fala].segundos * 60) + RESPIRO;
+  const aceitas: { real: number; fala: Fala }[] = [];
+  for (const c of candidatas) {
+    const choca = aceitas.filter((a) => c.real < fim(a) && a.real < fim(c));
+    if (choca.length === 0) {
+      aceitas.push(c);
+    } else if (IMPORTANTES.has(c.fala) && choca.every((a) => !IMPORTANTES.has(a.fala))) {
+      // o momento grande tira a fala pequena do caminho
+      for (const a of choca) aceitas.splice(aceitas.indexOf(a), 1);
+      aceitas.push(c);
+    }
+  }
+  return aceitas.sort((a, b) => a.real - b.real);
 };

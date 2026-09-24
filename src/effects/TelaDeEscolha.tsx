@@ -26,6 +26,8 @@ import { PRESETS } from "../characters/presets";
 import { ALTURA_QUADRIL } from "../characters/skeleton";
 import { Stickman } from "../characters/Stickman";
 import type { FighterId, Pose } from "../core/types";
+import { FALAS } from "../audio/falas";
+import { NARRADOR } from "../audio/registry";
 import { FONTE } from "./Espetaculo";
 import { NOMES } from "./espetaculo";
 
@@ -255,6 +257,15 @@ export const TelaDeEscolha: React.FC<{ a: FighterId; b: FighterId }> = ({ a, b }
         <Sequence key={k} from={k * fps} layout="none">
           <Audio src={staticFile("assets/audio/impacts/impact_light_01.wav")} volume={0.7} />
           <Audio src={staticFile("assets/audio/heavy/low_boom_01.wav")} volume={0.25 + k * 0.08} />
+        </Sequence>
+      ))}
+      {/* narrador: chama para a escolha e conta os tres ultimos */}
+      <Sequence from={0} layout="none">
+        <Audio src={staticFile(FALAS.escolha.arquivo)} volume={NARRADOR.volume} />
+      </Sequence>
+      {(["tres", "dois", "um"] as const).map((fala, k) => (
+        <Sequence key={fala} from={(k + 2) * fps + 2} layout="none">
+          <Audio src={staticFile(FALAS[fala].arquivo)} volume={NARRADOR.volume} />
         </Sequence>
       ))}
       <Sequence from={fim - 12} layout="none">
