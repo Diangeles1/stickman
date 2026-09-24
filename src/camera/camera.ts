@@ -75,8 +75,19 @@ export const enquadrarDois = (
   const a = amostrar(timeline.tracks[fighterA], frame);
   const b = amostrar(timeline.tracks[fighterB], frame);
 
-  const meio = (a.x + b.x) / 2;
-  const separacao = Math.abs(a.x - b.x);
+  // Corpo DEITADO nao ocupa o quadril: ele se estende para o lado da cabeca
+  // (para longe do outro). Enquadrando so o quadril, a cabeca de quem caiu
+  // ficava cortada na borda da tela no fim da luta.
+  const DEITADO = new Set(["downed", "groundHit", "sitUp"]);
+  const centroVisivel = (eu: typeof a, outro: typeof a): number => {
+    if (!DEITADO.has(eu.poseNome)) return eu.x;
+    const lado = eu.x <= outro.x ? -1 : 1;
+    return eu.x + lado * 150;
+  };
+  const ax = centroVisivel(a, b);
+  const bx = centroVisivel(b, a);
+  const meio = (ax + bx) / 2;
+  const separacao = Math.abs(ax - bx);
   const zoomQueCabe = larguraTela / (separacao + FOLGA_LATERAL);
 
   if (zoomQueCabe >= ZOOM_MINIMO_LEGIVEL) {
@@ -91,7 +102,7 @@ export const enquadrarDois = (
     .filter((i) => i.victim && i.frame <= frame)
     .pop();
   const foco =
-    ultimo?.victim === fighterB ? b.x : ultimo?.victim === fighterA ? a.x : meio;
+    ultimo?.victim === fighterB ? bx : ultimo?.victim === fighterA ? ax : meio;
 
   // 0.72 no foco e 0.28 no meio: o atingido fica folgado no quadro e o outro
   // entra pela borda, o que mantem a relacao entre os dois legivel.

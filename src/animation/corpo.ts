@@ -273,11 +273,11 @@ const DUR_COMPRESSAO = 5;
  * ARREMESSO NA DIRECAO DA CAMERA: quanto o corpo cresce na tela.
  *
  * O finalizador pede o corpo voando para perto de quem assiste. Num plano
- * lateral isso e ESCALA: o corpo cresce durante o voo (acelerando no fim,
- * como tudo que se aproxima) e continua grande depois de cair, em primeiro
- * plano. 1,8 e o teto: o suficiente para dominar o quadro sem sair dele.
+ * lateral isso e ESCALA: o corpo cresce na primeira metade do voo, passa
+ * perto de quem assiste, e volta ao tamanho normal ao cair. 1,6 e o pico:
+ * o suficiente para dominar o quadro sem sair dele.
  */
-const MAXIMO_DA_APROXIMACAO = 1.8;
+const MAXIMO_DA_APROXIMACAO = 1.6;
 /** Quanto o chao do primeiro plano desce na tela, por unidade de escala. */
 const CHAO_DO_PRIMEIRO_PLANO = 140;
 
@@ -287,11 +287,12 @@ const aproximacaoDaCamera = (
   frame: number,
 ): number => {
   for (const r of timeline.rumoACamera ?? []) {
-    if (r.who !== id || frame < r.de) continue;
-    const p = Math.min(1, (frame - r.de) / Math.max(1, r.ate - r.de));
-    // cresce acelerando mas sem salto no fim (com p^2 quase todo o
-    // crescimento cabia nos ultimos quadros do voo)
-    return 1 + (MAXIMO_DA_APROXIMACAO - 1) * suave(p);
+    if (r.who !== id || frame < r.de || frame > r.ate) continue;
+    const p = (frame - r.de) / Math.max(1, r.ate - r.de);
+    // Vem na direcao da camera no meio do voo e VOLTA ao tamanho normal ate
+    // cair. Ficando grande depois do pouso, o corpo deitado virava um
+    // gigante ao lado do outro lutador ate o fim do video.
+    return 1 + (MAXIMO_DA_APROXIMACAO - 1) * Math.sin(Math.PI * p);
   }
   return 1;
 };
