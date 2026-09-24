@@ -30,7 +30,7 @@
 import {
   alturaDoVoo,
   amostrar,
-  entradaLenta,
+  disparo,
   inclinacaoDesenhada,
   progressoDoVoo,
   suave,
@@ -44,6 +44,10 @@ import {
   mirarMembro,
   paraLocal,
   peMaisBaixo,
+  completar,
+  giroVisivel,
+  misturar,
+  poseBase,
   type Transformacao,
 } from "../characters/skeleton";
 import {
@@ -53,6 +57,7 @@ import {
 } from "../core/contact";
 import type {
   AimEvent,
+  JointName,
   FighterId,
   Pose,
   PoseName,
@@ -62,6 +67,135 @@ import type {
 
 /** Poses em que o corpo respira. Postura de espera, nunca durante a acao. */
 const POSES_QUE_RESPIRAM = new Set<PoseName>(["idle", "guard"]);
+
+/**
+ * GINGA DA GUARDA: o lutador quica no lugar, como boxeador.
+ *
+ * E o que mais separa luta de stickman profissional de manequim: ninguem
+ * espera um golpe parado. Os joelhos flexionam num ritmo curto e o corpo sobe
+ * e desce junto; a respiracao sozinha e sutil demais para ler no celular.
+ *
+ * Feita DOBRANDO OS JOELHOS, nao descendo o quadril: o apoio no chao (mais
+ * abaixo) deriva a altura do corpo do pe mais baixo, entao joelho que dobra
+ * baixa o corpo sozinho e o pe continua plantado.
+ */
+const PERIODO_DA_GINGA = 34;
+/**
+ * Deslocamento das juntas no ponto mais baixo da ginga, em unidades de pose.
+ *
+ * Os DOIS joelhos vao para FRENTE, que e para onde um joelho dobra. A versao
+ * anterior abria o joelho de tras para tras, e a base virava um arco de
+ * pernas para fora a cada quique. Os valores sao diferentes porque as pernas
+ * da guarda tem angulos diferentes: medidos para os dois pes subirem igual em
+ * relacao ao quadril (~5,5 unidades de pose), e entao e o corpo que desce, nao
+ * um pe que levanta.
+ */
+const GINGA: Pose = {
+  kneeFront: { x: 12, y: -4 },
+  kneeBack: { x: 22, y: -4 },
+  neck: { x: 2, y: 3 },
+  head: { x: 3, y: 4 },
+  handFront: { x: 2, y: 5 },
+  handBack: { x: 1, y: 4 },
+  elbowFront: { x: 1, y: 3 },
+  elbowBack: { x: 1, y: 3 },
+};
+
+const gingar = (pose: Pose, frame: number, defasagem: number): Pose => {
+  // 1 - cos da uma descida suave e uma subida suave: o corpo "pesa" embaixo
+  const fase = (frame / PERIODO_DA_GINGA) * Math.PI * 2 + defasagem;
+  const quanto = (1 - Math.cos(fase)) / 2;
+  const saida: Pose = { ...pose };
+  for (const [junta, d] of Object.entries(GINGA) as [keyof Pose, { x: number; y: number }][]) {
+    const v = pose[junta];
+    if (!v) continue;
+    saida[junta] = { x: v.x + d.x * quanto, y: v.y + d.y * quanto };
+  }
+  return saida;
+};
+
+/**
+ * GIRO DO CHUTE GIRATORIO: uma volta inteira no eixo vertical.
+ *
+ * O corpo gira entre o fim da carga e o contato, e chega ao contato exatamente
+ * de frente (giro = 1), que e onde a distancia de combate e a mira foram
+ * calculadas. No meio da volta ele fica de costas para o adversario, que e o
+ * quadro que o olho usa para ler "girou".
+ */
+const POSES_QUE_GIRAM = new Set<PoseName>(["spinKick"]);
+
+/**
+ * BASE FECHADA NO GIRO: os pes vem para baixo do quadril enquanto o corpo da
+ * a volta.
+ *
+ * O giro achata o corpo em volta do quadril; com a base aberta da guarda, os
+ * pes varriam o chao de um lado ao outro (267 unidades). Girar sobre o pe de
+ * apoio com a base aberta tambem nao serve: o quadril e que viajava 380
+ * unidades. Quem gira de verdade FECHA a base antes e pivota sob o proprio
+ * corpo, e e isso que esta funcao faz, na medida em que o giro acontece.
+ */
+const estreitarNoGiro = (pose: Pose, fechamento: number): Pose => {
+  if (fechamento <= 0.001) return pose;
+  const w = fechamento;
+  const c = completar(pose);
+  const fechar = (v: { x: number; y: number }, k: number) => ({
+    x: v.x * (1 - k * w),
+    y: v.y,
+  });
+  return {
+    ...c,
+    footFront: fechar(c.footFront, 0.8),
+    footBack: fechar(c.footBack, 0.8),
+    kneeFront: fechar(c.kneeFront, 0.6),
+    kneeBack: fechar(c.kneeBack, 0.6),
+  };
+};
+
+/**
+ * O GIRO EM DOIS TEMPOS: primeiro FECHA A BASE, depois gira.
+ *
+ * Fechando a base durante a propria volta, os pes eram arrastados pelo chao
+ * (a auditoria de pes mediu estalos de 100 unidades num quadro): com o corpo
+ * de perfil nao ha como pregar pe nenhum. Fechando ANTES, com o corpo ainda
+ * de frente, os pes plantados transformam o fechamento em passos de verdade,
+ * e a volta acontece sobre pes que ja estao embaixo do quadril.
+ *
+ * `giro`: 1 de frente, -1 de costas. `fechamento`: 0 base aberta, 1 fechada.
+ */
+const giroNoQuadro = (
+  track: Timeline["tracks"][string],
+  frame: number,
+): { giro: number; fechamento: number; inicio?: number } => {
+  const keys = track.keys;
+  for (let i = 1; i < keys.length; i++) {
+    const k = keys[i];
+    if (!POSES_QUE_GIRAM.has(k.pose)) continue;
+    const anterior = keys[i - 1];
+    // so a chave em que o golpe CHEGA: as seguintes seguram a extensao
+    if (POSES_QUE_GIRAM.has(anterior.pose)) continue;
+    // O TRONCO GIRA PRIMEIRO, A PERNA CHICOTEIA DEPOIS: a volta comeca
+    // ainda na carga e termina na metade do disparo; o resto do tempo e so a
+    // perna estendendo. Girando ate o ultimo quadro, corpo e perna chegavam
+    // juntos e o chute perdia o estalo.
+    // A volta e RAPIDA (~10 quadros): de perfil o corpo nao se le, entao
+    // quanto menos tempo ele passa assim, melhor. Mais lenta, lia como um
+    // poste parado no meio do golpe.
+    const inicio = anterior.frame - 6;
+    const fim = anterior.frame + (k.frame - anterior.frame) * 0.35;
+    const inicioDoFechamento = inicio - 12;
+    if (frame < inicioDoFechamento || frame > k.frame) continue;
+    const fechamento =
+      frame < inicio
+        ? suave((frame - inicioDoFechamento) / (inicio - inicioDoFechamento))
+        : frame <= fim
+          ? 1
+          : 1 - suave((frame - fim) / Math.max(1, k.frame - fim));
+    if (frame < inicio) return { giro: 1, fechamento };
+    const p = Math.min(1, (frame - inicio) / Math.max(1, fim - inicio));
+    return { giro: Math.cos(suave(p) * Math.PI * 2), fechamento, inicio };
+  }
+  return { giro: 1, fechamento: 0 };
+};
 
 /**
  * RESPIRACAO: o peito sobe e desce e os bracos acompanham.
@@ -126,6 +260,9 @@ const respirar = (pose: Pose, frame: number, defasagem: number): Pose => {
  */
 const GIRO_DA_QUEDA = 52;
 
+/** Poses de corpo lancado por um golpe: so elas recebem o giro da queda. */
+const POSES_ARREMESSADAS = new Set<PoseName>(["launched", "airborne", "knockback"]);
+
 /** Em quantos quadros o membro completa o avanco e volta. */
 const QUADROS_DO_AVANCO = 6;
 
@@ -171,7 +308,10 @@ const pesoDaMira = (aim: AimEvent, frame: number): number => {
     // ACELERA ate o contato. Com curva suave a correcao tinha a maior taxa no
     // MEIO do caminho, e o punho atingia a velocidade maxima 2 quadros ANTES
     // do contato: o golpe chegava e o corpo vinha atras, cadeia invertida.
-    return entradaLenta((frame - aim.from) / dur);
+    // mesma curva do disparo da pose (t^3): com t^2 a mira chegava antes do
+    // braco e o pico de velocidade do punho caia dois quadros antes do
+    // contato, junto com o do ombro
+    return disparo((frame - aim.from) / dur);
   }
   const dur = Math.max(1, aim.to - aim.contact);
   return 1 - suave((frame - aim.contact) / dur);
@@ -185,8 +325,12 @@ export type Corpo = {
   /** escala ja pronta para juntasNoMundo */
   scale: number;
   spin: number;
+  /** giro no eixo vertical: 1 de frente, -1 de costas (ver Transformacao) */
+  giro: number;
   pose: Pose;
   poseNome: PoseName;
+  /** o corpo esta no ar (salto, lancamento): nenhum pe apoia */
+  noAr: boolean;
   velocidade: number;
   aceleracao: number;
   /** quanto o quadril baixou em relacao ao apoio neutro, em unidades de mundo */
@@ -204,6 +348,7 @@ export const transformDoCorpo = (c: Corpo): Transformacao => ({
   facing: c.facing,
   scale: c.scale,
   spin: c.spin,
+  giro: c.giro,
 });
 
 /** Juntas do corpo em coordenadas de mundo. */
@@ -235,9 +380,17 @@ const corpoBase = (
   // meia volta de defasagem para o segundo lutador: os dois respirando em
   // sincronia denunciaria que a respiracao e a mesma funcao
   const defasagem = id === fighterA ? 0 : Math.PI;
-  const pose = POSES_QUE_RESPIRAM.has(a.poseNome)
+  const respirando = POSES_QUE_RESPIRAM.has(a.poseNome)
     ? respirar(a.pose, frame, defasagem)
     : a.pose;
+  const { giro, fechamento, inicio: inicioDoGiro } = giroNoQuadro(
+    timeline.tracks[id],
+    frame,
+  );
+  const pose = estreitarNoGiro(
+    a.poseNome === "guard" ? gingar(respirando, frame, defasagem) : respirando,
+    fechamento,
+  );
 
   // Em pose de ataque ou de reacao a inclinacao e zerada: a pose ja tem a
   // atitude do corpo desenhada, e girar o corpo no quadro do contato tirava o
@@ -246,13 +399,45 @@ const corpoBase = (
 
   // GIRO DA QUEDA. Sobe e volta a zero ao longo do arco (meia volta de seno),
   // no sentido em que o corpo esta viajando.
-  const arco = progressoDoVoo(timeline.tracks[id], frame);
+  // So corpo ARREMESSADO rola no ar. Quem pula para golpear controla o
+  // proprio corpo: aplicado a ele, o giro tombava o atacante 52 graus para
+  // frente e o pulo terminava com ele deitado em cima do outro.
+  const arco = POSES_ARREMESSADAS.has(a.poseNome)
+    ? progressoDoVoo(timeline.tracks[id], frame)
+    : -1;
   if (arco >= 0) {
     spin += Math.sin(arco * Math.PI) * GIRO_DA_QUEDA * Math.sign(a.velocidade || 1);
   }
 
   const compressao = compressaoDe(timeline, id, frame);
   const escala = escalaDoMundo(preset.scale);
+
+  // PIVO NO PE DE APOIO. Com a base ja fechada (ver giroNoQuadro), girar em
+  // volta do quadril ainda arrastava o pe de apoio num arco pelo chao. Aqui o
+  // corpo e deslocado para o pe de tras ficar parado enquanto o quadril da a
+  // volta em torno dele; como a base esta fechada, o quadril anda pouco.
+  //
+  // O pe fica onde estava NO INICIO da volta, e nao onde a pose atual o poe:
+  // a carga continua se aprofundando durante o giro, e ancorar no pe da pose
+  // atual fazia o pivo andar junto (15 unidades por quadro).
+  let pivo = 0;
+  if (giro !== 1 && inicioDoGiro !== undefined) {
+    const noInicio = amostrar(timeline.tracks[id], inicioDoGiro);
+    const peNoInicio =
+      noInicio.x +
+      completar(estreitarNoGiro(noInicio.pose, 1)).footBack.x * escala * facing;
+    const peAgora =
+      completar(pose).footBack.x * escala * facing * giroVisivel(giro);
+    // Entra e sai junto com o giro: aplicado inteiro, o deslocamento sumia
+    // de uma vez quando o giro voltava a 1, e o corpo saltava 71 unidades
+    // no quadro seguinte ao fim da volta.
+    //
+    // Inteiro enquanto os pes estao soltos (giro < 0,75, ver `girando`), e
+    // so desvanece quando os pes plantados ja voltaram a segurar o apoio:
+    // desvanecendo antes, o pe de apoio deslizava nas duas pontas da volta.
+    const pesoDoPivo = giro < 0.75 ? 1 : (1 - giro) / 0.25;
+    pivo = (peNoInicio - peAgora - a.x) * pesoDoPivo;
+  }
 
   // APOIO: o pe mais baixo encosta no chao. Medido no corpo JA INCLINADO E
   // ESPELHADO, e nao na pose crua: o spin gira o esqueleto em volta do
@@ -265,24 +450,329 @@ const corpoBase = (
     facing,
     scale: preset.scale,
     spin,
+    giro,
   });
-  const apoio = Math.max(local.footFront.y, local.footBack.y);
+  // O ponto mais baixo do CORPO, e nao so dos pes. Em pe da no mesmo; mas o
+  // corpo que cai de costas apoia nas costas e na cabeca, e o que levanta
+  // apoia na mao. Medindo so os pes, o corpo deitado com as pernas no ar
+  // afundava o tronco inteiro abaixo do chao.
+  const raioCabeca = (preset.headRadius - preset.limbWidth / 2) * preset.scale;
+  let apoio = local.head.y + raioCabeca;
+  for (const junta of Object.keys(local) as (keyof typeof local)[]) {
+    if (junta === "head") continue;
+    apoio = Math.max(apoio, local[junta].y);
+  }
   const voo = alturaDoVoo(timeline.tracks[id], frame);
 
   return {
-    x: a.x,
+    x: a.x + pivo,
     baseY: (-apoio - voo) * compressao,
     facing,
     scale: preset.scale * compressao,
     spin,
+    giro,
     pose,
     poseNome: a.poseNome,
+    noAr: voo > 0.5,
     velocidade: a.velocidade,
     aceleracao: a.aceleracao,
     agachamento: apoio - PE_NO_CHAO * escala,
     correcaoDaMira: 0,
     alcancou: true,
   };
+};
+
+// ===========================================================================
+// PES PLANTADOS
+// ===========================================================================
+//
+// A pose diz onde o pe fica em relacao ao QUADRIL. Se o quadril anda, o pe
+// anda junto, e um pe que anda encostado no chao e patinacao: a auditoria
+// mediu 6.000 unidades de pe deslizando numa luta de 8 segundos. E o defeito
+// que mais faz um lutador parecer boneco arrastado.
+//
+// Aqui o pe que encosta no chao e PREGADO no mundo, e a perna se resolve por
+// cinematica inversa para alcanca-lo. Quando o corpo se afasta demais do pe
+// pregado (a perna nao alcanca, ou o pe ficou longe de onde a pose quer),
+// o pe DA UM PASSO: levanta, viaja em arco e planta de novo. E o que faz o
+// peso ser transferido de um pe para o outro em vez de o corpo flutuar.
+//
+// Resolvido em sequencia, quadro a quadro, porque "onde o pe foi plantado"
+// depende do passado. Continua sendo funcao pura da timeline: o resultado e
+// calculado uma vez por lutador e guardado, e todo quadro consulta a mesma
+// tabela.
+
+/** Poses em que o corpo esta de pe e os pes podem apoiar. */
+export const POSES_DE_APOIO = new Set<PoseName>([
+  "idle", "guard", "coil",
+  "walk1", "walk2", "run1", "run2", "sprint1", "sprint2",
+  "advance", "retreat", "land",
+  "block", "dodge", "duck", "stagger",
+  "punch", "punchFast", "punchHeavy", "uppercut",
+  "kick", "kickLow", "kickHigh", "spinKick", "knee", "elbow", "charge",
+  "hitHead", "hitChest", "hitBody", "hitLeg",
+]);
+
+const POSES_DE_LOCOMOCAO = new Set<PoseName>([
+  "walk1", "walk2", "run1", "run2", "sprint1", "sprint2", "advance", "retreat",
+]);
+
+/** Pe a menos disto do chao (unidades de mundo) esta apoiado. */
+const ALTURA_DE_APOIO = 14;
+/**
+ * Acima desta velocidade do quadril (unidades por quadro) o corpo esta sendo
+ * ARRASTADO por um golpe, e pe arrastado desliza de verdade.
+ */
+const VELOCIDADE_DE_ARRASTO = 16;
+/**
+ * Pe pregado mais longe que isto de onde a pose o quer da um passo.
+ *
+ * Com 85 o pe ficava pregado longe demais e a IK esticava a perna: depois de
+ * um bloqueio o lutador ficava de pernas retas, base aberta, sem guarda
+ * nenhuma. Mais curto, ele reajusta a base com um passo, que e o que um
+ * lutador faz o tempo todo.
+ */
+const DISTANCIA_DO_PASSO = 55;
+/** Fracao do alcance da perna acima da qual o pe precisa se mover. */
+const ALCANCE_UTIL = 0.97;
+/** Perto do chao (unidades de mundo) o pe esta sujeito ao limite abaixo. */
+const ALTURA_DO_ESTALO = 20;
+/** O mais longe que um pe anda num quadro rente ao chao. */
+const PASSO_MAXIMO_POR_QUADRO = 28;
+/** Altura minima do pe quando o limite acima o obriga a dar um passo. */
+const ALTURA_DO_PASSINHO = 10;
+
+/** Quadros para o pe sair do chao sem estalo quando deixa de apoiar. */
+const QUADROS_DE_SOLTURA = 5;
+
+type EstadoDoPe = {
+  modo: "livre" | "plantado" | "passo" | "soltando";
+  /** x onde esta pregado */
+  px: number;
+  /** passo ou soltura: de onde saiu e quando */
+  de: Vec2;
+  ini: number;
+  dur: number;
+  /** ultima posicao entregue */
+  ultimo: Vec2;
+};
+
+type PlanoDosPes = {
+  alvo: Record<"footFront" | "footBack", { x: Float64Array; y: Float64Array; peso: Float64Array }>;
+};
+
+const POSE_BASE = poseBase();
+const distancia = (a: Vec2, b: Vec2) => Math.hypot(b.x - a.x, b.y - a.y);
+
+const CACHE_DOS_PES = new WeakMap<Timeline, Map<FighterId, PlanoDosPes>>();
+
+const PES = ["footFront", "footBack"] as const;
+
+const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
+  let porLutador = CACHE_DOS_PES.get(timeline);
+  if (!porLutador) {
+    porLutador = new Map();
+    CACHE_DOS_PES.set(timeline, porLutador);
+  }
+  const pronto = porLutador.get(id);
+  if (pronto) return pronto;
+
+  const n = timeline.durationInFrames + 2;
+  const plano: PlanoDosPes = {
+    alvo: {
+      footFront: { x: new Float64Array(n), y: new Float64Array(n), peso: new Float64Array(n) },
+      footBack: { x: new Float64Array(n), y: new Float64Array(n), peso: new Float64Array(n) },
+    },
+  };
+  const estado: Record<(typeof PES)[number], EstadoDoPe> = {
+    footFront: { modo: "livre", px: 0, de: { x: 0, y: 0 }, ini: 0, dur: 1, ultimo: { x: 0, y: 0 } },
+    footBack: { modo: "livre", px: 0, de: { x: 0, y: 0 }, ini: 0, dur: 1, ultimo: { x: 0, y: 0 } },
+  };
+  const perna =
+    (distancia(POSE_BASE.hip, POSE_BASE.kneeFront) +
+      distancia(POSE_BASE.kneeFront, POSE_BASE.footFront)) *
+    escalaDoMundo(PRESETS[id].scale);
+
+  for (let f = 0; f < n; f++) {
+    const c = corpoBase(timeline, id, f);
+    const j = juntasDoCorpo(c);
+    // Girando no eixo vertical o esqueleto esta achatado: a conversao do alvo
+    // do pe para o espaco da perna explode perto do perfil (giro ~ 0) e a IK
+    // da perna se debatia. Durante a volta os pes seguem a pose.
+    // (com o corpo pelo menos 75% de frente a conversao ja e estavel, e e
+    // melhor os pes voltarem a pisar: o fim da volta vira um passo)
+    const girando = c.giro < 0.75;
+    const podeApoiar =
+      !c.noAr &&
+      POSES_DE_APOIO.has(c.poseNome) &&
+      // andando, o pe de apoio SEMPRE prega, em qualquer velocidade: e
+      // exatamente ai que a patinacao aparece. So o corpo EMPURRADO arrasta.
+      (POSES_DE_LOCOMOCAO.has(c.poseNome) ||
+        Math.abs(c.velocidade) <= VELOCIDADE_DE_ARRASTO) &&
+      // girando no eixo vertical o pe de apoio pivota: nao ha onde pregar
+      !girando;
+
+    for (const pe of PES) {
+      const st = estado[pe];
+      const outro = estado[pe === "footFront" ? "footBack" : "footFront"];
+      const cru = j[pe];
+      const noChao = cru.y > -ALTURA_DE_APOIO;
+      let saida: Vec2 = cru;
+      let peso = 0;
+
+      if (!podeApoiar || !noChao) {
+        if (st.modo === "plantado" || st.modo === "passo") {
+          st.modo = "soltando";
+          st.de = { ...st.ultimo };
+          st.ini = f;
+        }
+        if (st.modo === "soltando") {
+          const s = (f - st.ini) / QUADROS_DE_SOLTURA;
+          if (s >= 1) {
+            st.modo = "livre";
+          } else {
+            const e = suave(s);
+            saida = {
+              x: st.de.x + (cru.x - st.de.x) * e,
+              y: st.de.y + (cru.y - st.de.y) * e,
+            };
+            peso = 1;
+          }
+        }
+        // pe livre nunca atravessa o chao: a pose misturada pode passar o
+        // pe por baixo da linha no meio de uma transicao (medido: 16 unidades
+        // abaixo no recolher do chute giratorio)
+        if (peso === 0 && cru.y > 0 && !girando) {
+          saida = { x: cru.x, y: 0 };
+          peso = 1;
+        }
+      } else {
+        if (st.modo === "livre" || st.modo === "soltando") {
+          // planta onde o pe esta AGORA na tela, nao onde a pose queria: sem
+          // isso a soltura pela metade viraria um salto de posicao
+          st.px = st.modo === "soltando" ? st.ultimo.x : cru.x;
+          st.modo = "plantado";
+        }
+        if (st.modo === "plantado") {
+          const erro = cru.x - st.px;
+          const alcance = Math.hypot(st.px - j.hip.x, j.hip.y);
+          const precisa =
+            Math.abs(erro) > DISTANCIA_DO_PASSO || alcance > perna * ALCANCE_UTIL;
+          // um pe de cada vez: os dois no ar ao mesmo tempo e pulo, nao passo
+          if (precisa && outro.modo !== "passo") {
+            st.modo = "passo";
+            st.de = { x: st.px, y: 0 };
+            st.ini = f;
+            st.dur = Math.max(6, Math.min(12, Math.round(Math.abs(erro) / 14)));
+          } else {
+            saida = { x: st.px, y: 0 };
+            peso = 1;
+          }
+        }
+        if (st.modo === "passo") {
+          const s = Math.min(1, (f - st.ini) / st.dur);
+          const e = suave(s);
+          const altura = Math.min(46, Math.abs(cru.x - st.de.x) * 0.22 + 14);
+          saida = {
+            x: st.de.x + (cru.x - st.de.x) * e,
+            y: -Math.sin(Math.PI * s) * altura,
+          };
+          peso = 1;
+          if (s >= 1) {
+            st.modo = "plantado";
+            st.px = cru.x;
+            saida = { x: st.px, y: 0 };
+          }
+        }
+      }
+
+      // LIMITE DE VELOCIDADE DO PE PERTO DO CHAO. Transicao de pose (parado
+      // para corrida, fim de passo) podia levar o pe 40 a 70 unidades num
+      // quadro: o pe teleportava rente ao chao. Pe de verdade, perto do chao,
+      // anda no maximo o que um passo anda. Aqui ele chega no mesmo lugar,
+      // so que em alguns quadros.
+      if (
+        f > 0 &&
+        !c.noAr &&
+        !girando &&
+        saida.y > -ALTURA_DO_ESTALO &&
+        Math.abs(c.velocidade) <= VELOCIDADE_DE_ARRASTO
+      ) {
+        const dx = saida.x - st.ultimo.x;
+        const dy = saida.y - st.ultimo.y;
+        const d = Math.hypot(dx, dy);
+        if (d > PASSO_MAXIMO_POR_QUADRO) {
+          const k = PASSO_MAXIMO_POR_QUADRO / d;
+          // pe que precisa andar tanto esta DANDO UM PASSO: sai do chao. Preso
+          // na altura em que estava, ele deslizava rente ao chao.
+          saida = {
+            x: st.ultimo.x + dx * k,
+            y: Math.min(st.ultimo.y + dy * k, -ALTURA_DO_PASSINHO),
+          };
+          peso = 1;
+          if (st.modo === "plantado") st.px = saida.x;
+        }
+      }
+
+      st.ultimo = saida;
+      plano.alvo[pe].x[f] = saida.x;
+      plano.alvo[pe].y[f] = saida.y;
+      plano.alvo[pe].peso[f] = peso;
+    }
+  }
+
+  porLutador.set(id, plano);
+  return plano;
+};
+
+/**
+ * IK com entrada e saida EM ANGULO.
+ *
+ * mirarMembro mistura a pose e a solucao do IK por POSICAO de junta, e no meio
+ * do caminho isso corta o arco: medido no soco pesado, o punho mergulhava 160
+ * unidades entre dois quadros e subia de volta. Aqui o IK resolve inteiro e a
+ * entrada dele e feita pela mistura por angulo do rig: o braco GIRA ate a
+ * solucao, como todo o resto do corpo.
+ */
+const mirarPorAngulo = (
+  pose: Pose,
+  junta: JointName,
+  alvo: Vec2,
+  peso: number,
+): { pose: Pose; erro: number; alcancou: boolean } => {
+  const r = mirarMembro(pose, junta, alvo, 1);
+  if (peso >= 0.999) return r;
+  return { ...r, pose: misturar(pose, r.pose, peso) };
+};
+
+/** Corpo com os pes resolvidos, ainda sem a mira do golpe. */
+const corpoPlantado = (
+  timeline: Timeline,
+  id: FighterId,
+  frame: number,
+): Corpo => {
+  const eu = corpoBase(timeline, id, frame);
+  // na volta do giro nao ha IK de perna (ver `girando` no planejamento)
+  if (eu.giro < 0.75) return eu;
+  const plano = planejarPes(timeline, id);
+  const ultimo = timeline.durationInFrames + 1;
+  const f0 = Math.max(0, Math.min(ultimo, Math.floor(frame)));
+  const f1 = Math.min(ultimo, f0 + 1);
+  const k = Math.max(0, Math.min(1, frame - f0));
+
+  let pose = eu.pose;
+  for (const pe of PES) {
+    const a = plano.alvo[pe];
+    const peso = a.peso[f0] + (a.peso[f1] - a.peso[f0]) * k;
+    if (peso <= 0.001) continue;
+    const alvo = {
+      x: a.x[f0] + (a.x[f1] - a.x[f0]) * k,
+      y: a.y[f0] + (a.y[f1] - a.y[f0]) * k,
+    };
+    const local = paraLocal(alvo, transformDoCorpo(eu));
+    pose = mirarPorAngulo(pose, pe, local, peso).pose;
+  }
+  return { ...eu, pose };
 };
 
 /** A mira ativa deste lutador neste quadro, se houver. */
@@ -305,14 +795,14 @@ export const corpoNoQuadro = (
   id: FighterId,
   frame: number,
 ): Corpo => {
-  const eu = corpoBase(timeline, id, frame);
+  const eu = corpoPlantado(timeline, id, frame);
   const aim = miraAtiva(timeline, id, frame);
   if (!aim) return eu;
 
   const peso = pesoDaMira(aim, frame);
   if (peso <= 0.001) return eu;
 
-  const alvo = corpoBase(timeline, aim.alvo, frame);
+  const alvo = corpoPlantado(timeline, aim.alvo, aim.congelarEm ?? frame);
   const noMundo = pontoDoAlvo(aim.ponto as PontoAlvo, juntasDoCorpo(alvo));
 
   // O ALVO DO IK E A SUPERFICIE DO CORPO, NAO O EIXO DA JUNTA.
@@ -332,12 +822,15 @@ export const corpoNoQuadro = (
   if (depois > 0) {
     const t = Math.min(1, depois / QUADROS_DO_AVANCO);
     // sobe rapido e volta: sin de meia volta
-    noMundo.x += Math.sin(t * Math.PI) * aim.avanco * aim.direcao;
+    const dir = aim.direcaoDoAvanco ?? { x: 1, y: 0 };
+    const k = Math.sin(t * Math.PI) * aim.avanco;
+    noMundo.x += k * dir.x * aim.direcao;
+    noMundo.y += k * dir.y;
   }
 
   const alvoLocal = paraLocal(noMundo, transformDoCorpo(eu));
 
-  const r = mirarMembro(eu.pose, aim.joint, alvoLocal, peso);
+  const r = mirarPorAngulo(eu.pose, aim.joint, alvoLocal, peso);
   return {
     ...eu,
     pose: r.pose,

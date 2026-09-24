@@ -82,15 +82,21 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     name: "uppercut",
     pose: "uppercut",
     windup: 16,
-    strike: 12,
+    strike: 14,
     recover: 24,
-    contactAt: 6,
+    // 8 e nao 6: golpe que lanca precisa de tempo para as pernas empurrarem
+    // antes do braco subir; em 5 quadros a corrente inteira cabia em dois
+    contactAt: 8,
     tier: "extreme",
     knockback: 520,
     hitStop: 6,
     contactJoint: "handFront",
     sound: "heavyHit",
     launches: true,
+    // curta distancia: o punho SOBE com o braco dobrado ate o queixo
+    extensao: 0.72,
+    // e continua subindo depois do contato
+    seguimento: { x: 0.35, y: -1 },
   }),
   kick: def({
     name: "kick",
@@ -182,7 +188,10 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     tier: "medium",
     knockback: 420,
     hitStop: 4,
-    contactJoint: "shoulderFront",
+    // o ANTEBRACO da frente lidera a investida, colado ao corpo. Era o ombro,
+    // que e raiz de cadeia: nao ha membro para a cinematica inversa mirar, e
+    // toda investida gerada errava o alvo por 90 a 136 unidades.
+    contactJoint: "elbowFront",
     sound: "whoosh",
   }),
   airAttack: def({
@@ -197,6 +206,9 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     hitStop: 4,
     contactJoint: "handFront",
     sound: "punch",
+    // no quadro do contato o pulo esta a 60% do tempo no ar: H = g T^2 / 8
+    // com T = 0,65 s (39 quadros) da 190, e 4H(0,6)(0,4) = 182 acima do apoio
+    elevacao: 182,
   }),
   diveAttack: def({
     name: "diveAttack",
@@ -211,6 +223,9 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     contactJoint: "footFront",
     sound: "heavyHit",
     cracksGround: true,
+    // no quadro do contato o pulo esta a 60% do tempo no ar: H = g T^2 / 8
+    // com T = 0,65 s (39 quadros) da 190, e 4H(0,6)(0,4) = 182 acima do apoio
+    elevacao: 182,
   }),
   special: def({
     name: "special",

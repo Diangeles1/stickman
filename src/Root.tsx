@@ -17,6 +17,8 @@ import {
 } from "./compositions/Prototype";
 import { PROTOTIPO } from "./data/fights/prototype";
 import { BENCHMARK } from "./data/fights/benchmark";
+import { BENCHMARK2 } from "./data/fights/benchmark2";
+import { LUTA_COMPLETA } from "./data/fights/luta-completa";
 import { gerarLuta } from "./data/gerador";
 import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
@@ -65,7 +67,10 @@ const POSES_REACAO: PoseName[] = [
   "advance",
   "retreat",
   "knockback",
+  "launched",
+  "groundHit",
   "downed",
+  "sitUp",
   "getUp",
 ];
 
@@ -123,6 +128,58 @@ export const RemotionRoot: React.FC = () => {
         width={BENCHMARK.width}
         height={BENCHMARK.height}
         defaultProps={{ spec: BENCHMARK, debug: false }}
+      />
+      {/*
+        O MESMO benchmark sem nada alem dos corpos: sem particulas, flash,
+        rastros, tremor, audio nem movimento de camera. E aqui que a animacao e
+        julgada; efeito so entra depois que esta versao convence.
+      */}
+      <Composition
+        id="Benchmark-SemEfeitos"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(BENCHMARK)}
+        fps={BENCHMARK.fps}
+        width={BENCHMARK.width}
+        height={BENCHMARK.height}
+        defaultProps={{ spec: BENCHMARK, semEfeitos: true }}
+      />
+      {/* A LUTA COMPLETA: abertura, trocas, aereo, escalada e finalizador */}
+      <Composition
+        id="LutaCompleta"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(LUTA_COMPLETA)}
+        fps={LUTA_COMPLETA.fps}
+        width={LUTA_COMPLETA.width}
+        height={LUTA_COMPLETA.height}
+        defaultProps={{ spec: LUTA_COMPLETA, debug: false }}
+      />
+      <Composition
+        id="LutaCompleta-SemEfeitos"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(LUTA_COMPLETA)}
+        fps={LUTA_COMPLETA.fps}
+        width={LUTA_COMPLETA.width}
+        height={LUTA_COMPLETA.height}
+        defaultProps={{ spec: LUTA_COMPLETA, semEfeitos: true }}
+      />
+      {/* BENCHMARK #2: combo encadeado, contra-ataque, esquiva e queda */}
+      <Composition
+        id="Benchmark2"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(BENCHMARK2)}
+        fps={BENCHMARK2.fps}
+        width={BENCHMARK2.width}
+        height={BENCHMARK2.height}
+        defaultProps={{ spec: BENCHMARK2, debug: false }}
+      />
+      <Composition
+        id="Benchmark2-SemEfeitos"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(BENCHMARK2)}
+        fps={BENCHMARK2.fps}
+        width={BENCHMARK2.width}
+        height={BENCHMARK2.height}
+        defaultProps={{ spec: BENCHMARK2, semEfeitos: true }}
       />
       <Composition
         id="Benchmark-Debug"

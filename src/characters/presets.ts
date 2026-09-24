@@ -51,7 +51,10 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     // diferenca para o vermelho e de matiz, nao de claridade.
     stroke: "#4a5170",
     auraColor: "#8fa2c8",
-    limbWidth: 98,
+    // 98 dava membros com 16% da altura do corpo: dois corpos encostados
+    // viravam uma mancha so, e o joelho e o cotovelo sumiam dentro do traco.
+    // Nesta espessura a silhueta le as articulacoes e o espaco entre os dois.
+    limbWidth: 62,
     headRadius: 85,
     scale: 1,
     profile: { speed: 0.9, power: 0.45 },
@@ -60,7 +63,8 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     id: "red",
     stroke: "#d6403a",
     auraColor: "#e2483c",
-    limbWidth: 103,
+    // um pouco mais grosso que o preto: o pesado tambem se le no traco
+    limbWidth: 68,
     headRadius: 88,
     scale: 1.06,
     profile: { speed: 0.42, power: 0.95 },

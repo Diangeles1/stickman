@@ -64,10 +64,13 @@ const RECUO_DA_CARGA = 46;
 
 /**
  * Quadros que o alvo leva para entrar na pose de reacao depois do contato.
- * Dois: reacao a impacto e estalo. Mais que isso vira transicao, e transicao
- * le como "se moveu", nao como "levou".
+ *
+ * Eram dois, e em dois quadros o corpo inteiro trocava de pose junto: nao
+ * havia onde a onda do impacto (cabeca, depois tronco, depois pernas)
+ * acontecer. Com cinco, a REGIAO atingida ainda reage no primeiro quadro (a
+ * janela dela e curta e a curva e de estalo), e o resto do corpo chega depois.
  */
-const QUADROS_DA_REACAO = 2;
+const QUADROS_DA_REACAO = 5;
 
 /**
  * Quadros que qualquer troca de pose IMPORTANTE ganha para acontecer.
@@ -97,6 +100,39 @@ const DISTANCIA_NEUTRA = 420;
  */
 export const ALTURA_QUADRIL = -ALTURA_DO_ESQUELETO;
 
+/** Golpes que acontecem no ar: o atacante pula para golpear. */
+const GOLPES_AEREOS = new Set<PoseName>(["airAttack", "diveAttack"]);
+/**
+ * Tempo no ar do pulo de ataque, em quadros. 0,65s da ~190 unidades de
+ * altura com a gravidade do mundo: o golpe vem DE CIMA (com 0,55s o pulo
+ * mal tirava a cabeca da altura da do outro), e o membro ainda alcanca o
+ * peito descendo.
+ */
+const TEMPO_NO_AR = s(0.65);
+
+/**
+ * PERSONALIDADE NA FISICA: o mesmo golpe, com outro corpo.
+ *
+ * A diferenca entre os lutadores era so a duracao dos golpes e a forca do
+ * empurrao. Aqui ela entra na FORMA do movimento, derivada do perfil de cada
+ * um (presets): o forte joga mais peso para tras antes de bater, carrega mais
+ * fundo, continua girando mais depois do contato e demora mais para se
+ * recompor; o rapido faz tudo mais compacto e volta logo para a guarda.
+ */
+const perfilDeMovimento = (quem: FighterId) => {
+  const { speed, power } = PRESETS[quem].profile;
+  return {
+    /** fracao do recuo da carga que o peso vai para tras na antecipacao */
+    recuoDoPeso: 0.2 + 0.35 * power,
+    /** exagero da carga no fim da preparacao (1 = pose escrita) */
+    carga: 1.04 + 0.16 * power,
+    /** o quanto o corpo continua depois do contato (0 a ~1,2) */
+    seguimento: 0.4 + 0.8 * power,
+    /** fracao da recuperacao gasta para recolher o membro */
+    recolher: 0.22 + 0.4 * (1 - speed),
+  };
+};
+
 type Estado = {
   x: number;
   pose: PoseName;
@@ -125,9 +161,19 @@ export const compilar = (spec: FightSpec): Timeline => {
 
   let cursor = 0;
 
-  const chave = (quem: FighterId, frame: number) => {
+  const chave = (quem: FighterId, frame: number, exagero?: number) => {
     const e = estado[quem];
-    tracks[quem].keys.push({ frame, x: e.x, pose: e.pose, airborne: e.airborne });
+    // Chave fora de ordem e invisivel no TypeScript e apaga um trecho inteiro
+    // na amostragem (ja sumiu com um knockback assim). Nunca antes da ultima.
+    const keys = tracks[quem].keys;
+    if (keys.length > 0) frame = Math.max(frame, keys[keys.length - 1].frame);
+    tracks[quem].keys.push({
+      frame,
+      x: e.x,
+      pose: e.pose,
+      airborne: e.airborne,
+      ...(exagero !== undefined && exagero !== 1 ? { exagero } : {}),
+    });
   };
 
   // ambos comecam registrados, senao a interpolacao nao tem de onde partir
@@ -158,10 +204,26 @@ export const compilar = (spec: FightSpec): Timeline => {
     const destino = estado[alvo].x + lado * distanciaAlvo;
     const distancia = Math.abs(destino - estado[atacante].x);
 
-    // ja esta no alcance: nao gasta tempo
-    if (distancia < distanciaAlvo * 0.2) {
+    // ja esta no lugar
+    if (distancia < 2) {
       estado[atacante].x = destino;
       return 0;
+    }
+
+    // DISTANCIA CURTA: um passo de ajuste, nao uma corrida. A versao anterior
+    // teleportava ate 20% da distancia de combate (medido: 48 unidades num
+    // quadro) e, acima disso, disparava uma corrida de poucos quadros a quase
+    // o dobro da velocidade de corrida: o lutador parava, arrancava de novo e
+    // tombava 45 graus para frente. Ajuste curto e um passo, e os pes
+    // plantados fazem o passo acontecer.
+    if (distancia < 170) {
+      const quadrosDoPasso = Math.max(s(0.16), Math.round(distancia / 11));
+      chave(atacante, cursor);
+      estado[atacante].pose = "advance";
+      estado[atacante].x = destino;
+      chave(atacante, cursor + quadrosDoPasso);
+      cursor += quadrosDoPasso;
+      return quadrosDoPasso;
     }
 
     const quadros = Math.max(s(0.12), Math.round(distancia / VELOCIDADE_DE_CORRIDA));
@@ -181,8 +243,11 @@ export const compilar = (spec: FightSpec): Timeline => {
 
     estado[atacante].pose = distancia > distanciaAlvo * 1.5 ? "sprint1" : "run1";
     chave(atacante, cursor + 1);
-    // chega a 88% do caminho em velocidade de corrida
-    estado[atacante].x = estado[atacante].x + (destino - estado[atacante].x) * 0.88;
+    // O trecho de corrida cobre a fracao do caminho PROPORCIONAL ao tempo
+    // dele (um pouco mais, porque a travagem e mais lenta). Fixo em 88%, a
+    // corrida curta saia a 1,5 vez a velocidade de corrida.
+    const fracao = Math.min(0.88, (corrida / quadros) * 1.15);
+    estado[atacante].x = estado[atacante].x + (destino - estado[atacante].x) * fracao;
     chave(atacante, cursor + corrida);
 
     // ---- DESACELERACAO -----------------------------------------------------
@@ -231,9 +296,44 @@ export const compilar = (spec: FightSpec): Timeline => {
       esquivado?: boolean;
       finalizador?: boolean;
       ponto?: PontoAlvo;
+      /**
+       * Golpe que VEM de outro no mesmo combo: a recuperacao do anterior e a
+       * preparacao deste. Sem peso para tras e com metade da carga.
+       */
+      encadeado?: boolean;
+      /**
+       * Outro golpe do combo vem depois deste: ninguem se afasta, quem
+       * defende segura a guarda, e a volta e curta, porque ela ja e a
+       * preparacao do proximo.
+       */
+      continua?: boolean;
+      /**
+       * O mesmo atacante golpeia de novo em seguida (o beat seguinte e dele):
+       * ele NAO volta para a distancia neutra. Um golpe que passou vira o
+       * embalo do proximo; recuar entre os dois jogava fora essa logica.
+       */
+      mantemPressao?: boolean;
     } = {},
   ) => {
-    const { windup, strike, recover, contactAt, def } = duracaoDe(atacante, move);
+    const duracoes = duracaoDe(atacante, move);
+    const { recover, contactAt, def } = duracoes;
+    const aereo = GOLPES_AEREOS.has(def.pose);
+    // o golpe aereo dura o pulo inteiro, nao o disparo de um golpe no chao
+    const strike = aereo
+      ? Math.max(duracoes.strike, 3 + TEMPO_NO_AR + 3)
+      : duracoes.strike;
+    // COMBO QUE FLUI: o golpe encadeado nao volta a guarda para carregar do
+    // zero. Soco, guarda, soco, guarda e o que a diretiva chama de combo
+    // robotico; aqui o braco que volta de um golpe ja e a carga do outro.
+    // O FINALIZADOR carrega quase o dobro: e o golpe mais importante da luta,
+    // e a preparacao longa (com a camera lenta que o acompanha) e o que faz
+    // o espectador saber que ele vem. Com a carga de um golpe comum, o giro
+    // do preto cabia em 7 quadros e o finalizador parecia um chute qualquer.
+    const windup = opcoes.encadeado
+      ? Math.max(3, Math.round(duracoes.windup * 0.45))
+      : opcoes.finalizador
+        ? Math.round(duracoes.windup * 1.8)
+        : duracoes.windup;
 
     // O ponto atingido define a distancia E a reacao. Sem isso o golpe era
     // animado contra uma distancia fixa que o membro nao alcancava.
@@ -244,39 +344,61 @@ export const compilar = (spec: FightSpec): Timeline => {
     // aplicado como atribuicao no MESMO quadro: 46 unidades de teleporte, que
     // a derivada da amostragem lia como velocidade enorme e acendia linhas de
     // velocidade em cima do personagem parado.
-    aproximar(atacante, alvo, distancia + RECUO_DA_CARGA);
+    if (opcoes.encadeado) {
+      // No combo o ajuste de distancia acontece DENTRO da carga (a chave da
+      // carga leva o corpo ate la), e nao num passo separado: com um passo
+      // entre cada golpe, o lutador ia e voltava e tres socos levavam 1,2 s.
+      const ladoDoAtaque = estado[atacante].x <= estado[alvo].x ? -1 : 1;
+      // sem o passo inteiro de carga: o golpe encadeado sai de onde o
+      // anterior deixou o corpo, e so o ajuste de distancia entre um golpe e
+      // outro acontece aqui. Com o recuo inteiro, o lutador ia e voltava a
+      // cada soco do combo.
+      estado[atacante].x =
+        estado[alvo].x + ladoDoAtaque * (distancia + RECUO_DA_CARGA * 0.25);
+    } else {
+      aproximar(atacante, alvo, distancia + RECUO_DA_CARGA);
+    }
 
     // ---- 1. ANTECIPACAO ---------------------------------------------------
-    // o corpo recua um passo e CARREGA. O recuo e pequeno de proposito: o que
-    // vende o golpe nao e o recuo, e ele voltar para frente no disparo.
+    // Tres tempos, e e a ordem que um lutador segue:
+    //
+    //   a. o PESO VAI PARA TRAS: o corpo recua um pouco enquanto enrola
+    //      (carga). Antes o corpo andava para FRENTE durante a preparacao, ou
+    //      seja a antecipacao ia no mesmo sentido do golpe e nao antecipava
+    //      nada.
+    //   b. O PASSO: ainda enrolado, e carregando mais fundo (moving hold, a
+    //      pose nao congela), o corpo avanca e o pe da frente planta (ver pes
+    //      plantados). Quanto mais forte o lutador, mais fundo ele carrega.
+    //   c. o DISPARO (mais abaixo) e so a corrente: com o pe ja plantado, o
+    //      quadril gira, o tronco gira, o ombro vem, e o punho chega por
+    //      ultimo. Deslocando o corpo durante o disparo, a translacao
+    //      dominava a velocidade de todas as juntas e o golpe virava um bloco
+    //      empurrado para frente (medido com scripts/cadeia.mts).
     const lado: 1 | -1 = estado[atacante].x <= estado[alvo].x ? 1 : -1;
-    // ele JA esta na posicao carregada; o passo a frente acontece no disparo
-    const xNoContato = estado[atacante].x + lado * RECUO_DA_CARGA;
-    // pose de CARGA, nao guarda: e ela que cria o arco que o punho percorre.
+    const perfil = perfilDeMovimento(atacante);
+    const xNoContato =
+      estado[atacante].x + lado * RECUO_DA_CARGA * (opcoes.encadeado ? 0.25 : 1);
+    estado[atacante].pose = "coil";
+    if (!opcoes.encadeado) {
+      estado[atacante].x -= lado * RECUO_DA_CARGA * perfil.recuoDoPeso;
+    }
     // A chave sai alguns quadros DEPOIS do cursor: no mesmo quadro ela
     // colidia com a chave de chegada da aproximacao e virava corte seco.
-    estado[atacante].pose = "coil";
-    chave(atacante, cursor + QUADROS_DE_TRANSICAO);
-
-    // O PASSO A FRENTE TERMINA NO FIM DA PREPARACAO, nao no contato.
-    //
-    // E assim que um lutador soca: o pe planta primeiro, e so depois o braco
-    // dispara. Antes o deslocamento do corpo terminava junto com o golpe, e o
-    // efeito era medivel: scripts/cadeia.mts mostrava quadril, joelho, pe,
-    // pescoco e ombro atingindo a velocidade maxima NO MESMO QUADRO do punho,
-    // porque a velocidade de todas as juntas era dominada pela translacao do
-    // corpo inteiro. Corpo que acelera junto le como bloco, nao como corrente.
-    estado[atacante].x = xNoContato;
-    // segura a carga ate o fim da preparacao. SEM esta chave o braco ja
-    // comecava a se estender durante o windup, e o golpe nao tinha disparo.
-    chave(atacante, cursor + windup);
+    const cargaPronta =
+      cursor + Math.max(1, Math.min(windup - 1, Math.round(windup * 0.6)));
+    chave(atacante, cargaPronta);
+    // golpe AEREO: o corpo fica agachado onde esta; o avanco e o proprio pulo
+    if (!aereo) estado[atacante].x = xNoContato;
+    chave(atacante, cursor + windup, windup >= 3 ? perfil.carga : 1);
 
     // O ALVO ENTRA EM GUARDA. Nao e enfeite: distanciaDeCombate() mede o ponto
     // atingido NA POSE DE GUARDA. Se o alvo estivesse em "advance" (que e como
     // ele saia da aproximacao), o peito dele estaria noutro lugar e a conta da
     // distancia seria sobre um corpo que nao existe na tela. Medido: 76
     // unidades de erro so por causa disso.
-    if (estado[alvo].pose !== "guard" && !estado[alvo].airborne) {
+    // (no meio de um combo bloqueado ele JA esta defendendo: segura a defesa)
+    const segueDefendendo = opcoes.bloqueado && estado[alvo].pose === "block";
+    if (estado[alvo].pose !== "guard" && !estado[alvo].airborne && !segueDefendendo) {
       estado[alvo].pose = "guard";
       chave(alvo, cursor + Math.round(windup * 0.6));
     }
@@ -284,7 +406,18 @@ export const compilar = (spec: FightSpec): Timeline => {
       cameraKeys.push({
         frame: cursor,
         center: { x: (estado[atacante].x + estado[alvo].x) / 2, y: ALTURA_QUADRIL - 40 },
-        zoom: opcoes.finalizador ? 1.7 : 1.35,
+        // golpe que vai ser esquivado nao fecha tanto: o quadro precisa caber
+        // o corpo que SAI do caminho, senao a esquiva acontece fora da tela
+        // o finalizador fecha o MAXIMO que ainda cabe os dois: a 1.7 fixo a
+        // preparacao inteira acontecia com o alvo fora do quadro
+        zoom: opcoes.finalizador
+          ? Math.min(
+              1.7,
+              1080 / (Math.abs(estado[atacante].x - estado[alvo].x) + 380),
+            )
+          : opcoes.esquivado
+            ? 1.08
+            : 1.35,
         ease: windup,
       });
       if (opcoes.finalizador) {
@@ -308,27 +441,61 @@ export const compilar = (spec: FightSpec): Timeline => {
     //                                ^ extensao maxima EXATAMENTE no contato
     //
     // Era dai que vinham as 294 unidades que faltavam, e nao da distancia.
-    const frameContato = cursor + contactAt;
+    // GOLPE AEREO: agacha (a carga acima), DECOLA, golpeia ja descendo e
+    // pousa. O golpe acontece depois do topo do pulo: e a queda que da peso a
+    // ele. A altura sai do tempo no ar (ver alturaDoVoo).
+    let frameContato = cursor + contactAt;
+    let pouso = 0;
+    if (aereo) {
+      // decola AINDA CARREGADO (a pose de carga, no ar): o braco que vai
+      // golpear fica guardado ate o disparo. Com a pose de pulo (bracos para
+      // cima), o movimento mais rapido do golpe era o braco subindo na
+      // decolagem, e o soco em si saia mais lento que ela.
+      estado[atacante].pose = "coil";
+      estado[atacante].airborne = true;
+      chave(atacante, cursor + 3, perfil.carga);
+      frameContato = cursor + 3 + Math.round(TEMPO_NO_AR * 0.6);
+      pouso = cursor + 3 + TEMPO_NO_AR;
+    }
     const direcao = lado;
     estado[atacante].pose = def.pose;
-    // x nao muda aqui: o corpo ja chegou no fim da preparacao, e agora quem
-    // se move e o membro. E essa separacao que faz a cadeia se ler.
+    if (aereo) estado[atacante].x = xNoContato;
     chave(atacante, frameContato);
 
-    // ---- 3. CONTATO -------------------------------------------------------
-    // segura a extensao por alguns quadros. Sem isto o quadro seguinte ao
-    // contato ja estava voltando, e o impacto passava sem ser lido.
+    // ---- 3. CONTATO E FOLLOW-THROUGH -------------------------------------
+    // O golpe nao para no contato. O membro continua (a mira empurra a ponta
+    // alem do ponto, ver AimEvent.avanco) e o CORPO continua girando alem da
+    // pose do golpe: e a massa que nao para de uma vez. Quanto mais pesado o
+    // lutador, mais longe o corpo vai. Antes esta chave so segurava a pose, e
+    // o corpo parava no quadro do contato como se batesse numa parede.
+    //
+    // No golpe ESQUIVADO o corpo vai bem mais longe: nao havia nada para
+    // parar o golpe, e o atacante se desequilibra para frente. E essa
+    // abertura que da ao outro o contra-ataque.
     const parada = Math.max(1, Math.min(s(0.05), strike - contactAt - 1));
-    chave(atacante, frameContato + parada);
+    const alem = opcoes.esquivado ? 2.2 : 1;
+    estado[atacante].x += lado * RECUO_DA_CARGA * 0.2 * perfil.seguimento * alem;
+    chave(atacante, frameContato + parada, 1 + 0.18 * perfil.seguimento * alem);
+    if (aereo) {
+      // pousa um pouco a frente, agachado: o pouso absorve a queda
+      estado[atacante].pose = "land";
+      estado[atacante].airborne = false;
+      estado[atacante].x += lado * RECUO_DA_CARGA * 0.6;
+      chave(atacante, Math.max(pouso, frameContato + parada + 2));
+    }
 
     // ONDE O MEMBRO REALMENTE CHEGA. O flash, a onda e as particulas nascem
     // daqui, e nao de um deslocamento fixo em relacao ao alvo.
+    // Golpe BLOQUEADO encosta na guarda, nao no ponto mirado: o punho que ia
+    // na cabeca bate no antebraco que esta na frente dela.
+    const pontoTocado: PontoAlvo = opcoes.bloqueado ? "guarda" : ponto;
     const contato = pontoDeContato(
-      ponto,
+      pontoTocado,
       alvo,
       estado[alvo].x,
       // o alvo olha para o lado contrario ao do golpe
       (-direcao) as 1 | -1,
+      opcoes.bloqueado ? "block" : "guard",
     );
 
     // ---- MIRA ------------------------------------------------------------
@@ -343,7 +510,7 @@ export const compilar = (spec: FightSpec): Timeline => {
       who: atacante,
       joint: def.contactJoint,
       alvo,
-      ponto,
+      ponto: pontoTocado,
       contact: frameContato,
       // entra durante o disparo e sai depois de segurar o contato
       from: cursor,
@@ -351,6 +518,17 @@ export const compilar = (spec: FightSpec): Timeline => {
       direcao,
       // golpe mais pesado passa mais alem: e a massa do membro que continua
       avanco: def.tier === "extreme" ? 54 : def.tier === "medium" ? 34 : 20,
+      ...(def.seguimento
+        ? {
+            direcaoDoAvanco: {
+              x: def.seguimento.x / Math.hypot(def.seguimento.x, def.seguimento.y),
+              y: def.seguimento.y / Math.hypot(def.seguimento.x, def.seguimento.y),
+            },
+          }
+        : {}),
+      // na esquiva o alvo comeca a sair s(0.2) antes do contato (ver abaixo):
+      // a mira fica no lugar onde ele estava nesse instante
+      ...(opcoes.esquivado ? { congelarEm: frameContato - s(0.2) } : {}),
     });
 
     // ultimo quadro em que o ALVO recebe chave nesta sequencia. O compilador
@@ -395,8 +573,14 @@ export const compilar = (spec: FightSpec): Timeline => {
       // a camera fecha um pouco, sem tremor: nao houve impacto
       cameraKeys.push({
         frame: frameContato - s(0.08),
-        center: { x: contato.x, y: ALTURA_QUADRIL - 60 },
-        zoom: 1.22,
+        // entre os DOIS, depois da esquiva: centrada no ponto onde o alvo
+        // estava, a camera perdia justamente quem esquivou (ele sai 150
+        // unidades dali). A esquiva so se le se o corpo que saiu aparece.
+        center: {
+          x: (estado[atacante].x + estado[alvo].x) / 2,
+          y: ALTURA_QUADRIL - 60,
+        },
+        zoom: 1.2,
         ease: s(0.1),
       });
       cameraKeys.push({
@@ -422,6 +606,19 @@ export const compilar = (spec: FightSpec): Timeline => {
         sound: "block",
         victim: alvo,
       });
+      // A GUARDA ABSORVE, MAS O CORPO SENTE: o bloqueio empurra quem defende
+      // para tras, mais quanto mais forte for quem bateu. Sem isto o soco
+      // pesado batia na guarda como numa parede, e a forca dele sumia.
+      chave(alvo, frameContato);
+      estado[alvo].x +=
+        direcao * (30 + 60 * PRESETS[atacante].profile.power);
+      chave(alvo, frameContato + s(0.12));
+      fimDaReacao = frameContato + s(0.12);
+      if (!opcoes.continua) {
+        estado[alvo].pose = "guard";
+        chave(alvo, frameContato + s(0.4));
+        fimDaReacao = frameContato + s(0.4);
+      }
     } else {
       impacts.push({
         frame: frameContato,
@@ -458,33 +655,39 @@ export const compilar = (spec: FightSpec): Timeline => {
       chave(alvo, frameContato);
 
       // FASE 1 - ABSORCAO. O corpo dobra em torno do golpe e JA comeca a ser
-      // deslocado: o impulso age no contato, nao depois dele. Dois quadros com
-      // curva de estalo (ver curvaPara): reacao a impacto nao e transicao.
+      // deslocado: o impulso age no contato, nao depois dele. A regiao
+      // atingida reage no primeiro quadro (a cabeca que leva o soco comeca a
+      // chicotear no quadro do contato) e o resto do corpo chega em seguida,
+      // na ordem da regiao (ver ATRASO_REACAO_*). Com dois quadros para tudo,
+      // o corpo inteiro trocava de pose junto e a onda do impacto nao existia.
+      const f1 = frameContato + QUADROS_DA_REACAO;
+      const f2 = frameContato + s(0.16);
+      const f3 = frameContato + s(0.2);
+      const fim = Math.max(f3 + 4, frameContato + voo);
       estado[alvo].pose = POSE_DA_REACAO[REACAO_DO_PONTO[ponto]];
       estado[alvo].x = xAntes + direcao * empurrao * 0.1;
-      chave(alvo, frameContato + QUADROS_DA_REACAO);
+      chave(alvo, f1);
 
       // FASE 2 - o corpo continua dobrado enquanto escorrega. E o que separa
       // "sentiu o golpe" de "foi empurrado": ele sente E anda ao mesmo tempo.
       estado[alvo].x = xAntes + direcao * empurrao * 0.34;
-      chave(alvo, frameContato + s(0.1));
+      chave(alvo, f2);
 
       // FASE 3 - DESLOCAMENTO. Agora sim a pose de empurrado, com o resto do
       // caminho. A curva saidaRapida da a desaceleracao de corpo com massa.
       //
       // A chave entra no INICIO do deslocamento, e isso importa muito no golpe
-      // que LANCA. Antes ela era escrita so em frameContato + voo, ou seja no
-      // fim: o corpo percorria os 637 unidades do voo DESLIZANDO NO CHAO em
-      // pose de reacao, e virava "no ar" apenas nos ultimos 3 quadros, onde
-      // entao pulava 477 unidades de uma vez. O golpe que lanca nao lancava.
-      estado[alvo].pose = voa ? "airborne" : "knockback";
+      // que LANCA: escrita so no fim, o corpo percorria o voo DESLIZANDO NO
+      // CHAO e virava "no ar" nos ultimos quadros. No voo a pose e a de corpo
+      // LANCADO, dobrado em "C" com os membros atrasados pela inercia.
+      estado[alvo].pose = voa ? "launched" : "knockback";
       estado[alvo].airborne = voa;
-      chave(alvo, frameContato + s(0.13));
+      chave(alvo, f3);
 
       estado[alvo].x = xAntes + direcao * empurrao;
-      chave(alvo, frameContato + voo);
-      fimDaReacao = frameContato + voo;
-      fimDoDeslocamento = frameContato + voo;
+      chave(alvo, fim);
+      fimDaReacao = fim;
+      fimDoDeslocamento = fim;
 
       // FASE 4 - FREADA. Ele planta o pe de tras e para de deslizar. Antes o
       // corpo empurrado voltava direto para a guarda, o que le como
@@ -493,31 +696,27 @@ export const compilar = (spec: FightSpec): Timeline => {
         estado[alvo].pose = "stagger";
         // escorrega um pouco mais enquanto freia: a freada tem custo
         estado[alvo].x = xAntes + direcao * empurrao * 1.08;
-        chave(alvo, frameContato + voo + s(0.13));
+        chave(alvo, fim + s(0.13));
         // segura a freada: o corpo respira antes de voltar a guarda
-        chave(alvo, frameContato + voo + s(0.3));
-        fimDaReacao = frameContato + voo + s(0.3);
+        chave(alvo, fim + s(0.3));
+        fimDaReacao = fim + s(0.3);
       }
 
       if (voa) {
-        // POUSO EM QUATRO TEMPOS. Trocar direto para "downed" fazia o corpo
-        // mudar de pose de um quadro para o outro, o que le como troca de
-        // desenho e nao como queda.
+        // QUEDA: as costas batem, o corpo desliza deitado e para.
+        //
+        // A sequencia anterior (pousa de pe, agacha, levanta de novo, deita)
+        // fazia o corpo lancado de costas aterrissar EM PE, o que nenhum corpo
+        // arremessado faz, e ainda ficar de pe por um instante antes de deitar.
         estado[alvo].airborne = false;
-        estado[alvo].pose = "land";          // 1. toca o chao
-        chave(alvo, frameContato + voo + s(0.05));
+        estado[alvo].pose = "groundHit"; // 1. costas e quadril no chao, pernas no ar
+        estado[alvo].x += direcao * empurrao * 0.06;
+        chave(alvo, fim + 2);
 
-        estado[alvo].pose = "squash";        // 2. o corpo comprime
-        estado[alvo].x += direcao * empurrao * 0.1;
-        chave(alvo, frameContato + voo + s(0.14));
-
-        estado[alvo].pose = "land";          // 3. quique curto de volta
-        chave(alvo, frameContato + voo + s(0.24));
-
-        estado[alvo].pose = "downed";        // 4. acomoda no chao
-        estado[alvo].x += direcao * empurrao * 0.05;
-        chave(alvo, frameContato + voo + s(0.46));
-        fimDaReacao = frameContato + voo + s(0.46);
+        estado[alvo].pose = "downed"; // 2. desliza deitado, perdendo velocidade
+        estado[alvo].x += direcao * empurrao * 0.14;
+        chave(alvo, fim + 2 + s(0.32));
+        fimDaReacao = fim + 2 + s(0.32);
       }
 
       // ==== CAMERA DO GOLPE ================================================
@@ -553,7 +752,9 @@ export const compilar = (spec: FightSpec): Timeline => {
         cameraKeys.push({
           frame: frameContato + Math.round(strike * 0.8),
           center: { x: 0, y: ALTURA_QUADRIL - 80 },
-          zoom: 0.78,
+          // 0.82 e o menor zoom em que o corpo ainda ocupa 25% da altura da
+          // tela (a 0.78 caia para 24%, o piso da diretiva)
+          zoom: 0.82,
           ease: Math.round(strike * 1.6),
           follow: alvo,
         });
@@ -578,8 +779,8 @@ export const compilar = (spec: FightSpec): Timeline => {
     // braco de manequim. Agora o corpo recua junto com o braco: e a
     // continuacao do passo que ele deu para golpear.
     estado[atacante].pose = "guard";
-    estado[atacante].x -= lado * RECUO_DA_CARGA * 0.55;
-    chave(atacante, cursor);
+    // no meio do combo o corpo NAO recua: o proximo golpe sai daqui
+    if (!opcoes.continua) estado[atacante].x -= lado * RECUO_DA_CARGA * 0.55;
 
     // ---- QUEM LANCA ANDA ATRAS ---------------------------------------------
     // Sem isto os dois terminam o golpe a 900 unidades de distancia, o plano
@@ -588,25 +789,67 @@ export const compilar = (spec: FightSpec): Timeline => {
     //
     // Nao e concessao a camera, e o que um lutador faz: quem acerta um golpe
     // que joga o outro longe avanca atras dele, nao fica parado olhando.
-    let ultimaDoAtacante = cursor;
-    if (!opcoes.bloqueado && !opcoes.esquivado && fimDaReacao > cursor + s(0.25)) {
-      const destinoFinal = estado[alvo].x - lado * DISTANCIA_NEUTRA;
+    const destinoFinal = estado[alvo].x - lado * DISTANCIA_NEUTRA;
+    const vaiSeguir =
+      !opcoes.bloqueado &&
+      !opcoes.esquivado &&
+      fimDaReacao > cursor + s(0.25) &&
       // so avanca, nunca recua: o alvo pode ter caido perto
-      if ((destinoFinal - estado[atacante].x) * lado > 0) {
-        // Ele CHEGA junto com o pouso, nao depois dele. Terminando a caminhada
-        // em fimDaReacao (que inclui o tempo de acomodar no chao) ele ainda
-        // estava a caminho no quadro do toque, e a auditoria de camera pegou
-        // exatamente um quadro cortado ali: separacao 627 contra 620 que o
-        // piso de zoom cabe. Seguir o proprio golpe e chegar com ele.
-        const chegada = Math.min(fimDaReacao, fimDoDeslocamento + s(0.12));
-        estado[atacante].pose = "walk1";
-        chave(atacante, cursor + QUADROS_DE_TRANSICAO);
-        estado[atacante].x = destinoFinal;
-        chave(atacante, chegada);
+      (destinoFinal - estado[atacante].x) * lado > 0;
+
+    // RECUPERACAO: o membro volta, o tronco volta, o peso se acomoda (a volta
+    // para a guarda passa um pouco do ponto e assenta, ver acomodar). Leva
+    // uma fracao da recuperacao que depende do lutador: o rapido recolhe em
+    // poucos quadros, o pesado demora. Antes o membro que levou 10 quadros
+    // para ir voltava em 3, e recolher de estalo le como elastico.
+    const retorno = opcoes.continua
+      ? cursor + Math.max(2, Math.round(recover * 0.12))
+      : cursor +
+        Math.max(3, Math.round(recover * perfil.recolher * (opcoes.esquivado ? 1.5 : 1)));
+    // (quem vai seguir o alvo recolhe o membro JA ANDANDO, ver abaixo)
+    if (!vaiSeguir) chave(atacante, retorno);
+    let ultimaDoAtacante = retorno;
+
+    // DISTANCIA DE NOVO. Depois de uma troca sem knockback (golpe esquivado ou
+    // bloqueado) os dois ficavam na distancia do golpe, com os corpos um
+    // dentro do outro, e as trocas seguintes aconteciam nesse emaranhado.
+    // Quem atacou sai para a distancia neutra: e o que devolve a leitura das
+    // duas silhuetas e da ao proximo golpe espaco para ter aproximacao.
+    if (
+      (opcoes.bloqueado || opcoes.esquivado) &&
+      !opcoes.continua &&
+      !opcoes.mantemPressao
+    ) {
+      const neutro = estado[alvo].x - lado * DISTANCIA_NEUTRA * 0.9;
+      if ((estado[atacante].x - neutro) * lado > 0) {
+        estado[atacante].pose = "retreat";
+        estado[atacante].x = neutro;
+        const passoAtras =
+          retorno + Math.max(s(0.22), Math.round(recover * 0.5));
+        chave(atacante, passoAtras);
         estado[atacante].pose = "guard";
-        ultimaDoAtacante = chegada + s(0.12);
+        ultimaDoAtacante = passoAtras + s(0.1);
         chave(atacante, ultimaDoAtacante);
       }
+    }
+
+    if (vaiSeguir) {
+      // Ele CHEGA junto com o pouso, nao depois dele: seguir o proprio golpe
+      // e chegar com ele. O membro recolhe no caminho para o passo (a perna
+      // do chute desce e os pes plantados cuidam do apoio). Esperando se
+      // recompor para so entao andar, o alvo empurrado ja estava 600
+      // unidades longe e a camera perdia um dos dois em todo knockback.
+      const chegada = Math.max(
+        cursor + QUADROS_DE_TRANSICAO + s(0.2),
+        Math.min(fimDaReacao, fimDoDeslocamento + s(0.12)),
+      );
+      estado[atacante].pose = "walk1";
+      chave(atacante, cursor + QUADROS_DE_TRANSICAO);
+      estado[atacante].x = destinoFinal;
+      chave(atacante, chegada);
+      estado[atacante].pose = "guard";
+      ultimaDoAtacante = chegada + s(0.12);
+      chave(atacante, ultimaDoAtacante);
     }
 
     // O alvo so volta a guarda DEPOIS que a reacao termina. A versao anterior
@@ -624,11 +867,21 @@ export const compilar = (spec: FightSpec): Timeline => {
 
     // o cursor nao pode terminar antes da ultima chave escrita, senao o
     // proximo beat escreve no passado
-    cursor = Math.max(cursor + recover, voltaDoAlvo, ultimaDoAtacante + 1);
+    cursor = opcoes.continua
+      ? Math.max(retorno, fimDaReacao) + 1
+      : Math.max(cursor + recover, voltaDoAlvo, ultimaDoAtacante + 1);
   };
 
-  for (const beat of spec.beats) {
+  for (let indice = 0; indice < spec.beats.length; indice++) {
+    const beat = spec.beats[indice];
     const inicio = cursor;
+    // o proximo beat e um golpe do MESMO atacante: ele mantem a pressao
+    const proxima = spec.beats[indice + 1];
+    const mantemPressao =
+      proxima !== undefined &&
+      "attacker" in proxima &&
+      "attacker" in beat &&
+      proxima.attacker === beat.attacker;
 
     switch (beat.type) {
       case "approach": {
@@ -638,8 +891,15 @@ export const compilar = (spec: FightSpec): Timeline => {
         chave(beat.who, cursor);
         e.pose = "run1";
         chave(beat.who, cursor + QUADROS_DE_TRANSICAO);
-        e.x = beat.toX;
+        // corre ate perto e FREIA nos ultimos quadros, em pose de passo: sem
+        // isso ele chegava em velocidade de corrida e parava de um quadro para
+        // o outro, ainda com a perna no meio da passada
+        const inicioDoApproach = e.x;
+        e.x = inicioDoApproach + (beat.toX - inicioDoApproach) * 0.9;
         e.pose = "run2";
+        chave(beat.who, cursor + Math.round(beat.duration * 0.72));
+        e.x = beat.toX;
+        e.pose = "advance";
         chave(beat.who, cursor + beat.duration);
         // o oponente tambem se move, senao um corre e o outro fica plantado
         const outro = oposto(beat.who);
@@ -670,6 +930,7 @@ export const compilar = (spec: FightSpec): Timeline => {
         golpear(beat.attacker, beat.target, beat.move, {
           bloqueado: true,
           ponto: beat.targetPoint,
+          mantemPressao,
         });
         break;
 
@@ -677,6 +938,7 @@ export const compilar = (spec: FightSpec): Timeline => {
         golpear(beat.attacker, beat.target, beat.move, {
           esquivado: true,
           ponto: beat.targetPoint,
+          mantemPressao,
         });
         break;
 
@@ -685,7 +947,14 @@ export const compilar = (spec: FightSpec): Timeline => {
         // cada golpe), que e o que o briefing pede
         beat.moves.forEach((move, i) => {
           const ultimo = i === beat.moves.length - 1;
-          golpear(beat.attacker, beat.target, move, { bloqueado: !ultimo });
+          golpear(beat.attacker, beat.target, move, {
+            // por padrao so o ultimo passa pela guarda; com final "blocked"
+            // o defensor segura o combo inteiro
+            bloqueado: !ultimo || beat.final === "blocked",
+            encadeado: i > 0,
+            continua: !ultimo,
+            ponto: beat.targetPoint,
+          });
         });
         break;
       }
@@ -773,8 +1042,13 @@ export const compilar = (spec: FightSpec): Timeline => {
         // queda que nunca aconteceu.
         const caido = estado[beat.who].pose === "downed";
         if (caido) {
+          // tres tempos: senta apoiado na mao, ajoelha, fica de pe. Cada um
+          // e uma pose que o corpo consegue sustentar, e o peso sobe em
+          // etapas; direto de deitado para ajoelhado o corpo girava no ar
+          estado[beat.who].pose = "sitUp";
+          chave(beat.who, cursor + Math.round(beat.duration * 0.3));
           estado[beat.who].pose = "getUp";
-          chave(beat.who, cursor + Math.round(beat.duration * 0.45));
+          chave(beat.who, cursor + Math.round(beat.duration * 0.62));
         } else {
           // quem esta de pe apenas se recompoe: segura a pose atual um
           // instante e volta a guarda. E um respiro, nao uma queda.

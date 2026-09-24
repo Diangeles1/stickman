@@ -19,6 +19,8 @@ import { ATAQUES } from "../src/attacks/registry";
 import { folgaDesejada, pontoDoAlvo, type PontoAlvo } from "../src/core/contact";
 import { compilar } from "../src/core/timeline";
 import { BENCHMARK } from "../src/data/fights/benchmark";
+import { BENCHMARK2 } from "../src/data/fights/benchmark2";
+import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
 import { gerarLuta } from "../src/data/gerador";
 import { UM_SOCO } from "../src/data/fights/um-soco";
 import type { FighterId, JointName } from "../src/core/types";
@@ -43,7 +45,11 @@ const qual = process.argv[2] ?? "benchmark";
  */
 const spec = qual.startsWith("gerada:")
   ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
-  : qual === "um-soco"
+  : qual === "completa"
+    ? LUTA_COMPLETA
+    : qual === "benchmark2"
+    ? BENCHMARK2
+    : qual === "um-soco"
     ? UM_SOCO
     : BENCHMARK;
 const t = compilar(spec);
@@ -66,10 +72,14 @@ const medir = (
   const p = juntasDoCorpo(a)[junta];
   const q = pontoDoAlvo(ponto, juntasDoCorpo(b));
   const folga = folgaDesejada(quem, alvoId);
+  // de que lado o golpe vem: a folga fica ENTRE os dois, entao o sinal dela
+  // depende de quem esta a esquerda. Com o sinal fixo, todo golpe da direita
+  // para a esquerda era reprovado com o dobro da folga de erro.
+  const direcao = Math.sign(b.x - a.x) || 1;
   return {
     dist: Math.hypot(q.x - p.x, q.y - p.y),
     // erro contra a superficie: dx deveria valer a folga, dy deveria ser zero
-    erro: Math.hypot(q.x - p.x - folga, q.y - p.y),
+    erro: Math.hypot(q.x - p.x - folga * direcao, q.y - p.y),
     dx: q.x - p.x,
     dy: q.y - p.y,
     separacao: Math.abs(a.x - b.x),

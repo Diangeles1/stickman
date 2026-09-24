@@ -18,6 +18,8 @@ import { corpoNoQuadro, juntasDoCorpo } from "../src/animation/corpo";
 import { CADEIA_DO_MEMBRO } from "../src/characters/skeleton";
 import { compilar } from "../src/core/timeline";
 import { BENCHMARK } from "../src/data/fights/benchmark";
+import { BENCHMARK2 } from "../src/data/fights/benchmark2";
+import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
 import { gerarLuta } from "../src/data/gerador";
 import { UM_SOCO } from "../src/data/fights/um-soco";
 import type { FighterId, JointName } from "../src/core/types";
@@ -47,7 +49,11 @@ const qual = process.argv[2] ?? "benchmark";
  */
 const spec = qual.startsWith("gerada:")
   ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
-  : qual === "um-soco"
+  : qual === "completa"
+    ? LUTA_COMPLETA
+    : qual === "benchmark2"
+    ? BENCHMARK2
+    : qual === "um-soco"
     ? UM_SOCO
     : BENCHMARK;
 const t = compilar(spec);
@@ -113,7 +119,15 @@ for (const mira of t.aims) {
   const ordemOk =
     quadril.v < MOVEU || ponta.v < MOVEU || ponta.frame >= quadril.frame;
 
-  const bloco = unicos.size <= 2 || espalhamento <= 2;
+  // Bloco = no maximo dois picos distintos, ou todos dentro de um quadro.
+  //
+  // Antes era "espalhamento <= 2", escrito quando os disparos tinham 8 a 10
+  // quadros. O jab do lutador rapido tem 5 quadros (83 ms), e dentro dele a
+  // corrente cabe em tres quadros consecutivos: quadril e tronco, cotovelo,
+  // punho. Exigir mais que isso reprovava a resolucao do video, nao o corpo.
+  // O que continua reprovado e o que importa: picos coincidentes e cadeia
+  // invertida (abaixo).
+  const bloco = unicos.size <= 2 || espalhamento < 2;
   if (bloco || !ordemOk) blocos++;
   console.log(
     `  picos distintos: ${unicos.size}/${CADEIA.length}, ` +

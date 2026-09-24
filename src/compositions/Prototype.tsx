@@ -23,6 +23,12 @@ export type PrototypeProps = {
    */
   spec?: FightSpec;
   debug?: boolean;
+  /**
+   * Desliga TUDO que nao e o corpo: particulas, flash, ondas, rastros, aura,
+   * tremor e movimentos de camera (fica um plano de dois neutro). E o modo de
+   * julgar a animacao: se a luta nao convence assim, efeito nenhum salva.
+   */
+  semEfeitos?: boolean;
   /** usadas pela composicao gerada; o spec chega pronto via calculateMetadata */
   seed?: number;
   segundos?: number;
@@ -31,6 +37,7 @@ export type PrototypeProps = {
 export const Prototype: React.FC<PrototypeProps> = ({
   spec,
   debug = false,
+  semEfeitos = false,
   seed = 1,
   segundos = 30,
 }) => {
@@ -42,8 +49,8 @@ export const Prototype: React.FC<PrototypeProps> = ({
   const timeline = React.useMemo(() => compilar(usado), [usado]);
   return (
     <>
-      <FightScene timeline={timeline} debug={debug} />
-      <FightAudio timeline={timeline} />
+      <FightScene timeline={timeline} debug={debug} semEfeitos={semEfeitos} />
+      {semEfeitos ? null : <FightAudio timeline={timeline} />}
     </>
   );
 };

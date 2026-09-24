@@ -17,11 +17,26 @@ import { POSES } from "../characters/poses";
 import {
   ATRASO_DA_REACAO,
   ATRASO_DO_ATAQUE,
+  ATRASO_DO_CHUTE,
+  ATRASO_DO_UPPERCUT,
+  ATRASO_REACAO_CABECA,
+  ATRASO_REACAO_PEITO,
+  ATRASO_REACAO_PERNA,
+  ATRASO_REACAO_TRONCO,
+  ESCALA_POSE,
   completar,
+  exagerar,
   misturar,
   type PerfilDeAtraso,
 } from "../characters/skeleton";
-import type { FighterTrack, Pose, PoseName, Timeline } from "../core/types";
+import type {
+  FighterId,
+  FighterTrack,
+  JointName,
+  Pose,
+  PoseName,
+  Timeline,
+} from "../core/types";
 
 /** Aceleracao e desaceleracao suaves. Serve para quase tudo. */
 export const suave = (t: number): number => t * t * (3 - 2 * t);
@@ -31,6 +46,16 @@ export const saidaRapida = (t: number): number => 1 - (1 - t) * (1 - t);
 
 /** Comeca devagar e acelera: preparacao de golpe, queda. */
 export const entradaLenta = (t: number): number => t * t;
+
+/**
+ * DISPARO: quase parado no comeco, explosivo no fim.
+ *
+ * E a curva do golpe: pouca coisa acontece logo depois da carga, e a maior
+ * parte do caminho e percorrida nos ultimos quadros antes do contato. Com
+ * t^2 o pico de velocidade da ponta caia 2 quadros antes do contato; com t^3
+ * ele cai no contato, que e onde o golpe precisa ter a maior velocidade.
+ */
+export const disparo = (t: number): number => t * t * t;
 
 /**
  * Estalo: quase todo o movimento nos primeiros quadros.
@@ -155,39 +180,46 @@ export const inclinacaoDesenhada = (a: {
  */
 const atrasoPara = (destino: PoseName): PerfilDeAtraso | undefined => {
   switch (destino) {
-    // corpo atingido: a forca entra no ponto do golpe e se espalha
+    // corpo atingido: a forca entra no PONTO DO GOLPE e se espalha a partir
+    // dele (ver ATRASO_REACAO_*)
     case "hitHead":
+      return ATRASO_REACAO_CABECA;
     case "hitChest":
+      return ATRASO_REACAO_PEITO;
     case "hitBody":
+    case "launched":
+      return ATRASO_REACAO_TRONCO;
     case "hitLeg":
+      return ATRASO_REACAO_PERNA;
     case "knockback":
+    case "groundHit":
     case "stagger":
     case "downed":
     case "land":
     case "squash":
       return ATRASO_DA_REACAO;
-    // golpe e locomocao: o movimento nasce no chao e sobe
-    case "punch":
-    case "punchFast":
-    case "punchHeavy":
     case "uppercut":
+      return ATRASO_DO_UPPERCUT;
+    // chute: a mesma corrente, terminando no pe
     case "kick":
     case "kickLow":
     case "kickHigh":
     case "spinKick":
     case "knee":
+    case "diveAttack":
+      return ATRASO_DO_CHUTE;
+    // golpe e locomocao: o movimento nasce no chao e sobe
+    case "punch":
+    case "punchFast":
+    case "punchHeavy":
     case "elbow":
+    case "airAttack":
     case "charge":
     case "coil":
-    case "walk1":
-    case "walk2":
-    case "run1":
-    case "run2":
-    case "sprint1":
-    case "sprint2":
-    case "advance":
-    case "retreat":
       return ATRASO_DO_ATAQUE;
+    // Locomocao NAO usa a corrente do golpe. Com ela, o pe chegava no destino
+    // nos primeiros 36% da transicao: ao frear de uma corrida, o pe da frente
+    // saltava 78 unidades num quadro. Passo e passo; corrente e para golpe.
     default:
       return undefined;
   }
@@ -206,6 +238,8 @@ const curvaPara = (destino: PoseName): ((t: number) => number) => {
       return estalo;
     case "knockback":
     case "downed":
+    case "launched":
+    case "groundHit":
       return saidaRapida;
     // freada: chega devagar, porque ele esta GASTANDO energia para parar
     case "stagger":
@@ -224,10 +258,158 @@ const curvaPara = (destino: PoseName): ((t: number) => number) => {
     case "knee":
     case "elbow":
     case "charge":
-      return entradaLenta;
+      return disparo;
     default:
       return suave;
   }
+};
+
+/**
+ * Poses de GOLPE: o que o corpo faz ate elas e o disparo.
+ */
+const POSES_DE_GOLPE = new Set<PoseName>([
+  "punch", "punchFast", "punchHeavy", "uppercut",
+  "kick", "kickLow", "kickHigh", "spinKick",
+  "knee", "elbow", "charge", "airAttack", "diveAttack",
+]);
+
+/**
+ * Curva do DESLOCAMENTO do corpo (o x do quadril), que pode diferir da curva
+ * da pose.
+ *
+ * No golpe, o corpo avanca PRIMEIRO e para antes do contato: o pe planta, o
+ * quadril chega, e so entao o braco termina de disparar. Com a mesma curva da
+ * pose (que acelera ate o contato), o quadril chegava junto com o punho, e o
+ * soco era um bloco empurrado para frente.
+ */
+const curvaDoDeslocamento = (destino: PoseName): ((t: number) => number) =>
+  POSES_DE_GOLPE.has(destino)
+    ? (t: number) => suave(Math.min(1, t / 0.6))
+    : curvaPara(destino);
+
+/**
+ * A pose que uma chave pede: a escrita, a fase do ciclo de locomocao, ou a
+ * escrita EXAGERADA em relacao a guarda (carga mais funda, follow-through).
+ */
+const poseDaChave = (
+  track: FighterTrack,
+  k: FighterTrack["keys"][number],
+): Pose => {
+  if (CICLOS[k.pose]) {
+    return poseDoCiclo(k.pose, distanciaPercorrida(track, k.frame)).pose;
+  }
+  if (k.exagero !== undefined && k.exagero !== 1) {
+    return exagerar(POSES.guard, POSES[k.pose], k.exagero);
+  }
+  return POSES[k.pose];
+};
+
+/**
+ * Sai rapido, PASSA um pouco do destino e volta (easeOutBack).
+ *
+ * E o "settle" da animacao profissional: nenhum corpo com massa para
+ * exatamente onde queria parar. Quem volta de um golpe para a guarda passa um
+ * pouco do ponto e se acomoda. Sem isto o corpo chega na guarda e trava, que
+ * e a assinatura de animacao interpolada.
+ *
+ * `folga` controla quanto passa: 1.2 da ~6% de ultrapassagem, que se sente sem
+ * parecer mola.
+ */
+export const acomodar = (t: number, folga = 1.2): number => {
+  const u = t - 1;
+  return 1 + (folga + 1) * u * u * u + folga * u * u;
+};
+
+/**
+ * Poses de onde a volta para a guarda ganha acomodacao.
+ *
+ * So golpe e reacao: sao as poses em que o corpo gastou energia e precisa
+ * dissipa-la. Voltar para a guarda depois de um passo nao tem o que acomodar.
+ */
+const POSES_QUE_ACOMODAM = new Set<PoseName>([
+  "punch", "punchFast", "punchHeavy", "uppercut",
+  "kick", "kickLow", "kickHigh", "spinKick",
+  "knee", "elbow", "charge", "airAttack", "diveAttack",
+  "hitHead", "hitChest", "hitBody", "hitLeg",
+  "knockback", "stagger", "block", "dodge", "duck",
+  "land", "getUp",
+]);
+
+/**
+ * Curva usada na MISTURA DE POSE, que pode diferir da curva do deslocamento.
+ *
+ * Separada de curvaPara porque o que acomoda e o corpo, nao a posicao: se o x
+ * tambem passasse do ponto, o personagem deslizaria para frente e para tras no
+ * chao, e a distancia de combate calculada deixaria de valer.
+ */
+const curvaDaPose = (
+  origem: PoseName,
+  destino: PoseName,
+): ((t: number) => number) =>
+  destino === "guard" && POSES_QUE_ACOMODAM.has(origem)
+    ? acomodar
+    : curvaPara(destino);
+
+/**
+ * Quanto o pe que esta AVANCANDO sobe no meio da passada, em unidades de pose.
+ *
+ * E o que faltava para o ciclo parecer passada: misturar duas poses de corrida
+ * leva o pe de tras ate a frente em linha reta, ARRASTANDO no chao. Numa
+ * passada de verdade a perna que avanca dobra, o joelho sobe e o pe passa por
+ * cima. Corrida levanta mais que caminhada, sprint mais que corrida.
+ */
+const ELEVACAO_DA_PASSADA: Partial<Record<PoseName, number>> = {
+  walk1: 14, walk2: 14,
+  run1: 28, run2: 28,
+  sprint1: 34, sprint2: 34,
+};
+
+/**
+ * Pose CONTINUA do ciclo de locomocao, dada a distancia percorrida.
+ *
+ * A versao anterior escolhia run1 OU run2 conforme a fase, entao a cada passo
+ * as pernas trocavam de lugar num unico quadro: um estalo por passada, que e
+ * o que mais denuncia animacao amadora. Agora a fase e continua: entre as duas
+ * poses extremas a perna percorre o caminho, e a perna que avanca levanta.
+ *
+ * As duas poses extremas continuam sendo as escritas a mao, entao o ciclo nos
+ * extremos e exatamente o de antes; o que mudou e o caminho entre eles.
+ */
+const poseDoCiclo = (
+  nome: PoseName,
+  distancia: number,
+): { pose: Pose; nome: PoseName } => {
+  const ciclo = CICLOS[nome];
+  if (!ciclo) return { pose: POSES[nome], nome };
+  const [a, b, passo] = ciclo;
+  const fase = distancia / passo;
+  const i = Math.floor(fase);
+  const de = i % 2 === 0 ? a : b;
+  const para = i % 2 === 0 ? b : a;
+  // LINEAR, de proposito: com o passo derivado das poses, fase linear faz o
+  // pe de apoio recuar exatamente na velocidade do corpo, ou seja parado no
+  // mundo. Uma curva aqui fazia o pe ir e voltar em volta do ponto pregado.
+  const t = fase - i;
+  const pose = misturar(POSES[de], POSES[para], t);
+
+  const elevacao = ELEVACAO_DA_PASSADA[nome] ?? 0;
+  const arco = Math.sin(Math.PI * t) * elevacao;
+  const pa = completar(POSES[de]);
+  const pb = completar(POSES[para]);
+  const levantar = (joelho: JointName, pe: JointName) => {
+    // so a perna que vai para FRENTE levanta; a outra e a de apoio
+    if (pb[pe].x <= pa[pe].x) return;
+    pose[pe] = { x: pose[pe].x, y: pose[pe].y - arco };
+    // o joelho puxa a perna: sobe menos que o pe e vai um pouco a frente
+    pose[joelho] = {
+      x: pose[joelho].x + arco * 0.35,
+      y: pose[joelho].y - arco * 0.55,
+    };
+  };
+  levantar("kneeFront", "footFront");
+  levantar("kneeBack", "footBack");
+
+  return { pose, nome: t > 0.5 ? para : de };
 };
 
 /**
@@ -241,36 +423,27 @@ const curvaPara = (destino: PoseName): ((t: number) => number) => {
  * uma passada a cada 0,13s, que e o ritmo de corrida em fuga. Ciclo lento
  * parece caminhada.
  */
-const CICLOS: Partial<Record<PoseName, [PoseName, PoseName, number]>> = {
-  // o terceiro numero agora e o PASSO em unidades de mundo, nao em quadros
-  walk1: ["walk1", "walk2", 96],
-  walk2: ["walk1", "walk2", 96],
-  run1: ["run1", "run2", 132],
-  run2: ["run1", "run2", 132],
-  sprint1: ["sprint1", "sprint2", 152],
-  sprint2: ["sprint1", "sprint2", 152],
-};
-
 /**
- * Fase do ciclo de locomocao, dada pela DISTANCIA PERCORRIDA.
+ * PASSO DO CICLO, em unidades de mundo: quanto o corpo anda enquanto as
+ * pernas vao de uma pose extrema a outra.
  *
- * Antes vinha do contador de quadros: a perna trocava a cada N quadros
- * independentemente da velocidade do corpo. E exatamente isso que o olho le
- * como personagem PATINANDO, porque a cadencia da perna nao tem relacao com o
- * quanto o corpo andou.
- *
- * Agora um passo acontece a cada tantas unidades de mundo. Corpo lento da
- * passada lenta, corpo rapido da passada rapida, e corpo parado nao mexe a
- * perna, tudo sem ninguem precisar ajustar nada.
+ * E DERIVADO das proprias poses, e nao escolhido: e exatamente o quanto o pe
+ * de apoio recua em relacao ao quadril entre as duas poses. So assim o pe no
+ * chao fica parado no mundo enquanto o corpo passa por cima dele. Os valores
+ * anteriores (96, 132, 152) eram um terco disso: a perna dava tres passadas
+ * no espaco de uma e o pe de apoio deslizava para tras, o "moonwalk" que a
+ * auditoria de pes mediu.
  */
-const faseDoCiclo = (
-  nome: PoseName,
-  distancia: number,
-): PoseName => {
-  const ciclo = CICLOS[nome];
-  if (!ciclo) return nome;
-  const [a, b, passo] = ciclo;
-  return Math.floor(distancia / passo) % 2 === 0 ? a : b;
+const passoDoCiclo = (a: PoseName, b: PoseName): number =>
+  Math.abs(POSES[a].footFront!.x - POSES[b].footFront!.x) * ESCALA_POSE;
+
+const CICLOS: Partial<Record<PoseName, [PoseName, PoseName, number]>> = {
+  walk1: ["walk1", "walk2", passoDoCiclo("walk1", "walk2")],
+  walk2: ["walk1", "walk2", passoDoCiclo("walk1", "walk2")],
+  run1: ["run1", "run2", passoDoCiclo("run1", "run2")],
+  run2: ["run1", "run2", passoDoCiclo("run1", "run2")],
+  sprint1: ["sprint1", "sprint2", passoDoCiclo("sprint1", "sprint2")],
+  sprint2: ["sprint1", "sprint2", passoDoCiclo("sprint1", "sprint2")],
 };
 
 /**
@@ -297,7 +470,7 @@ export const distanciaPercorrida = (
     }
     if (frame <= a.frame || b.frame <= a.frame) break;
     const bruto = (frame - a.frame) / (b.frame - a.frame);
-    soma += Math.abs(b.x - a.x) * curvaPara(b.pose)(bruto);
+    soma += Math.abs(b.x - a.x) * curvaDoDeslocamento(b.pose)(bruto);
     break;
   }
   return soma;
@@ -317,7 +490,7 @@ const posicaoEm = (track: FighterTrack, frame: number): number => {
     if (frame > b.frame) continue;
     if (b.frame <= a.frame) return b.x;
     const bruto = (frame - a.frame) / (b.frame - a.frame);
-    const t = curvaPara(b.pose)(Math.min(1, Math.max(0, bruto)));
+    const t = curvaDoDeslocamento(b.pose)(Math.min(1, Math.max(0, bruto)));
     return a.x + (b.x - a.x) * t;
   }
   return keys[keys.length - 1].x;
@@ -351,7 +524,7 @@ const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
   if (frame <= keys[0].frame) {
     const k = keys[0];
     return {
-      x: k.x, pose: POSES[k.pose], poseNome: k.pose, airborne: k.airborne,
+      x: k.x, pose: poseDaChave(track, k), poseNome: k.pose, airborne: k.airborne,
       velocidade, aceleracao, inclinacao,
     };
   }
@@ -364,31 +537,41 @@ const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
     // duas chaves no mesmo quadro = corte seco, nao interpolacao
     if (b.frame <= a.frame) {
       return {
-        x: b.x, pose: POSES[b.pose], poseNome: b.pose, airborne: b.airborne,
+        x: b.x, pose: poseDaChave(track, b), poseNome: b.pose, airborne: b.airborne,
         velocidade, aceleracao, inclinacao,
       };
     }
 
     const bruto = (frame - a.frame) / (b.frame - a.frame);
-    const t = curvaPara(b.pose)(Math.min(1, Math.max(0, bruto)));
+    const t = curvaDoDeslocamento(b.pose)(Math.min(1, Math.max(0, bruto)));
 
     // Quando as duas chaves sao do MESMO ciclo (corrida, caminhada), nao ha o
     // que interpolar entre elas: o que vale e a fase do ciclo neste quadro.
     const cicloA = CICLOS[a.pose];
     if (cicloA && CICLOS[b.pose] && cicloA[0] === CICLOS[b.pose]![0]) {
-      const fase = faseDoCiclo(a.pose, distanciaPercorrida(track, frame));
+      const ciclo = poseDoCiclo(a.pose, distanciaPercorrida(track, frame));
       return {
         x: a.x + (b.x - a.x) * t,
-        pose: POSES[fase],
-        poseNome: fase,
+        pose: ciclo.pose,
+        poseNome: ciclo.nome,
         airborne: a.airborne,
         velocidade, aceleracao, inclinacao,
       };
     }
 
+    // Chave de CICLO entra e sai pela fase em que o ciclo estava naquele
+    // quadro, e nao pela pose pura: ao parar de andar no meio da passada, a
+    // perna saltava da fase atual para "walk1" num quadro (medido: pe
+    // deslocando 192 unidades de uma vez).
     return {
       x: a.x + (b.x - a.x) * t,
-      pose: misturar(POSES[a.pose], POSES[b.pose], t, atrasoPara(b.pose)),
+      pose: misturar(
+        poseDaChave(track, a),
+        poseDaChave(track, b),
+        Math.min(1, Math.max(0, bruto)),
+        atrasoPara(b.pose),
+        curvaDaPose(a.pose, b.pose),
+      ),
       poseNome: t > 0.5 ? b.pose : a.pose,
       airborne: t > 0.5 ? b.airborne : a.airborne,
       velocidade, aceleracao, inclinacao,
@@ -398,7 +581,7 @@ const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
   const ultima = keys[keys.length - 1];
   return {
     x: ultima.x,
-    pose: POSES[ultima.pose],
+    pose: poseDaChave(track, ultima),
     poseNome: ultima.pose,
     airborne: ultima.airborne,
     velocidade, aceleracao, inclinacao,
@@ -527,11 +710,19 @@ export const alturaDoVoo = (
     if (frame < t.de || frame > t.ate) continue;
     const dur = Math.max(1, t.ate - t.de);
     const p = (frame - t.de) / dur;
-    // parabola com o topo em 0,45: sobe rapido, desce mais devagar
-    return Math.sin(Math.PI * Math.min(1, p / 0.9)) * alturaMaxima;
+    // PARABOLA DE VERDADE, com a altura dada pelo TEMPO no ar: H = g T^2 / 8.
+    // Antes a altura era fixa (520) para qualquer voo: um pulo curto de ataque
+    // subia tanto quanto um arremesso, e o corpo ainda ficava parado no chao
+    // nos ultimos 10% do trecho. Com gravidade constante, voo curto e baixo e
+    // voo longo e alto, que e o que o olho espera.
+    const altura = Math.min(alturaMaxima, (GRAVIDADE * dur * dur) / 8);
+    return 4 * altura * p * (1 - p);
   }
   return 0;
 };
+
+/** Gravidade do mundo, em unidades de mundo por quadro ao quadrado. */
+export const GRAVIDADE = 1.0;
 
 export const alturaNoAr = (
   track: FighterTrack,
@@ -601,6 +792,34 @@ export const quadroEfetivo = (timeline: Timeline, frame: number): number => {
     }
   }
   return frame - ajuste;
+};
+
+/**
+ * TREMOR DO HIT STOP, em unidades de mundo no eixo x.
+ *
+ * Tecnica de jogo de luta: durante o congelamento do impacto quem apanhou
+ * VIBRA no lugar, e quem bateu vibra menos. Congelar tudo parado le como
+ * travamento do video; congelar vibrando le como "a forca esta entrando".
+ *
+ * Recebe o quadro REAL, nao o efetivo: durante o hit stop o quadro efetivo e
+ * constante, e e justamente o quadro real que avanca e faz a vibracao andar.
+ */
+export const tremorDoHitStop = (
+  timeline: Timeline,
+  frameReal: number,
+  id: FighterId,
+): number => {
+  for (const imp of timeline.impacts) {
+    if (imp.hitStop <= 0) continue;
+    const k = frameReal - imp.frame;
+    if (k < 0 || k >= imp.hitStop) continue;
+    const base =
+      imp.tier === "extreme" ? 18 : imp.tier === "medium" ? 11 : 6;
+    const vitima = imp.victim === id;
+    const amplitude = base * (vitima ? 1 : 0.35) * (1 - k / imp.hitStop);
+    return (k % 2 === 0 ? 1 : -1) * amplitude;
+  }
+  return 0;
 };
 
 export { interpolate };

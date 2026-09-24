@@ -12,9 +12,17 @@
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { corpoNoQuadro } from "../animation/corpo";
-import { poseDeContato, quadroEfetivo } from "../animation/sampler";
+import {
+  poseDeContato,
+  quadroEfetivo,
+  tremorDoHitStop,
+} from "../animation/sampler";
 import { Arena } from "../backgrounds/Arena";
-import { cameraNoQuadro, transformDaCamera } from "../camera/camera";
+import {
+  cameraNoQuadro,
+  enquadrarDois,
+  transformDaCamera,
+} from "../camera/camera";
 import { PRESETS } from "../characters/presets";
 import { ALTURA_QUADRIL } from "../characters/skeleton";
 import { Stickman, StickmanTrail } from "../characters/Stickman";
@@ -26,6 +34,7 @@ import {
   Ondas,
   Particulas,
 } from "../effects/Impact";
+import { ArcoDoGolpe } from "../effects/Arco";
 import { DebugOverlay } from "../debug/DebugOverlay";
 import { poeiraAmbiente } from "../particles/particles";
 import type { Timeline } from "../core/types";
@@ -34,6 +43,8 @@ export type FightSceneProps = {
   timeline: Timeline;
   /** liga o overlay de medicao (punho, alvo, distancia). Desligado no render final. */
   debug?: boolean;
+  /** so os corpos: sem efeitos, sem tremor, camera neutra (ver Prototype) */
+  semEfeitos?: boolean;
 };
 
 /** Enquadramento inicial, usado antes da primeira chave de camera. */
@@ -62,7 +73,11 @@ const QUADROS_DO_RASTRO = 4;
 /** de quantos em quantos quadros, para o rastro ter espacamento visivel */
 const PASSO_DO_RASTRO = 2;
 
-export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false }) => {
+export const FightScene: React.FC<FightSceneProps> = ({
+  timeline,
+  debug = false,
+  semEfeitos = false,
+}) => {
   const frameReal = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
 
@@ -70,10 +85,16 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
   // golpe pesar. A timeline continua intacta; so o quadro consultado congela.
   const frame = quadroEfetivo(timeline, frameReal);
 
-  const cam = cameraNoQuadro(timeline, frame, CAMERA_PADRAO, {
-    largura: width,
-    alturaQuadril: -ALTURA_QUADRIL,
-  });
+  const cam = semEfeitos
+    ? {
+        ...enquadrarDois(timeline, frame, width, -ALTURA_QUADRIL),
+        shake: { x: 0, y: 0 },
+      }
+    : cameraNoQuadro(timeline, frame, CAMERA_PADRAO, {
+        largura: width,
+        alturaQuadril: -ALTURA_QUADRIL,
+      });
+  const fx = !semEfeitos;
   const { fighterA, fighterB, seed, scenario } = timeline.spec;
   const limpo = scenario === "limpo";
 
@@ -129,9 +150,12 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
                 baseX: c.x,
                 baseY: c.baseY,
                 spin: c.spin,
+                giro: c.giro,
               };
             })
           : [],
+      // so o DESENHO vibra: a mira e a camera continuam no corpo parado
+      tremor: tremorDoHitStop(timeline, frameReal, id),
     };
   });
 
@@ -160,7 +184,7 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
         {/* poeira no ar: o cenario respira mesmo quando ninguem se move.
             No cenario limpo ela sai: nada deve competir com a silhueta. */}
         <g data-layer="ambient-dust">
-          {limpo
+          {limpo || !fx
             ? null
             : poeira.map((p, i) => (
                 <circle
@@ -184,78 +208,93 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
           So as PARTICULAS ficam na frente: estilhaco voando na frente do
           corpo e correto, e sao poucos e pequenos.
         */}
-        <Ondas impactos={timeline.impacts} frame={frame} />
-        <Clarao impactos={timeline.impacts} frame={frame} />
+        {fx && <Ondas impactos={timeline.impacts} frame={frame} />}
+        {fx && <Clarao impactos={timeline.impacts} frame={frame} />}
 
         {/* aura e linhas de velocidade FICAM ATRAS dos dois corpos. A linha de
             velocidade do lutador empurrado atravessava o peito do outro, e no
             quadro do golpe isso vira sujeira em cima da acao. */}
-        <g data-layer="atras-dos-corpos">
-          {lutadores.map(({ id, corpo, preset, rapido, rastro }) => (
-            <g key={`tras-${id}`}>
-              {rastro.length > 0 && (
-                <StickmanTrail
-                  preset={preset}
-                  quadros={rastro}
-                  facing={corpo.facing}
-                  forca={limpo ? 0.34 : 0.22}
-                />
-              )}
-              {auraDe(id) > 0.02 && (
-                <Aura
-                  centro={{ x: corpo.x, y: corpo.baseY }}
-                  cor={preset.auraColor}
-                  forca={auraDe(id)}
+        {fx && (
+          <g data-layer="atras-dos-corpos">
+            {lutadores.map(({ id, corpo, preset, rapido, rastro }) => (
+              <g key={`tras-${id}`}>
+                <ArcoDoGolpe
+                  timeline={timeline}
                   frame={frame}
+                  id={id}
+                  cor={preset.stroke}
+                  largura={preset.limbWidth * preset.scale * 1.15}
+                  opacidade={limpo ? 0.32 : 0.42}
                 />
-              )}
-              {rapido && (
-                <LinhasDeVelocidade
-                  origem={{ x: corpo.x, y: corpo.baseY }}
-                  direcao={Math.sign(corpo.velocidade)}
-                  forca={Math.min(
-                    1,
-                    (Math.abs(corpo.velocidade) - LIMITE_LINHAS) / 60,
-                  )}
-                  seed={seed}
-                  chave={`sl-${id}-${Math.round(frame / 3)}`}
-                />
-              )}
-            </g>
-          ))}
-        </g>
+                {rastro.length > 0 && (
+                  <StickmanTrail
+                    preset={preset}
+                    quadros={rastro}
+                    facing={corpo.facing}
+                    forca={limpo ? 0.34 : 0.22}
+                  />
+                )}
+                {auraDe(id) > 0.02 && (
+                  <Aura
+                    centro={{ x: corpo.x, y: corpo.baseY }}
+                    cor={preset.auraColor}
+                    forca={auraDe(id)}
+                    frame={frame}
+                  />
+                )}
+                {rapido && (
+                  <LinhasDeVelocidade
+                    origem={{ x: corpo.x, y: corpo.baseY }}
+                    direcao={Math.sign(corpo.velocidade)}
+                    forca={Math.min(
+                      1,
+                      (Math.abs(corpo.velocidade) - LIMITE_LINHAS) / 60,
+                    )}
+                    seed={seed}
+                    chave={`sl-${id}-${Math.round(frame / 3)}`}
+                  />
+                )}
+              </g>
+            ))}
+          </g>
+        )}
 
-        {lutadores.map(({ id, corpo, preset }) => (
+        {lutadores.map(({ id, corpo, preset, tremor }) => (
           <Stickman
             key={id}
             preset={preset}
             pose={corpo.pose}
-            baseX={corpo.x}
+            baseX={corpo.x + (fx ? tremor : 0)}
             baseY={corpo.baseY}
             facing={corpo.facing}
             scaleExtra={corpo.scale / preset.scale}
             spin={corpo.spin}
+            giro={corpo.giro}
             contorno={!limpo}
           />
         ))}
 
-        <Particulas
-          impactos={timeline.impacts}
-          frame={frame}
-          seed={seed}
-          fps={fps}
-        />
+        {fx && (
+          <Particulas
+            impactos={timeline.impacts}
+            frame={frame}
+            seed={seed}
+            fps={fps}
+          />
+        )}
 
         {debug && <DebugOverlay timeline={timeline} frame={frame} />}
       </g>
 
       {/* o flash cobre a TELA, nao o mundo: fica fora do grupo da camera */}
-      <Flash
-        impactos={timeline.impacts}
-        frame={frame}
-        largura={width}
-        altura={height}
-      />
+      {fx && (
+        <Flash
+          impactos={timeline.impacts}
+          frame={frame}
+          largura={width}
+          altura={height}
+        />
+      )}
     </svg>
   );
 };
