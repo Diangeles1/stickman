@@ -52,7 +52,9 @@ export const enquadrarDois = (
   const separacao = Math.abs(a.x - b.x);
   // a folga inclui o corpo de cada um e o membro estendido de um golpe
   const larguraNecessaria = separacao + 900;
-  const zoom = Math.min(1.1, Math.max(0.42, larguraTela / larguraNecessaria));
+  // piso 0.42 deixava o corpo com 8% da tela quando eles se separavam muito.
+  // 0.58 e o limite em que a silhueta ainda se le num celular.
+  const zoom = Math.min(1.15, Math.max(0.58, larguraTela / larguraNecessaria));
 
   return { center: { x: meio, y: alturaQuadril - 120 }, zoom };
 };

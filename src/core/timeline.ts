@@ -157,16 +157,32 @@ export const compilar = (spec: FightSpec): Timeline => {
         cracksGround: Boolean(def.cracksGround),
         sound: def.sound,
       });
-      // reacao do alvo: recua e, em golpe que lanca, sobe
-      estado[alvo].pose = def.launches ? "airborne" : "knockback";
-      estado[alvo].airborne = Boolean(def.launches);
+      // Reacao do alvo em tres tempos, que e o que o briefing pede: o corpo
+      // sai do chao, voa, e POUSA com uma reacao. Sem o pouso o personagem
+      // simplesmente reaparece de pe, e o golpe perde o peso.
+      const voa = Boolean(def.launches) || def.tier === "extreme";
+      estado[alvo].pose = voa ? "airborne" : "knockback";
+      estado[alvo].airborne = voa;
       chave(alvo, frameContato);
+
       // knockback em unidades de MUNDO. Dividir por 60 (como se fosse por
       // segundo) dava ~5 unidades de recuo, imperceptivel numa figura de
       // 597 unidades de altura.
       const empurrao = def.knockback * (1 + preset[atacante].profile.power * 0.6);
+      const voo = Math.round(strike * (voa ? 3.2 : 1.6));
       estado[alvo].x += direcao * empurrao;
-      chave(alvo, frameContato + Math.round(strike * 1.6));
+      chave(alvo, frameContato + voo);
+
+      if (voa) {
+        // pousa: encosta o pe e amortece
+        estado[alvo].airborne = false;
+        estado[alvo].pose = "land";
+        chave(alvo, frameContato + voo + 4);
+        // o quique: escorrega um pouco mais depois de pousar
+        estado[alvo].x += direcao * empurrao * 0.12;
+        estado[alvo].pose = "downed";
+        chave(alvo, frameContato + voo + 14);
+      }
 
       cameraKeys.push({
         frame: frameContato,

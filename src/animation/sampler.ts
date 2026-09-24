@@ -31,6 +31,23 @@ type Amostra = {
   pose: Pose;
   poseNome: PoseName;
   airborne: boolean;
+  /** velocidade em unidades de mundo por quadro (com sinal) */
+  velocidade: number;
+  /**
+   * Inclinacao do corpo em graus, DERIVADA da velocidade.
+   *
+   * E o que da movimento corporal integrado sem animar cada pose na mao: quem
+   * acelera para frente inclina para frente, quem e empurrado tomba para tras.
+   * Corrida, knockback e mudanca de direcao ganham peso de graca, e nenhuma
+   * pose precisa saber disso.
+   */
+  inclinacao: number;
+};
+
+/** Quanto o corpo tomba por unidade de velocidade, com teto. */
+const inclinacaoPorVelocidade = (v: number): number => {
+  const bruta = v * 0.55;
+  return Math.max(-26, Math.min(26, bruta));
 };
 
 /**
@@ -82,15 +99,45 @@ const faseDoCiclo = (nome: PoseName, frame: number): PoseName => {
   return Math.floor(frame / periodo) % 2 === 0 ? a : b;
 };
 
+/**
+ * Posicao pura num quadro, sem os extras. Usada internamente para medir
+ * velocidade por diferenca finita entre dois quadros vizinhos.
+ */
+const posicaoEm = (track: FighterTrack, frame: number): number => {
+  const keys = track.keys;
+  if (keys.length === 0) return 0;
+  if (frame <= keys[0].frame) return keys[0].x;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const a = keys[i];
+    const b = keys[i + 1];
+    if (frame > b.frame) continue;
+    if (b.frame <= a.frame) return b.x;
+    const bruto = (frame - a.frame) / (b.frame - a.frame);
+    const t = curvaPara(b.pose)(Math.min(1, Math.max(0, bruto)));
+    return a.x + (b.x - a.x) * t;
+  }
+  return keys[keys.length - 1].x;
+};
+
 /** Estado de um lutador no quadro pedido. */
 export const amostrar = (track: FighterTrack, frame: number): Amostra => {
+  // velocidade por diferenca central: mais estavel que olhar so para tras,
+  // e e dela que sai a inclinacao do corpo
+  const velocidade = (posicaoEm(track, frame + 1) - posicaoEm(track, frame - 1)) / 2;
+  const inclinacao = inclinacaoPorVelocidade(velocidade);
   const keys = track.keys;
   if (keys.length === 0) {
-    return { x: 0, pose: POSES.idle, poseNome: "idle", airborne: false };
+    return {
+      x: 0, pose: POSES.idle, poseNome: "idle", airborne: false,
+      velocidade: 0, inclinacao: 0,
+    };
   }
   if (frame <= keys[0].frame) {
     const k = keys[0];
-    return { x: k.x, pose: POSES[k.pose], poseNome: k.pose, airborne: k.airborne };
+    return {
+      x: k.x, pose: POSES[k.pose], poseNome: k.pose, airborne: k.airborne,
+      velocidade, inclinacao,
+    };
   }
 
   for (let i = 0; i < keys.length - 1; i++) {
@@ -100,7 +147,10 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
 
     // duas chaves no mesmo quadro = corte seco, nao interpolacao
     if (b.frame <= a.frame) {
-      return { x: b.x, pose: POSES[b.pose], poseNome: b.pose, airborne: b.airborne };
+      return {
+        x: b.x, pose: POSES[b.pose], poseNome: b.pose, airborne: b.airborne,
+        velocidade, inclinacao,
+      };
     }
 
     const bruto = (frame - a.frame) / (b.frame - a.frame);
@@ -116,6 +166,7 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
         pose: POSES[fase],
         poseNome: fase,
         airborne: a.airborne,
+        velocidade, inclinacao,
       };
     }
 
@@ -124,6 +175,7 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
       pose: misturar(POSES[a.pose], POSES[b.pose], t),
       poseNome: t > 0.5 ? b.pose : a.pose,
       airborne: t > 0.5 ? b.airborne : a.airborne,
+      velocidade, inclinacao,
     };
   }
 
@@ -133,6 +185,7 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
     pose: POSES[ultima.pose],
     poseNome: ultima.pose,
     airborne: ultima.airborne,
+    velocidade, inclinacao,
   };
 };
 

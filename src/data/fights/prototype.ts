@@ -5,17 +5,22 @@
  * hardcoded no codigo. Uma luta e um objeto FightSpec. Para criar a segunda,
  * copie este arquivo e troque os beats; nada mais muda.
  *
- * A sequencia segue o roteiro de 8 a 10 segundos pedido:
- *   0-1s  os dois ja em movimento, sem introducao lenta
- *   1-2s  preto corre, vermelho se prepara
- *   2-3s  soco do preto, vermelho bloqueia
- *   3-4s  contra-ataque pesado do vermelho, preto esquiva
- *   4-5s  chute do preto, vermelho leva knockback
- *   5-6s  vermelho recupera o equilibrio, aura comeca
- *   6-7s  vermelho avanca
- *   7-8s  esquiva rapidissima do preto
- *   8-9s  chute giratorio
- *   9-10s vermelho lancado, camera acompanha
+ * Coreografia pedida (8 a 10s), sem tempo morto:
+ *   0.0-0.7  os dois ja se preparando
+ *   0.7-1.5  preto DISPARA em direcao ao vermelho
+ *   1.5-2.0  soco do preto, vermelho bloqueia, IMPACTO
+ *   2.0-2.8  contra-ataque pesado do vermelho, preto esquiva por pouco
+ *   2.8-3.6  chute rapido do preto, vermelho leva knockback
+ *   3.6-4.5  vermelho recupera e ativa a aura, o ambiente reage
+ *   4.5-5.5  vermelho dispara em velocidade
+ *   5.5-6.5  preto desvia no ultimo instante
+ *   6.5-7.5  chute giratorio do preto
+ *   7.5-8.5  vermelho lancado para tras
+ *   8.5-9.0  impacto forte
+ *   9.0-10.0 plano final com os dois
+ *
+ * Nao existe beat de "introducao": o primeiro beat ja e movimento, e o
+ * primeiro contato acontece antes dos 2s.
  */
 
 import type { FightSpec } from "../../core/types";
@@ -30,32 +35,33 @@ export const PROTOTIPO: FightSpec = {
   intensity: 9,
   scenario: "arena",
   beats: [
-    // acao no quadro zero: os dois correndo um para o outro
-    { type: "approach", who: "black", toX: -240, duration: 40 },
+    // 0.0-0.7 os dois se preparando, ja em movimento (nada de parados)
+    { type: "approach", who: "black", toX: -560, duration: 42 },
 
-    // primeiro embate: soco bloqueado
+    // 0.7-2.0 o preto dispara e soca; o vermelho bloqueia
     { type: "blocked", attacker: "black", target: "red", move: "punch" },
 
-    // contra-ataque pesado, e o preto esquiva (velocidade contra forca)
+    // 2.0-2.8 contra-ataque pesado, esquiva por pouco
     { type: "attack", attacker: "red", target: "black", move: "punchHeavy" },
-    { type: "dodge", who: "black", duration: 14 },
+    { type: "dodge", who: "black", duration: 16 },
 
-    // resposta do preto com chute: o vermelho voa
-    { type: "attack", attacker: "black", target: "red", move: "kick" },
-    { type: "knockback", who: "red", distance: 260, duration: 18 },
+    // 2.8-3.6 chute rapido conecta: knockback de verdade
+    { type: "attack", attacker: "black", target: "red", move: "kickHigh" },
 
-    // o vermelho se levanta e carrega a aura
-    { type: "recover", who: "red", duration: 16 },
-    { type: "powerUp", who: "red", duration: 34 },
+    // 3.6-4.5 o vermelho se levanta e liga a aura
+    { type: "recover", who: "red", duration: 18 },
+    { type: "powerUp", who: "red", duration: 40 },
 
-    // investida
+    // 4.5-5.5 investida em velocidade
     { type: "attack", attacker: "red", target: "black", move: "charge" },
 
-    // esquiva extrema e finalizacao com chute giratorio
-    { type: "dodge", who: "black", duration: 12 },
+    // 5.5-6.5 desvio no ultimo instante
+    { type: "dodge", who: "black", duration: 18 },
+
+    // 6.5-8.5 chute giratorio e o corpo voando
     { type: "finisher", attacker: "black", target: "red", move: "spinKick" },
 
-    // respiro final para a camera acompanhar o corpo voando
-    { type: "hold", duration: 30, label: "acompanha o lancamento" },
+    // 8.5-10.0 plano final: a camera abre e mostra os dois
+    { type: "hold", duration: 70, label: "plano final com os dois" },
   ],
 };
