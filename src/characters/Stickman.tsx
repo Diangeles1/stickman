@@ -33,6 +33,15 @@ export type StickmanProps = {
   opacity?: number;
   /** escurece o braco e a perna de tras, o que da leitura de volume */
   profundidade?: boolean;
+  /**
+   * Liga o contorno escuro.
+   *
+   * Ele existe para separar um corpo do outro quando se encostam sobre fundo
+   * ESCURO. Sobre fundo claro ele vira uma borda preta desenhada em volta do
+   * personagem, que a referencia nao tem: la a separacao vem do proprio fundo
+   * branco aparecendo entre os membros.
+   */
+  contorno?: boolean;
 };
 
 /**
@@ -70,6 +79,7 @@ export const Stickman: React.FC<StickmanProps> = ({
   spin = 0,
   opacity = 1,
   profundidade = true,
+  contorno = true,
 }) => {
   const transformacao: Transformacao = {
     baseX,
@@ -102,6 +112,7 @@ export const Stickman: React.FC<StickmanProps> = ({
         Vem por baixo de tudo, entao nao muda a cor de nenhum personagem: so
         aparece onde ha borda.
       */}
+      {contorno && (
       <g data-part="contorno" stroke={COR_DO_CONTORNO} fill={COR_DO_CONTORNO}>
         {OSSOS.map(([de, para]) => (
           <line
@@ -116,6 +127,7 @@ export const Stickman: React.FC<StickmanProps> = ({
         ))}
         <circle cx={j.head.x} cy={j.head.y} r={raioCabeca + CONTORNO} />
       </g>
+      )}
 
       {OSSOS.map(([de, para]) => {
         // o osso e "de tras" quando qualquer ponta dele e de tras

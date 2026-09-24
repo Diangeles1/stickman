@@ -22,8 +22,15 @@ import { BENCHMARK } from "../src/data/fights/benchmark";
 import { UM_SOCO } from "../src/data/fights/um-soco";
 import type { FighterId, JointName } from "../src/core/types";
 
-/** Abaixo disto o golpe encostou (mao mais volume do corpo). */
-const ENCOSTOU = 90;
+/**
+ * Erro maximo aceito, em unidades de mundo.
+ *
+ * Deixou de ser 90 fixo, que era calibrado para membro fino. O que se cobra e
+ * o ERRO em relacao ao contato pretendido, que e a SUPERFICIE do corpo, e nao
+ * a distancia crua ate o eixo da junta: cobrar a distancia crua puniria um
+ * golpe que encostou certo e premiaria um que afundou.
+ */
+const ENCOSTOU = 40;
 
 const qual = process.argv[2] ?? "benchmark";
 const spec = qual === "um-soco" ? UM_SOCO : BENCHMARK;
@@ -46,8 +53,11 @@ const medir = (
   const b = corpoNoQuadro(t, alvoId, frame);
   const p = juntasDoCorpo(a)[junta];
   const q = pontoDoAlvo(ponto, juntasDoCorpo(b));
+  const folga = folgaDesejada(quem, alvoId);
   return {
     dist: Math.hypot(q.x - p.x, q.y - p.y),
+    // erro contra a superficie: dx deveria valer a folga, dy deveria ser zero
+    erro: Math.hypot(q.x - p.x - folga, q.y - p.y),
     dx: q.x - p.x,
     dy: q.y - p.y,
     separacao: Math.abs(a.x - b.x),
@@ -78,7 +88,7 @@ for (const mira of t.aims) {
   for (let f = mira.contact - 4; f <= mira.contact + 3; f++) {
     const m = medir(mira.who, mira.alvo, mira.joint, mira.ponto as PontoAlvo, f);
     const marca = f === mira.contact ? " <== CONTATO" : "";
-    const toca = m.dist < ENCOSTOU ? "toca" : "    ";
+    const toca = m.erro < ENCOSTOU ? "toca" : "    ";
     console.log(
       `  ${String(f).padStart(6)} | ${String(Math.round(m.dist)).padStart(4)} ${toca} | ` +
         `${String(Math.round(m.dx)).padStart(4)} | ${String(Math.round(m.dy)).padStart(4)} | ` +
@@ -94,10 +104,13 @@ for (const mira of t.aims) {
   );
   // Golpe ESQUIVADO nao precisa encostar: o alvo saiu do caminho de proposito
   // e a mira aponta para onde ele estava.
-  if (temImpacto && m.dist >= ENCOSTOU) reprovados++;
+  if (temImpacto && m.erro >= ENCOSTOU) reprovados++;
   console.log(
-    `  no contato: ${Math.round(m.dist)} unidades, correcao do IK ${m.correcao.toFixed(0)}` +
-      `${temImpacto && m.dist >= ENCOSTOU ? "   <<< NAO ENCOSTA" : ""}\n`,
+    `  no contato: erro ${Math.round(m.erro)} contra a superficie ` +
+      `(dist ate o eixo ${Math.round(m.dist)}, folga esperada ` +
+      `${Math.round(folgaDesejada(mira.who, mira.alvo))}), ` +
+      `correcao do IK ${m.correcao.toFixed(0)}` +
+      `${temImpacto && m.erro >= ENCOSTOU ? "   <<< NAO ENCOSTA" : ""}\n`,
   );
 }
 

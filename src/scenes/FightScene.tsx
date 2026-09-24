@@ -17,7 +17,7 @@ import { Arena } from "../backgrounds/Arena";
 import { cameraNoQuadro, transformDaCamera } from "../camera/camera";
 import { PRESETS } from "../characters/presets";
 import { ALTURA_QUADRIL } from "../characters/skeleton";
-import { Stickman } from "../characters/Stickman";
+import { Stickman, StickmanTrail } from "../characters/Stickman";
 import {
   Aura,
   Clarao,
@@ -47,6 +47,21 @@ const CAMERA_PADRAO = {
 /** Acima desta velocidade (unidades por quadro) aparecem linhas de velocidade. */
 const LIMITE_LINHAS = 26;
 
+/**
+ * RASTRO FANTASMA: copias esmaecidas dos quadros anteriores.
+ *
+ * E a assinatura do estilo pedido. Medido no projeto de referencia do autor,
+ * e o que comunica velocidade sem precisar de mais quadros de animacao: o
+ * corpo rapido deixa um traco do caminho que percorreu.
+ *
+ * Aparece so acima de uma velocidade alta, senao vira borrao permanente.
+ */
+const LIMITE_RASTRO = 34;
+/** quantos quadros atras entram no rastro */
+const QUADROS_DO_RASTRO = 4;
+/** de quantos em quantos quadros, para o rastro ter espacamento visivel */
+const PASSO_DO_RASTRO = 2;
+
 export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false }) => {
   const frameReal = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
@@ -59,7 +74,8 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
     largura: width,
     alturaQuadril: -ALTURA_QUADRIL,
   });
-  const { fighterA, fighterB, seed } = timeline.spec;
+  const { fighterA, fighterB, seed, scenario } = timeline.spec;
+  const limpo = scenario === "limpo";
 
   // rachaduras abertas pelos impactos que JA aconteceram neste quadro: elas
   // sao consequencia da acao, nao desenho permanente do cenario
@@ -101,6 +117,21 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
       rapido:
         Math.abs(corpo.velocidade) > LIMITE_LINHAS &&
         !poseDeContato(corpo.poseNome),
+      // o rastro le do MESMO corpoNoQuadro, entao ele mostra exatamente onde
+      // o personagem esteve, e nao uma aproximacao
+      rastro:
+        Math.abs(corpo.velocidade) > LIMITE_RASTRO
+          ? Array.from({ length: QUADROS_DO_RASTRO }, (_, k) => {
+              const atras = (QUADROS_DO_RASTRO - k) * PASSO_DO_RASTRO;
+              const c = corpoNoQuadro(timeline, id, frame - atras);
+              return {
+                pose: c.pose,
+                baseX: c.x,
+                baseY: c.baseY,
+                spin: c.spin,
+              };
+            })
+          : [],
     };
   });
 
@@ -109,7 +140,7 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      style={{ background: "#06070a" }}
+      style={{ background: limpo ? "#ffffff" : "#06070a" }}
     >
       <defs>
         <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
@@ -117,23 +148,30 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
           <stop offset="100%" stopColor="#0d0f15" />
         </linearGradient>
       </defs>
-      <rect width={width} height={height} fill="url(#ceu)" />
+      <rect
+        width={width}
+        height={height}
+        fill={limpo ? "#ffffff" : "url(#ceu)"}
+      />
 
       <g transform={transformDaCamera(cam, width, height)}>
-        <Arena seed={seed} rachaduras={rachaduras} />
+        <Arena seed={seed} rachaduras={rachaduras} cenario={scenario} />
 
-        {/* poeira no ar: o cenario respira mesmo quando ninguem se move */}
+        {/* poeira no ar: o cenario respira mesmo quando ninguem se move.
+            No cenario limpo ela sai: nada deve competir com a silhueta. */}
         <g data-layer="ambient-dust">
-          {poeira.map((p, i) => (
-            <circle
-              key={i}
-              cx={p.pos.x}
-              cy={p.pos.y}
-              r={p.raio}
-              fill="#9aa4bb"
-              opacity={p.opacidade}
-            />
-          ))}
+          {limpo
+            ? null
+            : poeira.map((p, i) => (
+                <circle
+                  key={i}
+                  cx={p.pos.x}
+                  cy={p.pos.y}
+                  r={p.raio}
+                  fill="#9aa4bb"
+                  opacity={p.opacidade}
+                />
+              ))}
         </g>
 
         {/*
@@ -153,8 +191,16 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
             velocidade do lutador empurrado atravessava o peito do outro, e no
             quadro do golpe isso vira sujeira em cima da acao. */}
         <g data-layer="atras-dos-corpos">
-          {lutadores.map(({ id, corpo, preset, rapido }) => (
+          {lutadores.map(({ id, corpo, preset, rapido, rastro }) => (
             <g key={`tras-${id}`}>
+              {rastro.length > 0 && (
+                <StickmanTrail
+                  preset={preset}
+                  quadros={rastro}
+                  facing={corpo.facing}
+                  forca={limpo ? 0.34 : 0.22}
+                />
+              )}
               {auraDe(id) > 0.02 && (
                 <Aura
                   centro={{ x: corpo.x, y: corpo.baseY }}
@@ -189,6 +235,7 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
             facing={corpo.facing}
             scaleExtra={corpo.scale / preset.scale}
             spin={corpo.spin}
+            contorno={!limpo}
           />
         ))}
 

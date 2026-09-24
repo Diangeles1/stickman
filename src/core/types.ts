@@ -213,7 +213,12 @@ export type FightSpec = {
   height: number;
   /** 0 a 10, como no briefing. Escala duracoes e intensidade. */
   intensity: number;
-  scenario: "arena";
+  /**
+   * "arena" e o cenario escuro com rachaduras e poeira.
+   * "limpo" e fundo branco com uma linha de chao, no estilo da referencia:
+   * nada compete com a silhueta dos lutadores.
+   */
+  scenario: "arena" | "limpo";
   beats: Beat[];
 };
 

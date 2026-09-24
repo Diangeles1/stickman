@@ -46,7 +46,11 @@ import {
   peMaisBaixo,
   type Transformacao,
 } from "../characters/skeleton";
-import { pontoDoAlvo, type PontoAlvo } from "../core/contact";
+import {
+  folgaDesejada,
+  pontoDoAlvo,
+  type PontoAlvo,
+} from "../core/contact";
 import type {
   AimEvent,
   FighterId,
@@ -310,6 +314,16 @@ export const corpoNoQuadro = (
 
   const alvo = corpoBase(timeline, aim.alvo, frame);
   const noMundo = pontoDoAlvo(aim.ponto as PontoAlvo, juntasDoCorpo(alvo));
+
+  // O ALVO DO IK E A SUPERFICIE DO CORPO, NAO O EIXO DA JUNTA.
+  //
+  // pontoDoAlvo devolve o eixo do tronco; a superficie fica meia espessura de
+  // membro a frente, dos dois lados. Com membro fino a diferenca passava
+  // despercebida, mas ao triplicar a espessura para bater com a referencia ela
+  // virou 68 unidades: o punho mirava no EIXO e afundava o membro inteiro
+  // dentro do adversario.
+  const folga = folgaDesejada(id, aim.alvo);
+  noMundo.x -= folga * aim.direcao;
 
   // FOLLOW-THROUGH: depois do contato o alvo da mira avanca, entao o membro
   // PASSA do ponto antes de voltar. Membro que para exatamente onde acertou

@@ -71,6 +71,7 @@ export type ArenaProps = {
   seed: number;
   /** rachaduras extras abertas por impacto, em x de mundo */
   rachaduras?: number[];
+  cenario?: "arena" | "limpo";
   /** meia-largura do mundo desenhado */
   extensao?: number;
 };
@@ -79,6 +80,7 @@ export const Arena: React.FC<ArenaProps> = ({
   seed,
   rachaduras = [],
   extensao = 3000,
+  cenario = "arena",
 }) => {
   const rachadurasBase = React.useMemo(() => {
     const saida: string[] = [];
@@ -106,6 +108,35 @@ export const Arena: React.FC<ArenaProps> = ({
       })),
     [seed, extensao],
   );
+
+  /**
+   * CENARIO LIMPO: fundo branco e UMA linha de chao.
+   *
+   * Medido contra a referencia, a moldura e a espessura do membro ja batiam; o
+   * que sobrava de diferenca era o cenario. Rachadura, mancha, poeira e
+   * gradiente competem com a silhueta, e neste estilo a silhueta e tudo o que
+   * conta. A linha do chao existe so para o olho saber onde o pe encosta.
+   */
+  if (cenario === "limpo") {
+    return (
+      <g data-layer="arena">
+        <rect
+          x={-extensao}
+          y={CHAO_Y}
+          width={extensao * 2}
+          height={2400}
+          fill="#ffffff"
+        />
+        <rect
+          x={-extensao}
+          y={CHAO_Y - 7}
+          width={extensao * 2}
+          height={14}
+          fill="#111111"
+        />
+      </g>
+    );
+  }
 
   return (
     <g data-layer="arena">

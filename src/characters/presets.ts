@@ -12,6 +12,26 @@
 
 import type { FighterId, FighterPreset } from "../core/types";
 
+/*
+ * ESPESSURA DOS MEMBROS: medida contra a referencia, nao escolhida.
+ *
+ * scripts/estilo.mts mede a espessura do membro como fracao da altura do
+ * corpo, na referencia e no render:
+ *
+ *   referencia (StickNodes)   12.4%
+ *   luta1, o projeto do autor  20.8%
+ *   este motor, antes           4.2%
+ *
+ * Membro fino le como esqueleto de arame; os dois de cima leem como corpo
+ * porque a silhueta tem massa. O alvo e o luta1, que e o estilo pedido: com
+ * 597 unidades de corpo, 98 de espessura medem 20.8% na tela: as pontas
+ * arredondadas somam espessura, entao o numero da pose fica abaixo do medido.
+ * O alvo e o MEDIDO, e quem decide e scripts/estilo, nao a conta.
+ *
+ * A distancia de combate se ajusta sozinha a isso, porque ela deriva da
+ * espessura do traco (ver distanciaDeCombate): membro mais grosso significa
+ * superficie mais a frente do eixo, e os dois param mais longe um do outro.
+ */
 export const PRESETS: Record<FighterId, FighterPreset> = {
   // O "preto" NAO pode ser preto de verdade: contra o fundo escuro da arena
   // ele desaparece. Este cinza-azulado le como preto na tela. Descoberto no
@@ -29,10 +49,10 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     //
     // Continua lendo como "o preto" porque e cinza-azulado dessaturado: a
     // diferenca para o vermelho e de matiz, nao de claridade.
-    stroke: "#6d7590",
+    stroke: "#4a5170",
     auraColor: "#8fa2c8",
-    limbWidth: 26,
-    headRadius: 62,
+    limbWidth: 98,
+    headRadius: 85,
     scale: 1,
     profile: { speed: 0.9, power: 0.45 },
   },
@@ -40,8 +60,8 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     id: "red",
     stroke: "#d6403a",
     auraColor: "#e2483c",
-    limbWidth: 28,
-    headRadius: 64,
+    limbWidth: 103,
+    headRadius: 88,
     scale: 1.06,
     profile: { speed: 0.42, power: 0.95 },
   },
@@ -49,8 +69,8 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     id: "blue",
     stroke: "#3f7fd6",
     auraColor: "#4aa8ff",
-    limbWidth: 26,
-    headRadius: 62,
+    limbWidth: 98,
+    headRadius: 85,
     scale: 1,
     profile: { speed: 0.7, power: 0.65 },
   },
@@ -58,8 +78,8 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     id: "gold",
     stroke: "#d8a63a",
     auraColor: "#ffd45e",
-    limbWidth: 27,
-    headRadius: 63,
+    limbWidth: 100,
+    headRadius: 86,
     scale: 1.02,
     profile: { speed: 0.75, power: 0.8 },
   },
@@ -67,8 +87,8 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     id: "green",
     stroke: "#46a85e",
     auraColor: "#63d97f",
-    limbWidth: 26,
-    headRadius: 62,
+    limbWidth: 98,
+    headRadius: 85,
     scale: 1,
     profile: { speed: 0.65, power: 0.6 },
   },
@@ -76,8 +96,8 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     id: "white",
     stroke: "#e6e9f0",
     auraColor: "#ffffff",
-    limbWidth: 25,
-    headRadius: 61,
+    limbWidth: 94,
+    headRadius: 84,
     scale: 0.98,
     profile: { speed: 0.85, power: 0.5 },
   },
@@ -85,8 +105,8 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     id: "purple",
     stroke: "#8a52cc",
     auraColor: "#b478ff",
-    limbWidth: 27,
-    headRadius: 63,
+    limbWidth: 100,
+    headRadius: 86,
     scale: 1.03,
     profile: { speed: 0.6, power: 0.78 },
   },

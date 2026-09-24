@@ -31,8 +31,15 @@ import type { AttackName, FightSpec } from "../src/core/types";
 
 const PONTOS: PontoAlvo[] = ["head", "chest", "torso", "center", "legs"];
 
-/** Acima disto consideramos que o golpe NAO encostou. */
-const ENCOSTOU = 90;
+/**
+ * Erro maximo aceito, em unidades de mundo: meia espessura de membro.
+ *
+ * Deixou de ser 90 fixo. O limite tem que escalar com o personagem: com
+ * membro tres vezes mais grosso, 90 unidades de erro sao visualmente outra
+ * coisa. Meia espessura e o ponto em que a superficie do membro ainda toca a
+ * superficie do corpo.
+ */
+const ENCOSTOU = 40;
 
 const luta = (move: AttackName, ponto: PontoAlvo): FightSpec => ({
   fighterA: "black",
@@ -89,7 +96,12 @@ for (const move of nomes) {
     const dx = q.x - p.x;
     const dy = q.y - p.y;
     const dist = Math.hypot(dx, dy);
-    const ok = dist < ENCOSTOU;
+    // O que se cobra e o ERRO em relacao ao contato pretendido, que e a
+    // SUPERFICIE do corpo: dx igual a folga e dy zero. Cobrar a distancia
+    // crua ao eixo da junta puniria um golpe que encostou corretamente, e
+    // premiaria um que afundou.
+    const erro = Math.hypot(dx - folga, dy);
+    const ok = erro < ENCOSTOU;
     if (padrao && !ok) reprovados++;
     if (dist > piorDist.v) piorDist = { v: dist, onde: `${move}/${ponto}` };
     if (a.correcaoDaMira > piorCorr.v) {
@@ -102,6 +114,7 @@ for (const move of nomes) {
     console.log(
       `${padrao ? "*" : " "}${move.padEnd(11)} ${ponto.padEnd(7)} ${dist.toFixed(0).padStart(5)} ` +
         `${dx.toFixed(0).padStart(5)} ${dy.toFixed(0).padStart(5)} ` +
+        `${erro.toFixed(0).padStart(6)} ` +
         `${a.correcaoDaMira.toFixed(0).padStart(7)}  ` +
         `${a.alcancou ? "sobra " : "no fim"}` +
         `${padrao && !ok ? "  <<< NAO ENCOSTA" : ""}`,

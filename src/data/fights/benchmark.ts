@@ -47,7 +47,10 @@ export const BENCHMARK: FightSpec = {
   // 5 de 10: intensidade media. O benchmark existe para LER o movimento, e
   // intensidade alta encurta os golpes ate esconder o que se quer avaliar.
   intensity: 5,
-  scenario: "arena",
+  // Cenario LIMPO, no estilo da referencia: fundo branco e uma linha de chao.
+  // Trocar o cenario e trocar UM campo de dado, nao codigo, que era o ponto
+  // de tudo isto ser um motor.
+  scenario: "limpo",
   beats: [
     // 1. IDLE. Nada acontece de proposito: e aqui que se ve se o lutador
     //    parado tem vida ou e um manequim.
