@@ -75,7 +75,9 @@ export type PoseName =
   | "downed"
   | "sitUp"
   | "getUp"
-  | "charge";
+  | "charge"
+  | "danca"
+  | "placa";
 
 /** Identidade visual de um lutador. Adicionar cor nova nao mexe em codigo. */
 export type FighterId = "black" | "red" | "blue" | "gold" | "green" | "white" | "purple";
@@ -233,6 +235,16 @@ export type Beat =
       move: AttackName;
       targetPoint?: PontoAlvo;
     }
+  /**
+   * Danca da vitoria (passinho do Jamal): o vencedor comemora. O movimento
+   * e procedural (ver animation/danca.ts); o beat so marca quem e quando.
+   */
+  | { type: "danca"; who: FighterId; duration: number }
+  /**
+   * PLACA: o vencedor vira de frente, puxa das costas uma placa gigante e
+   * segura no alto. `linhas` e o que esta escrito, de cima para baixo.
+   */
+  | { type: "placa"; who: FighterId; duration: number; linhas: string[] }
   | { type: "cta"; duration: number }
   | { type: "hook"; duration: number };
 
@@ -278,6 +290,12 @@ export type ImpactEvent = {
    * compressao do impacto, e a absorcao do golpe nao existiria.
    */
   victim?: FighterId;
+  /** quem bateu: o placar (vida, combo) precisa saber de quem foi o golpe */
+  attacker?: FighterId;
+  /** o golpe encostou na guarda, nao no corpo */
+  bloqueado?: boolean;
+  /** o golpe que encerra a luta */
+  finalizador?: boolean;
 };
 
 /**
@@ -358,6 +376,15 @@ export type Timeline = {
   cameraKeys: CameraKey[];
   /** trechos em camera lenta */
   slowMo: { from: number; to: number; factor: number }[];
+  /**
+   * CAMERA LENTA DE VERDADE: trechos em que o video gasta mais quadros reais
+   * por quadro logico (factor 0.25 = quatro vezes mais devagar).
+   *
+   * Diferente de slowMo, que so avisa a camera, este muda a DURACAO do video
+   * (ver core/tempo.ts). Fica reservado para os poucos momentos que o
+   * espectador tem que ver devagar: a esquiva por um fio e o nocaute.
+   */
+  camaraLenta: { from: number; to: number; factor: number }[];
 };
 
 export type CameraKey = {

@@ -135,3 +135,75 @@ export const REFORCO_HITSTOP: Record<ImpactTier, CamadaDeSom | null> = {
     offset: 0.04,
   },
 };
+
+// ---- ESPETACULO ------------------------------------------------------------
+// Sons dos letreiros e das quedas (ver effects/espetaculo.ts). Offset em
+// relacao ao quadro em que o letreiro aparece.
+
+/** abertura: o ar cortando quando as placas entram e o grave do "VS" */
+export const SOM_ABERTURA_VS: SomComposto = [
+  { arquivo: `${A}/transitions/whoosh_transition_01.wav`, volume: 0.55, offset: -0.16 },
+  { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.75, offset: 0 },
+  { arquivo: `${A}/impacts/impact_light_01.wav`, volume: 0.5, offset: 0 },
+];
+
+/** "LUTE!": uma pancada seca, o gongo da luta */
+export const SOM_ABERTURA_LUTE: SomComposto = [
+  { arquivo: `${A}/heavy/heavy_hit_01.wav`, volume: 0.55, offset: 0 },
+  { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.5, offset: 0.02 },
+];
+
+/** esquiva: o golpe que passa rente corta o ar e nao encosta em nada */
+export const SOM_ESQUIVA: SomComposto = [
+  { arquivo: `${A}/whoosh/whoosh_heavy.wav`, volume: 0.55, offset: -0.3 },
+  { arquivo: `${A}/whoosh/whoosh_light.wav`, volume: 0.45, offset: -0.05 },
+];
+
+/** corpo batendo no chao: baque, grave e um pouco de cascalho */
+export const SOM_QUEDA: SomComposto = [
+  { arquivo: `${A}/impacts/impact_body_01.wav`, volume: 0.75, offset: 0 },
+  { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.5, offset: 0.01 },
+  { arquivo: `${A}/debris/debris_01.wav`, volume: 0.3, offset: 0.03 },
+];
+
+/** nocaute: o grave que segura a camera lenta inteira */
+export const SOM_KO: SomComposto = [
+  { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.9, offset: 0.1 },
+  { arquivo: `${A}/heavy/camera_rumble_01.wav`, volume: 0.55, offset: 0.25 },
+  { arquivo: `${A}/transitions/whoosh_transition_01.wav`, volume: 0.5, offset: 0.4 },
+];
+
+/** o nome do vencedor entrando */
+export const SOM_VENCEDOR: SomComposto = [
+  { arquivo: `${A}/transitions/whoosh_transition_01.wav`, volume: 0.55, offset: -0.1 },
+  { arquivo: `${A}/heavy/heavy_hit_01.wav`, volume: 0.45, offset: 0 },
+];
+
+/**
+ * BATIDA DO PASSINHO: um tamborzao simples montado com os sons que ja
+ * existem (nao e a musica original, que tem direitos). Grave em todo tempo,
+ * estalo no contratempo. Tocado no ritmo exato da danca (TEMPO_DA_DANCA).
+ */
+export const BATIDA_GRAVE: CamadaDeSom = {
+  arquivo: `${A}/heavy/low_boom_01.wav`,
+  volume: 0.55,
+  offset: 0,
+};
+export const BATIDA_ESTALO: CamadaDeSom = {
+  arquivo: `${A}/punches/punch_light_01.wav`,
+  volume: 0.4,
+  offset: 0,
+};
+
+/** a mao vai buscar a placa: o ar cortando */
+export const SOM_BUSCA_PLACA: SomComposto = [
+  { arquivo: `${A}/whoosh/whoosh_medium.wav`, volume: 0.55, offset: 0 },
+];
+
+/** a placa sai de tras e chega no alto: puxao, pancada e grave */
+export const SOM_PLACA: SomComposto = [
+  { arquivo: `${A}/whoosh/whoosh_heavy.wav`, volume: 0.65, offset: -0.2 },
+  { arquivo: `${A}/heavy/heavy_hit_01.wav`, volume: 0.6, offset: 0 },
+  { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.7, offset: 0.02 },
+  { arquivo: `${A}/impacts/impact_light_01.wav`, volume: 0.5, offset: 0.05 },
+];

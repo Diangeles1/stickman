@@ -158,6 +158,7 @@ export const compilar = (spec: FightSpec): Timeline => {
   const aims: AimEvent[] = [];
   const cameraKeys: CameraKey[] = [];
   const slowMo: Timeline["slowMo"] = [];
+  const camaraLenta: Timeline["camaraLenta"] = [];
 
   let cursor = 0;
 
@@ -569,6 +570,12 @@ export const compilar = (spec: FightSpec): Timeline => {
         to: frameContato + s(0.1),
         factor: 0.55,
       });
+      // e cai de verdade: o golpe passa rente em camera lenta
+      camaraLenta.push({
+        from: frameContato - s(0.12),
+        to: frameContato + s(0.1),
+        factor: 0.5,
+      });
 
       // a camera fecha um pouco, sem tremor: nao houve impacto
       cameraKeys.push({
@@ -605,6 +612,8 @@ export const compilar = (spec: FightSpec): Timeline => {
         cracksGround: false,
         sound: "block",
         victim: alvo,
+        attacker: atacante,
+        bloqueado: true,
       });
       // A GUARDA ABSORVE, MAS O CORPO SENTE: o bloqueio empurra quem defende
       // para tras, mais quanto mais forte for quem bateu. Sem isto o soco
@@ -629,7 +638,17 @@ export const compilar = (spec: FightSpec): Timeline => {
         cracksGround: Boolean(def.cracksGround),
         sound: def.sound,
         victim: alvo,
+        attacker: atacante,
+        ...(opcoes.finalizador ? { finalizador: true } : {}),
       });
+      if (opcoes.finalizador) {
+        // NOCAUTE EM CAMERA LENTA: o voo comeca quatro vezes mais devagar e
+        // acelera de volta. E o quadro que o espectador vai querer rever.
+        camaraLenta.push(
+          { from: frameContato, to: frameContato + s(0.25), factor: 0.25 },
+          { from: frameContato + s(0.25), to: frameContato + s(0.5), factor: 0.5 },
+        );
+      }
 
       const voa = Boolean(def.launches) || def.tier === "extreme";
 
@@ -1067,6 +1086,54 @@ export const compilar = (spec: FightSpec): Timeline => {
         });
         break;
 
+      case "danca": {
+        // o vencedor sai da guarda e entra no passinho; o resto do corpo
+        // (pernas, bracos, rebolado) e calculado em animation/danca.ts
+        chave(beat.who, cursor);
+        estado[beat.who].pose = "danca";
+        chave(beat.who, cursor + 10);
+        chave(beat.who, cursor + beat.duration);
+        // a camera enquadra o vencedor dancando E o derrotado no chao: um
+        // sem o outro nao conta a piada. Corpo inteiro, com os pes, porque
+        // e nas pernas que o passinho acontece.
+        cameraKeys.push({
+          frame: cursor,
+          center: {
+            x: (estado[beat.who].x + estado[oposto(beat.who)].x) / 2,
+            y: ALTURA_QUADRIL - 60,
+          },
+          zoom: 1.0,
+          ease: s(0.5),
+          fit: true,
+        });
+        cursor += beat.duration;
+        break;
+      }
+
+      case "placa": {
+        // o movimento e procedural (animation/placa.ts); aqui so a troca de
+        // pose, para os pes plantados soltarem e o corpo girar de frente
+        chave(beat.who, cursor);
+        estado[beat.who].pose = "placa";
+        chave(beat.who, cursor + 12);
+        chave(beat.who, cursor + beat.duration);
+        // abre e sobe: a placa fica bem acima da cabeca. Puxada um pouco
+        // para o lado do derrotado, que continua no quadro caido
+        cameraKeys.push({
+          frame: cursor + 20,
+          center: {
+            x:
+              estado[beat.who].x +
+              (estado[oposto(beat.who)].x - estado[beat.who].x) * 0.4,
+            y: ALTURA_QUADRIL - 320,
+          },
+          zoom: 0.85,
+          ease: s(0.45),
+        });
+        cursor += beat.duration;
+        break;
+      }
+
       case "hold":
       case "cta":
       case "hook":
@@ -1090,5 +1157,6 @@ export const compilar = (spec: FightSpec): Timeline => {
     cameraKeys,
     tracks,
     slowMo,
+    camaraLenta,
   };
 };

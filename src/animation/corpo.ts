@@ -35,6 +35,8 @@ import {
   progressoDoVoo,
   suave,
 } from "./sampler";
+import { poseDaDanca, reboladoDaDanca } from "./danca";
+import { VIRA, poseDaPlaca } from "./placa";
 import { PRESETS } from "../characters/presets";
 import {
   ALTURA_QUADRIL,
@@ -387,10 +389,39 @@ const corpoBase = (
     timeline.tracks[id],
     frame,
   );
-  const pose = estreitarNoGiro(
+  let pose = estreitarNoGiro(
     a.poseNome === "guard" ? gingar(respirando, frame, defasagem) : respirando,
     fechamento,
   );
+
+  // DANCA DA VITORIA: por cima de tudo, entrando em 12 quadros a partir da
+  // guarda (misturada em angulos, os ossos nao esticam). Continua alguns
+  // quadros depois do fim, enquanto a placa (abaixo) vira o corpo de frente.
+  let rebolado = 0;
+  const danca = timeline.scheduled.find(
+    (b) =>
+      b.beat.type === "danca" &&
+      b.beat.who === id &&
+      frame >= b.from &&
+      frame < b.to + VIRA,
+  );
+  if (danca) {
+    const t = frame - danca.from;
+    const entrada = Math.min(1, t / 12);
+    pose = misturar(pose, poseDaDanca(t), entrada * entrada * (3 - 2 * entrada));
+    rebolado = reboladoDaDanca(t) * entrada;
+  }
+  // A PLACA: vira de frente e puxa a placa das costas
+  const placa = timeline.scheduled.find(
+    (b) => b.beat.type === "placa" && b.beat.who === id && frame >= b.from,
+  );
+  if (placa) {
+    const t = frame - placa.from;
+    const vira = Math.min(1, t / VIRA);
+    const w = vira * vira * (3 - 2 * vira);
+    pose = misturar(pose, poseDaPlaca(t), w);
+    rebolado *= 1 - w;
+  }
 
   // Em pose de ataque ou de reacao a inclinacao e zerada: a pose ja tem a
   // atitude do corpo desenhada, e girar o corpo no quadro do contato tirava o
@@ -465,7 +496,7 @@ const corpoBase = (
   const voo = alturaDoVoo(timeline.tracks[id], frame);
 
   return {
-    x: a.x + pivo,
+    x: a.x + pivo + rebolado,
     baseY: (-apoio - voo) * compressao,
     facing,
     scale: preset.scale * compressao,
