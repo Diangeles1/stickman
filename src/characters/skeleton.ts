@@ -393,7 +393,11 @@ export const paraLocal = (mundo: Vec2, t: Transformacao): Vec2 => {
   const ex = dx * cos + dy * sen;
   const ey = -dx * sen + dy * cos;
   const escala = t.scale * ESCALA_POSE;
-  return { x: ex / (t.facing * escala), y: ey / escala };
+  // giro perto de zero nao tem inversa util: o corpo esta de perfil e
+  // qualquer x local cai na mesma linha. O piso so evita divisao por zero.
+  const giro = t.giro ?? 1;
+  const g = Math.abs(giro) < 0.05 ? Math.sign(giro || 1) * 0.05 : giro;
+  return { x: ex / (t.facing * g * escala), y: ey / escala };
 };
 
 /**
@@ -507,21 +511,53 @@ export const mirarMembro = (
  * entao a pose no QUADRO-CHAVE continua exata: o atraso muda o caminho, nao
  * o destino. Isso importa porque o contato e garantido nos quadros-chave.
  */
-export type PerfilDeAtraso = Partial<Record<JointName, number>>;
+/**
+ * Cada junta tem uma JANELA dentro do movimento: um numero so e o instante em
+ * que ela comeca (e todas terminam juntas no fim); um par [comeca, termina]
+ * tambem diz quando ela CHEGA.
+ *
+ * O par existe porque atrasar so a partida nao faz cadeia: todas as juntas
+ * ainda chegam no ultimo quadro, e numa curva que acelera ate o contato todas
+ * atingem a velocidade maxima nesse mesmo quadro. O corpo continua um bloco,
+ * so que com partida escalonada. Cadeia de verdade e a raiz CHEGAR antes: o
+ * quadril termina de girar, o tronco termina, o ombro termina, e por ultimo o
+ * punho, que recebe a energia de todos.
+ */
+export type PerfilDeAtraso = Partial<Record<JointName, number | [number, number]>>;
 
 /**
  * ATAQUE: o movimento nasce no chao e sobe.
  * pe -> perna -> quadril -> tronco -> ombro -> braco -> punho
  */
 export const ATRASO_DO_ATAQUE: PerfilDeAtraso = {
-  hip: 0,
-  kneeBack: 0.05, kneeFront: 0.05,
-  footBack: 0.11, footFront: 0.11,
-  neck: 0.12,
-  shoulderBack: 0.15, shoulderFront: 0.15,
-  head: 0.2,
-  elbowBack: 0.24, elbowFront: 0.24,
-  handBack: 0.34, handFront: 0.34,
+  hip: [0, 0.3],
+  kneeBack: [0.02, 0.36], kneeFront: [0.02, 0.36],
+  footBack: [0.04, 0.4], footFront: [0.04, 0.4],
+  neck: [0.04, 0.42],
+  shoulderBack: [0.1, 0.56], shoulderFront: [0.1, 0.56],
+  head: [0.14, 0.62],
+  elbowBack: [0.26, 0.86], elbowFront: [0.26, 0.86],
+  handBack: [0.34, 1], handFront: [0.34, 1],
+};
+
+/**
+ * CHUTE: a mesma cadeia, mas a ponta e o PE.
+ *
+ * Com o perfil do soco o pe da frente chegava junto com o quadril, ou seja
+ * antes do tronco: a perna que chuta era a primeira coisa a parar. Aqui a
+ * perna de apoio e o tronco se resolvem primeiro, os bracos abrem como
+ * contrapeso, e o joelho e o pe da frente chegam por ultimo.
+ */
+export const ATRASO_DO_CHUTE: PerfilDeAtraso = {
+  hip: [0, 0.6],
+  kneeBack: [0.02, 0.62], footBack: [0.02, 0.62],
+  neck: [0.08, 0.7],
+  head: [0.14, 0.78],
+  shoulderBack: [0.1, 0.74], shoulderFront: [0.1, 0.74],
+  elbowBack: [0.16, 0.82], elbowFront: [0.16, 0.82],
+  handBack: [0.22, 0.88], handFront: [0.22, 0.88],
+  kneeFront: [0.28, 0.92],
+  footFront: [0.38, 1],
 };
 
 /**
@@ -543,23 +579,31 @@ export const ATRASO_DA_REACAO: PerfilDeAtraso = {
   footBack: 0.3, footFront: 0.3,
 };
 
+/**
+ * `t` e o tempo CRU (0 a 1) e `curva` e aplicada depois da janela de cada
+ * junta. A ordem importa: aplicando a curva antes, uma curva que acelera ate
+ * o fim empurrava a chegada de TODAS as juntas para os ultimos quadros, e num
+ * golpe de 6 quadros a cadeia inteira cabia num so.
+ */
 export const misturar = (
   a: Pose,
   b: Pose,
   t: number,
   atrasos?: PerfilDeAtraso,
+  curva: (t: number) => number = (x) => x,
 ): Required<Pose> => {
   const ca = completar(a);
   const cb = completar(b);
   const saida = poseBase();
   for (const junta of TODAS_AS_JUNTAS) {
-    const atraso = atrasos?.[junta] ?? 0;
-    // reescala o tempo da junta: ela so comeca depois do seu atraso, e chega
-    // exatamente junto com as outras no fim
-    const tj =
-      atraso <= 0
-        ? t
-        : Math.max(0, Math.min(1, (t - atraso) / (1 - atraso)));
+    const janela = atrasos?.[junta] ?? 0;
+    const [comeca, termina] =
+      typeof janela === "number" ? [janela, 1] : janela;
+    // reescala o tempo da junta para a janela dela e so entao aplica a
+    // curva. A curva pode passar de 1 (acomodacao): isso e intencional.
+    const tj = curva(
+      Math.max(0, Math.min(1, (t - comeca) / (termina - comeca))),
+    );
     saida[junta] = {
       x: ca[junta].x + (cb[junta].x - ca[junta].x) * tj,
       y: ca[junta].y + (cb[junta].y - ca[junta].y) * tj,
@@ -578,6 +622,15 @@ export type Transformacao = {
   scale: number;
   /** rotacao do corpo inteiro em graus, em torno do quadril (chute giratorio) */
   spin?: number;
+  /**
+   * GIRO NO EIXO VERTICAL: multiplica a largura do corpo. 1 = de frente para
+   * o lado que ele olha, 0 = de perfil para a camera, -1 = de costas.
+   *
+   * E como animacao 2D mostra um corpo girando em torno de si mesmo (o chute
+   * giratorio): o esqueleto "achata" ate virar uma linha e abre do outro
+   * lado. Sem isto o chute giratorio era um chute lateral com outro nome.
+   */
+  giro?: number;
 };
 
 /** Aplica a transformacao e devolve as juntas em coordenadas de mundo. */
@@ -590,12 +643,13 @@ export const juntasNoMundo = (
   const cos = Math.cos(rad);
   const sen = Math.sin(rad);
   const saida = {} as Record<JointName, Vec2>;
+  const giro = t.giro ?? 1;
 
   for (const junta of TODAS_AS_JUNTAS) {
     // espelha, escala (ESCALA_POSE leva a pose para unidades de mundo), gira
     // em torno do quadril e por fim translada
     const escala = t.scale * ESCALA_POSE;
-    const ex = c[junta].x * t.facing * escala;
+    const ex = c[junta].x * t.facing * giro * escala;
     const ey = c[junta].y * escala;
     saida[junta] = {
       x: t.baseX + ex * cos - ey * sen,

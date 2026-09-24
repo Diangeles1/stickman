@@ -21,17 +21,29 @@ const p = (pose: Pose): Pose => pose;
 export const POSES: Record<PoseName, Pose> = {
   idle: p({}),
 
+  /**
+   * GUARDA DE LUTA.
+   *
+   * A anterior era um corpo em pe com os bracos dobrados: pernas quase retas,
+   * base estreita, tronco vertical. Nas lutas de stickman profissionais a
+   * guarda e uma BASE: pes afastados, joelhos dobrados, peso levemente a
+   * frente e o punho da frente na altura do queixo. E a pose em que o
+   * personagem passa mais tempo, entao e a que mais diz se ele e um lutador.
+   */
   guard: p({
-    neck: { x: 4, y: -74 },
-    head: { x: 6, y: -114 },
-    elbowBack: { x: -6, y: -38 },
-    handBack: { x: 10, y: -52 },
-    elbowFront: { x: 14, y: -38 },
-    handFront: { x: 30, y: -56 },
-    kneeBack: { x: -22, y: 46 },
-    footBack: { x: -40, y: 92 },
-    kneeFront: { x: 18, y: 46 },
-    footFront: { x: 34, y: 92 },
+    neck: { x: 9, y: -72 },
+    head: { x: 14, y: -111 },
+    // punho de tras colado ao queixo, cotovelo fechando a costela
+    elbowBack: { x: 2, y: -40 },
+    handBack: { x: 18, y: -64 },
+    // punho da frente adiantado, na altura do queixo
+    elbowFront: { x: 30, y: -44 },
+    handFront: { x: 46, y: -70 },
+    // base larga e joelhos dobrados: o peso fica pronto para sair
+    kneeBack: { x: -30, y: 46 },
+    footBack: { x: -54, y: 92 },
+    kneeFront: { x: 30, y: 44 },
+    footFront: { x: 46, y: 92 },
   }),
 
   // --- locomocao -----------------------------------------------------------

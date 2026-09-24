@@ -64,6 +64,85 @@ import type {
 const POSES_QUE_RESPIRAM = new Set<PoseName>(["idle", "guard"]);
 
 /**
+ * GINGA DA GUARDA: o lutador quica no lugar, como boxeador.
+ *
+ * E o que mais separa luta de stickman profissional de manequim: ninguem
+ * espera um golpe parado. Os joelhos flexionam num ritmo curto e o corpo sobe
+ * e desce junto; a respiracao sozinha e sutil demais para ler no celular.
+ *
+ * Feita DOBRANDO OS JOELHOS, nao descendo o quadril: o apoio no chao (mais
+ * abaixo) deriva a altura do corpo do pe mais baixo, entao joelho que dobra
+ * baixa o corpo sozinho e o pe continua plantado.
+ */
+const PERIODO_DA_GINGA = 34;
+/**
+ * Deslocamento das juntas no ponto mais baixo da ginga, em unidades de pose.
+ *
+ * Os dois joelhos NAO abrem o mesmo tanto, de proposito: as pernas da guarda
+ * tem angulos diferentes, e com a mesma abertura o pe da frente subia 9
+ * unidades de mundo no fundo da ginga, o corpo "pisava no ar". Estes valores
+ * foram medidos para os dois pes subirem igual em relacao ao quadril (6,7 e
+ * 6,6 unidades de pose), e entao e o corpo que desce, nao o pe que levanta.
+ */
+const GINGA: Pose = {
+  kneeFront: { x: 18, y: -4 },
+  kneeBack: { x: -26, y: -4 },
+  neck: { x: 2, y: 3 },
+  head: { x: 3, y: 4 },
+  handFront: { x: 2, y: 5 },
+  handBack: { x: 1, y: 4 },
+  elbowFront: { x: 1, y: 3 },
+  elbowBack: { x: 1, y: 3 },
+};
+
+const gingar = (pose: Pose, frame: number, defasagem: number): Pose => {
+  // 1 - cos da uma descida suave e uma subida suave: o corpo "pesa" embaixo
+  const fase = (frame / PERIODO_DA_GINGA) * Math.PI * 2 + defasagem;
+  const quanto = (1 - Math.cos(fase)) / 2;
+  const saida: Pose = { ...pose };
+  for (const [junta, d] of Object.entries(GINGA) as [keyof Pose, { x: number; y: number }][]) {
+    const v = pose[junta];
+    if (!v) continue;
+    saida[junta] = { x: v.x + d.x * quanto, y: v.y + d.y * quanto };
+  }
+  return saida;
+};
+
+/**
+ * GIRO DO CHUTE GIRATORIO: uma volta inteira no eixo vertical.
+ *
+ * O corpo gira entre o fim da carga e o contato, e chega ao contato exatamente
+ * de frente (giro = 1), que e onde a distancia de combate e a mira foram
+ * calculadas. No meio da volta ele fica de costas para o adversario, que e o
+ * quadro que o olho usa para ler "girou".
+ */
+const POSES_QUE_GIRAM = new Set<PoseName>(["spinKick"]);
+
+const giroNoQuadro = (
+  track: Timeline["tracks"][string],
+  frame: number,
+): number => {
+  const keys = track.keys;
+  for (let i = 1; i < keys.length; i++) {
+    const k = keys[i];
+    if (!POSES_QUE_GIRAM.has(k.pose)) continue;
+    const anterior = keys[i - 1];
+    // so a chave em que o golpe CHEGA: as seguintes seguram a extensao
+    if (POSES_QUE_GIRAM.has(anterior.pose)) continue;
+    // O TRONCO GIRA PRIMEIRO, A PERNA CHICOTEIA DEPOIS: a volta comeca
+    // ainda na carga e termina na metade do disparo; o resto do tempo e so a
+    // perna estendendo. Girando ate o ultimo quadro, corpo e perna chegavam
+    // juntos e o chute perdia o estalo.
+    const inicio = anterior.frame - 10;
+    const fim = anterior.frame + (k.frame - anterior.frame) * 0.5;
+    if (frame < inicio || frame > k.frame) continue;
+    const p = Math.min(1, (frame - inicio) / Math.max(1, fim - inicio));
+    return Math.cos(suave(p) * Math.PI * 2);
+  }
+  return 1;
+};
+
+/**
  * RESPIRACAO: o peito sobe e desce e os bracos acompanham.
  *
  * Sem isto o lutador que espera fica LITERALMENTE parado. Medido no
@@ -185,6 +264,8 @@ export type Corpo = {
   /** escala ja pronta para juntasNoMundo */
   scale: number;
   spin: number;
+  /** giro no eixo vertical: 1 de frente, -1 de costas (ver Transformacao) */
+  giro: number;
   pose: Pose;
   poseNome: PoseName;
   velocidade: number;
@@ -204,6 +285,7 @@ export const transformDoCorpo = (c: Corpo): Transformacao => ({
   facing: c.facing,
   scale: c.scale,
   spin: c.spin,
+  giro: c.giro,
 });
 
 /** Juntas do corpo em coordenadas de mundo. */
@@ -235,9 +317,12 @@ const corpoBase = (
   // meia volta de defasagem para o segundo lutador: os dois respirando em
   // sincronia denunciaria que a respiracao e a mesma funcao
   const defasagem = id === fighterA ? 0 : Math.PI;
-  const pose = POSES_QUE_RESPIRAM.has(a.poseNome)
+  const respirando = POSES_QUE_RESPIRAM.has(a.poseNome)
     ? respirar(a.pose, frame, defasagem)
     : a.pose;
+  const pose =
+    a.poseNome === "guard" ? gingar(respirando, frame, defasagem) : respirando;
+  const giro = giroNoQuadro(timeline.tracks[id], frame);
 
   // Em pose de ataque ou de reacao a inclinacao e zerada: a pose ja tem a
   // atitude do corpo desenhada, e girar o corpo no quadro do contato tirava o
@@ -265,6 +350,7 @@ const corpoBase = (
     facing,
     scale: preset.scale,
     spin,
+    giro,
   });
   const apoio = Math.max(local.footFront.y, local.footBack.y);
   const voo = alturaDoVoo(timeline.tracks[id], frame);
@@ -275,6 +361,7 @@ const corpoBase = (
     facing,
     scale: preset.scale * compressao,
     spin,
+    giro,
     pose,
     poseNome: a.poseNome,
     velocidade: a.velocidade,

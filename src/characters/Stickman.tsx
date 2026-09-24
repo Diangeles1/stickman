@@ -30,6 +30,8 @@ export type StickmanProps = {
   scaleExtra?: number;
   /** rotacao do corpo em torno do quadril, em graus (chute giratorio) */
   spin?: number;
+  /** giro no eixo vertical: 1 de frente, -1 de costas (ver Transformacao) */
+  giro?: number;
   opacity?: number;
   /** escurece o braco e a perna de tras, o que da leitura de volume */
   profundidade?: boolean;
@@ -60,6 +62,36 @@ const CONTORNO = 5;
  */
 const COR_DO_CONTORNO = "#050609";
 
+/** Membros da FRENTE: de costas para a camera eles passam a ficar atras. */
+const JUNTAS_FRENTE = new Set<JointName>([
+  "shoulderFront",
+  "elbowFront",
+  "handFront",
+  "kneeFront",
+  "footFront",
+]);
+
+const ehDeFundo = (junta: JointName, deCostas: boolean): boolean =>
+  deCostas ? JUNTAS_FRENTE.has(junta) : JUNTAS_FUNDO.has(junta);
+
+/**
+ * Ossos na ordem de profundidade para o lado que o corpo mostra.
+ *
+ * De costas (no meio do chute giratorio) o braco e a perna "de tras" ficam
+ * mais perto da camera. Sem trocar a ordem, o membro de tras continuava
+ * escuro e por baixo, e o giro lia como corpo achatando, nao virando.
+ */
+const ossosEmOrdem = (deCostas: boolean): [JointName, JointName][] => {
+  if (!deCostas) return OSSOS;
+  const fundo = OSSOS.filter(
+    ([a, b]) => ehDeFundo(a, true) || ehDeFundo(b, true),
+  );
+  const resto = OSSOS.filter(
+    ([a, b]) => !(ehDeFundo(a, true) || ehDeFundo(b, true)),
+  );
+  return [...fundo, ...resto];
+};
+
 /** Escurece uma cor hex por um fator. Usado no membro de tras. */
 const escurecer = (hex: string, fator: number): string => {
   const n = parseInt(hex.slice(1), 16);
@@ -77,6 +109,7 @@ export const Stickman: React.FC<StickmanProps> = ({
   facing,
   scaleExtra = 1,
   spin = 0,
+  giro = 1,
   opacity = 1,
   profundidade = true,
   contorno = true,
@@ -87,7 +120,10 @@ export const Stickman: React.FC<StickmanProps> = ({
     facing,
     scale: preset.scale * scaleExtra,
     spin,
+    giro,
   };
+  const deCostas = giro < 0;
+  const ossos = ossosEmOrdem(deCostas);
   const j: Record<JointName, Vec2> = juntasNoMundo(pose, transformacao);
   const largura = preset.limbWidth * preset.scale * scaleExtra;
   // 0.62 jogava o membro de tras para razao de contraste 1.8 contra o fundo:
@@ -114,7 +150,7 @@ export const Stickman: React.FC<StickmanProps> = ({
       */}
       {contorno && (
       <g data-part="contorno" stroke={COR_DO_CONTORNO} fill={COR_DO_CONTORNO}>
-        {OSSOS.map(([de, para]) => (
+        {ossos.map(([de, para]) => (
           <line
             key={`c-${de}-${para}`}
             x1={j[de].x}
@@ -129,10 +165,11 @@ export const Stickman: React.FC<StickmanProps> = ({
       </g>
       )}
 
-      {OSSOS.map(([de, para]) => {
+      {ossos.map(([de, para]) => {
         // o osso e "de tras" quando qualquer ponta dele e de tras
         const atras =
-          profundidade && (JUNTAS_FUNDO.has(de) || JUNTAS_FUNDO.has(para));
+          profundidade &&
+          (ehDeFundo(de, deCostas) || ehDeFundo(para, deCostas));
         return (
           <line
             key={`${de}-${para}`}
@@ -167,7 +204,13 @@ export const Stickman: React.FC<StickmanProps> = ({
  */
 export const StickmanTrail: React.FC<{
   preset: FighterPreset;
-  quadros: { pose: Pose; baseX: number; baseY: number; spin?: number }[];
+  quadros: {
+    pose: Pose;
+    baseX: number;
+    baseY: number;
+    spin?: number;
+    giro?: number;
+  }[];
   facing: 1 | -1;
   /** opacidade do rastro mais forte; os demais decaem a partir dela */
   forca?: number;
@@ -182,6 +225,7 @@ export const StickmanTrail: React.FC<{
         baseY={q.baseY}
         facing={facing}
         spin={q.spin}
+        giro={q.giro}
         opacity={(forca * (i + 1)) / quadros.length}
         profundidade={false}
       />

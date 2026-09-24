@@ -396,7 +396,9 @@ export const compilar = (spec: FightSpec): Timeline => {
       cameraKeys.push({
         frame: frameContato - s(0.08),
         center: { x: contato.x, y: ALTURA_QUADRIL - 60 },
-        zoom: 1.22,
+        // 1.2 e nao 1.22: com a guarda de base larga o atacante ficava 1
+        // unidade alem da margem e saia do quadro logo depois da esquiva
+        zoom: 1.2,
         ease: s(0.1),
       });
       cameraKeys.push({
@@ -579,7 +581,6 @@ export const compilar = (spec: FightSpec): Timeline => {
     // continuacao do passo que ele deu para golpear.
     estado[atacante].pose = "guard";
     estado[atacante].x -= lado * RECUO_DA_CARGA * 0.55;
-    chave(atacante, cursor);
 
     // ---- QUEM LANCA ANDA ATRAS ---------------------------------------------
     // Sem isto os dois terminam o golpe a 900 unidades de distancia, o plano
@@ -588,25 +589,41 @@ export const compilar = (spec: FightSpec): Timeline => {
     //
     // Nao e concessao a camera, e o que um lutador faz: quem acerta um golpe
     // que joga o outro longe avanca atras dele, nao fica parado olhando.
-    let ultimaDoAtacante = cursor;
-    if (!opcoes.bloqueado && !opcoes.esquivado && fimDaReacao > cursor + s(0.25)) {
-      const destinoFinal = estado[alvo].x - lado * DISTANCIA_NEUTRA;
+    const destinoFinal = estado[alvo].x - lado * DISTANCIA_NEUTRA;
+    const vaiSeguir =
+      !opcoes.bloqueado &&
+      !opcoes.esquivado &&
+      fimDaReacao > cursor + s(0.25) &&
       // so avanca, nunca recua: o alvo pode ter caido perto
-      if ((destinoFinal - estado[atacante].x) * lado > 0) {
-        // Ele CHEGA junto com o pouso, nao depois dele. Terminando a caminhada
-        // em fimDaReacao (que inclui o tempo de acomodar no chao) ele ainda
-        // estava a caminho no quadro do toque, e a auditoria de camera pegou
-        // exatamente um quadro cortado ali: separacao 627 contra 620 que o
-        // piso de zoom cabe. Seguir o proprio golpe e chegar com ele.
-        const chegada = Math.min(fimDaReacao, fimDoDeslocamento + s(0.12));
-        estado[atacante].pose = "walk1";
-        chave(atacante, cursor + QUADROS_DE_TRANSICAO);
-        estado[atacante].x = destinoFinal;
-        chave(atacante, chegada);
-        estado[atacante].pose = "guard";
-        ultimaDoAtacante = chegada + s(0.12);
-        chave(atacante, ultimaDoAtacante);
-      }
+      (destinoFinal - estado[atacante].x) * lado > 0;
+
+    let ultimaDoAtacante: number;
+    if (vaiSeguir) {
+      // Ele CHEGA junto com o pouso, nao depois dele. Terminando a caminhada
+      // em fimDaReacao (que inclui o tempo de acomodar no chao) ele ainda
+      // estava a caminho no quadro do toque, e a auditoria de camera pegou
+      // exatamente um quadro cortado ali: separacao 627 contra 620 que o
+      // piso de zoom cabe. Seguir o proprio golpe e chegar com ele.
+      //
+      // O membro recolhe JA ANDANDO: a pose vai direto da extensao para o
+      // passo. Parar para recolher e so depois andar atrasava a caminhada, e
+      // a camera perdia o atacante enquanto o outro voava.
+      const chegada = Math.min(fimDaReacao, fimDoDeslocamento + s(0.12));
+      estado[atacante].pose = "walk1";
+      chave(atacante, cursor + QUADROS_DE_TRANSICAO);
+      estado[atacante].x = destinoFinal;
+      chave(atacante, chegada);
+      estado[atacante].pose = "guard";
+      ultimaDoAtacante = chegada + s(0.12);
+      chave(atacante, ultimaDoAtacante);
+    } else {
+      // A volta leva um terco da recuperacao, e nao zero quadros: antes a
+      // chave da guarda caia no fim do disparo, e o membro que levou 10
+      // quadros para ir voltava em 3. Recolher de estalo le como elastico;
+      // recolher com tempo (e com a acomodacao da amostragem) le como membro
+      // com massa.
+      ultimaDoAtacante = cursor + Math.max(3, Math.round(recover * 0.35));
+      chave(atacante, ultimaDoAtacante);
     }
 
     // O alvo so volta a guarda DEPOIS que a reacao termina. A versao anterior

@@ -12,7 +12,11 @@
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { corpoNoQuadro } from "../animation/corpo";
-import { poseDeContato, quadroEfetivo } from "../animation/sampler";
+import {
+  poseDeContato,
+  quadroEfetivo,
+  tremorDoHitStop,
+} from "../animation/sampler";
 import { Arena } from "../backgrounds/Arena";
 import { cameraNoQuadro, transformDaCamera } from "../camera/camera";
 import { PRESETS } from "../characters/presets";
@@ -26,6 +30,7 @@ import {
   Ondas,
   Particulas,
 } from "../effects/Impact";
+import { ArcoDoGolpe } from "../effects/Arco";
 import { DebugOverlay } from "../debug/DebugOverlay";
 import { poeiraAmbiente } from "../particles/particles";
 import type { Timeline } from "../core/types";
@@ -129,9 +134,12 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
                 baseX: c.x,
                 baseY: c.baseY,
                 spin: c.spin,
+                giro: c.giro,
               };
             })
           : [],
+      // so o DESENHO vibra: a mira e a camera continuam no corpo parado
+      tremor: tremorDoHitStop(timeline, frameReal, id),
     };
   });
 
@@ -193,6 +201,14 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
         <g data-layer="atras-dos-corpos">
           {lutadores.map(({ id, corpo, preset, rapido, rastro }) => (
             <g key={`tras-${id}`}>
+              <ArcoDoGolpe
+                timeline={timeline}
+                frame={frame}
+                id={id}
+                cor={preset.stroke}
+                largura={preset.limbWidth * preset.scale * 1.15}
+                opacidade={limpo ? 0.32 : 0.42}
+              />
               {rastro.length > 0 && (
                 <StickmanTrail
                   preset={preset}
@@ -225,16 +241,17 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
           ))}
         </g>
 
-        {lutadores.map(({ id, corpo, preset }) => (
+        {lutadores.map(({ id, corpo, preset, tremor }) => (
           <Stickman
             key={id}
             preset={preset}
             pose={corpo.pose}
-            baseX={corpo.x}
+            baseX={corpo.x + tremor}
             baseY={corpo.baseY}
             facing={corpo.facing}
             scaleExtra={corpo.scale / preset.scale}
             spin={corpo.spin}
+            giro={corpo.giro}
             contorno={!limpo}
           />
         ))}
