@@ -750,7 +750,8 @@ export const compilar = (spec: FightSpec): Timeline => {
       ? cursor + Math.max(2, Math.round(recover * 0.12))
       : cursor +
         Math.max(3, Math.round(recover * perfil.recolher * (opcoes.esquivado ? 1.5 : 1)));
-    chave(atacante, retorno);
+    // (quem vai seguir o alvo recolhe o membro JA ANDANDO, ver abaixo)
+    if (!vaiSeguir) chave(atacante, retorno);
     let ultimaDoAtacante = retorno;
 
     // DISTANCIA DE NOVO. Depois de uma troca sem knockback (golpe esquivado ou
@@ -777,15 +778,17 @@ export const compilar = (spec: FightSpec): Timeline => {
     }
 
     if (vaiSeguir) {
-      // Ele CHEGA junto com o pouso, nao depois dele. Seguir o proprio golpe
-      // e chegar com ele; so comeca a andar depois de se recompor, porque
-      // andar com a perna do chute ainda no ar e o que um boneco faria.
+      // Ele CHEGA junto com o pouso, nao depois dele: seguir o proprio golpe
+      // e chegar com ele. O membro recolhe no caminho para o passo (a perna
+      // do chute desce e os pes plantados cuidam do apoio). Esperando se
+      // recompor para so entao andar, o alvo empurrado ja estava 600
+      // unidades longe e a camera perdia um dos dois em todo knockback.
       const chegada = Math.max(
-        retorno + QUADROS_DE_TRANSICAO + s(0.2),
+        cursor + QUADROS_DE_TRANSICAO + s(0.2),
         Math.min(fimDaReacao, fimDoDeslocamento + s(0.12)),
       );
       estado[atacante].pose = "walk1";
-      chave(atacante, retorno + QUADROS_DE_TRANSICAO);
+      chave(atacante, cursor + QUADROS_DE_TRANSICAO + 2);
       estado[atacante].x = destinoFinal;
       chave(atacante, chegada);
       estado[atacante].pose = "guard";

@@ -188,7 +188,10 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     tier: "medium",
     knockback: 420,
     hitStop: 4,
-    contactJoint: "shoulderFront",
+    // o ANTEBRACO da frente lidera a investida, colado ao corpo. Era o ombro,
+    // que e raiz de cadeia: nao ha membro para a cinematica inversa mirar, e
+    // toda investida gerada errava o alvo por 90 a 136 unidades.
+    contactJoint: "elbowFront",
     sound: "whoosh",
   }),
   airAttack: def({

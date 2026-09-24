@@ -37,6 +37,9 @@ const MEDIOS: AttackName[] = ["punch", "kick", "kickHigh", "knee", "charge"];
 /** Golpes que fecham a luta. Todos de intensidade extrema: lancam. */
 const FINALIZADORES: AttackName[] = ["uppercut", "spinKick", "punchHeavy"];
 
+/** Golpes que so tem um alvo possivel (o padrao deles, ver ALVO_PADRAO). */
+const GOLPES_DE_ALVO_FIXO = new Set<AttackName>(["charge", "kickLow", "knee"]);
+
 /** Alvos alternativos, para o golpe nao mirar sempre no mesmo lugar. */
 const ALVOS: PontoAlvo[] = ["head", "chest", "torso"];
 
@@ -139,7 +142,12 @@ export const gerarLuta = (
     // vencendo o outro
     const chanceDeEntrar = 0.45 + escalada * 0.45;
     const sorte = rng();
-    const ponto = rng() < 0.35 ? sorteia(ALVOS) : undefined;
+    // Golpe de alvo FIXO nao sorteia ponto: investida na cabeca, chute baixo
+    // no rosto ou joelhada na cabeca nao sao golpes que um corpo consegue dar,
+    // e o sorteio produzia exatamente esses (o ombro da investida parava 43
+    // unidades abaixo da cabeca). Eles usam o ponto padrao do golpe.
+    const sorteado = rng() < 0.35 ? sorteia(ALVOS) : undefined;
+    const ponto = GOLPES_DE_ALVO_FIXO.has(move) ? undefined : sorteado;
 
     if (sorte < chanceDeEntrar) {
       beats.push(
