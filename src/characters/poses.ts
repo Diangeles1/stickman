@@ -205,37 +205,48 @@ export const POSES: Record<PoseName, Pose> = {
    * qualquer ataque, entao melhorar aqui melhora a luta inteira.
    */
   coil: p({
-    hip: { x: -12, y: 6 },
-    neck: { x: -16, y: -70 },
-    head: { x: -22, y: -108 },
+    hip: { x: -14, y: 8 },
+    // o TRONCO gira para tras: e o tronco que carrega o golpe, nao o braco
+    neck: { x: -30, y: -66 },
+    head: { x: -40, y: -102 },
     // o punho volta para junto do ombro
-    elbowFront: { x: -6, y: -52 },
-    handFront: { x: -28, y: -62 },
-    elbowBack: { x: -24, y: -44 },
-    handBack: { x: -6, y: -58 },
+    elbowFront: { x: -18, y: -50 },
+    handFront: { x: -42, y: -58 },
+    elbowBack: { x: -34, y: -42 },
+    handBack: { x: -14, y: -56 },
     // peso e joelho na perna de tras: energia guardada
-    kneeBack: { x: -32, y: 50 },
-    footBack: { x: -54, y: 92 },
-    kneeFront: { x: 18, y: 50 },
-    footFront: { x: 30, y: 92 },
+    kneeBack: { x: -34, y: 48 },
+    footBack: { x: -58, y: 92 },
+    kneeFront: { x: 22, y: 50 },
+    footFront: { x: 36, y: 92 },
   }),
 
   // --- socos ---------------------------------------------------------------
   punch: p({
-    // o quadril gira para dentro do golpe
-    hip: { x: 8, y: 2 },
-    neck: { x: 10, y: -72 },
-    head: { x: 16, y: -110 },
-    elbowFront: { x: 40, y: -62 },
-    handFront: { x: 86, y: -72 },
-    elbowBack: { x: -18, y: -46 },
-    handBack: { x: -26, y: -60 },
-    kneeFront: { x: 34, y: 46 },
-    footFront: { x: 58, y: 92 },
-    // a perna de tras ESTICA: e ela que empurra o corpo para dentro do soco.
-    // Antes ficava na pose base, e o soco saia so do braco.
-    kneeBack: { x: -36, y: 54 },
-    footBack: { x: -76, y: 92 },
+    // O CORPO INTEIRO ENTRA NO GOLPE.
+    //
+    // A versao anterior tinha o tronco quase reto (pescoco em x=10) e todo o
+    // alcance vinha do braco. Duas consequencias medidas: o soco nao tinha
+    // corpo atras dele, e a distancia de combate derivada ficava em 260
+    // unidades, perto o bastante para as bases das pernas dos dois se
+    // sobreporem na tela.
+    //
+    // Agora a cadeia e a que a diretiva pede: pe de tras estica, quadril gira,
+    // tronco gira, ombro vai junto (derivado do tronco), braco estende. Isso
+    // leva o punho mais longe do quadril e afasta os dois corpos.
+    hip: { x: 10, y: 2 },
+    neck: { x: 34, y: -66 },
+    head: { x: 44, y: -102 },
+    elbowFront: { x: 60, y: -78 },
+    handFront: { x: 106, y: -86 },
+    // o braco de tras vem para tras como contrapeso
+    elbowBack: { x: 6, y: -44 },
+    handBack: { x: -16, y: -54 },
+    kneeFront: { x: 46, y: 46 },
+    footFront: { x: 74, y: 92 },
+    // a perna de tras ESTICA: e ela que empurra o corpo para dentro do soco
+    kneeBack: { x: -34, y: 54 },
+    footBack: { x: -80, y: 92 },
   }),
   punchFast: p({
     neck: { x: 8, y: -72 },

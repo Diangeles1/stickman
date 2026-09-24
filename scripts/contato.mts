@@ -11,26 +11,19 @@
  * Uso: npx tsx scripts/contato.mts
  */
 
-import {
-  alturaNoAr,
-  amostrar,
-  inclinacaoDesenhada,
-} from "../src/animation/sampler";
+import { corpoNoQuadro } from "../src/animation/corpo";
 import { ATAQUES } from "../src/attacks/registry";
 import { PRESETS } from "../src/characters/presets";
-import { ALTURA_QUADRIL, juntasNoMundo } from "../src/characters/skeleton";
-import { ALVO_PADRAO, distanciaDeCombate } from "../src/core/contact";
+import { juntasNoMundo } from "../src/characters/skeleton";
+import {
+  ALVO_PADRAO,
+  distanciaDeCombate,
+  folgaDesejada,
+  pontoDoAlvo,
+  type PontoAlvo,
+} from "../src/core/contact";
 import { compilar } from "../src/core/timeline";
 import { UM_SOCO } from "../src/data/fights/um-soco";
-import type { JointName } from "../src/core/types";
-
-const JUNTA_DO_PONTO: Record<string, JointName> = {
-  head: "head",
-  chest: "neck",
-  torso: "hip",
-  legs: "kneeFront",
-  center: "hip",
-};
 
 /** Distancia a partir da qual consideramos que encostou. */
 const ENCOSTOU = 90;
@@ -46,29 +39,30 @@ const alvo = "target" in ataque ? ataque.target : spec.fighterB;
 const def = ATAQUES[move];
 
 const juntaAtacante = def.contactJoint;
-const juntaAlvo = JUNTA_DO_PONTO[ponto];
 
+/**
+ * Mede o quadro usando corpoNoQuadro, que e a MESMA funcao que a cena usa
+ * para desenhar. Medidor que monta a transformacao por conta propria mede um
+ * corpo que a tela nao mostra, e foi assim que o bug original sobreviveu a
+ * tres rodadas de analise visual.
+ */
 const medir = (frame: number) => {
-  const a = amostrar(t.tracks[atacante], frame);
-  const b = amostrar(t.tracks[alvo], frame);
+  const a = corpoNoQuadro({
+    track: t.tracks[atacante], outro: t.tracks[alvo], frame,
+    preset: PRESETS[atacante],
+  });
+  const b = corpoNoQuadro({
+    track: t.tracks[alvo], outro: t.tracks[atacante], frame,
+    preset: PRESETS[alvo], defasagem: Math.PI,
+  });
   const ja = juntasNoMundo(a.pose, {
-    baseX: a.x,
-    baseY: alturaNoAr(t.tracks[atacante], frame, ALTURA_QUADRIL),
-    facing: a.x <= b.x ? 1 : -1,
-    scale: PRESETS[atacante].scale,
-    // o spin entra na conta: sem ele o medidor mediria um corpo que a cena
-    // nao desenha, e foi assim que o bug sobreviveu a tres analises
-    spin: inclinacaoDesenhada(a) * (a.x <= b.x ? 1 : -1),
+    baseX: a.x, baseY: a.baseY, facing: a.facing, scale: a.scale, spin: a.spin,
   });
   const jb = juntasNoMundo(b.pose, {
-    baseX: b.x,
-    baseY: alturaNoAr(t.tracks[alvo], frame, ALTURA_QUADRIL),
-    facing: b.x <= a.x ? 1 : -1,
-    scale: PRESETS[alvo].scale,
-    spin: inclinacaoDesenhada(b) * (b.x <= a.x ? 1 : -1),
+    baseX: b.x, baseY: b.baseY, facing: b.facing, scale: b.scale, spin: b.spin,
   });
   const p = ja[juntaAtacante];
-  const q = jb[juntaAlvo];
+  const q = pontoDoAlvo(ponto as PontoAlvo, jb);
   return {
     a,
     b,
@@ -80,7 +74,10 @@ const medir = (frame: number) => {
 };
 
 console.log(`golpe: ${move}  ponto mirado: ${ponto}`);
-console.log(`junta atacante: ${juntaAtacante}  junta do alvo: ${juntaAlvo}`);
+console.log(`junta atacante: ${juntaAtacante}`);
+console.log(
+  `folga perseguida: ${folgaDesejada(atacante, alvo).toFixed(0)} unidades`,
+);
 console.log(
   `distancia de combate calculada: ${Math.round(
     distanciaDeCombate(def, atacante, alvo, ponto as never),

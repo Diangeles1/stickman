@@ -106,6 +106,30 @@ export const poseBase = (): Required<Pose> => ({
 });
 
 /**
+ * Y do pe na pose base. E a DEFINICAO de onde fica o chao.
+ *
+ * ALTURA_QUADRIL vem deste mesmo numero, entao uma pose cujo pe mais baixo
+ * esteja em 92 apoia exatamente no chao quando baseY = -ALTURA_QUADRIL.
+ */
+export const PE_NO_CHAO = QUADRIL_AO_PE;
+
+/**
+ * Y do pe mais baixo da pose, em unidades de pose.
+ *
+ * E o que permite APOIAR o personagem no chao em vez de confiar que a pose foi
+ * escrita com o pe no lugar certo. Medido: 13 das 39 poses estavam fora, e
+ * sprint1 flutuava 106 unidades de mundo (18% de uma altura de corpo).
+ */
+export const peMaisBaixo = (pose: Pose): number => {
+  const c = completar(pose);
+  return Math.max(c.footFront.y, c.footBack.y);
+};
+
+/** Fator que leva unidades de pose para unidades de mundo. */
+export const escalaDoMundo = (escalaDoLutador: number): number =>
+  escalaDoLutador * ESCALA_POSE;
+
+/**
  * OSSOS RIGIDOS, do tronco para as pontas.
  *
  * A ordem importa: o pai e corrigido antes do filho, senao corrigir o pai

@@ -14,7 +14,11 @@
 
 import { POSES } from "../characters/poses";
 import { PRESETS } from "../characters/presets";
-import { juntasNoMundo } from "../characters/skeleton";
+import {
+  escalaDoMundo,
+  juntasNoMundo,
+  peMaisBaixo,
+} from "../characters/skeleton";
 import type {
   AttackDef,
   FighterId,
@@ -26,13 +30,42 @@ import type {
 /** Pontos de contato do ALVO: onde um golpe pode acertar. */
 export type PontoAlvo = "head" | "chest" | "torso" | "legs" | "center";
 
-/** Junta que representa cada ponto do alvo. */
-const JUNTA_DO_ALVO: Record<PontoAlvo, JointName> = {
-  head: "head",
-  chest: "neck",
-  torso: "hip",
-  legs: "kneeFront",
-  center: "hip",
+const entre = (a: Vec2, b: Vec2, t: number): Vec2 => ({
+  x: a.x + (b.x - a.x) * t,
+  y: a.y + (b.y - a.y) * t,
+});
+
+/**
+ * PONTO DO ALVO em coordenadas de mundo, dado o esqueleto ja posicionado.
+ *
+ * Nao e mais "a junta mais parecida". O peito estava ancorado na junta do
+ * PESCOCO, que e o topo do tronco: o punho acertava o peito de verdade e a
+ * medida acusava 44 unidades de distancia, porque media contra um ponto acima
+ * de onde o peito fica. Agora os pontos sao interpolados ao longo do tronco,
+ * que e onde eles existem num corpo.
+ *
+ * Funcao unica, usada pela coreografia, pelo overlay e pelos medidores. As
+ * copias dessa tabela espalhadas por tres arquivos ja me fizeram medir uma
+ * coisa enquanto o compilador animava outra.
+ */
+export const pontoDoAlvo = (
+  ponto: PontoAlvo,
+  juntas: Record<JointName, Vec2>,
+): Vec2 => {
+  switch (ponto) {
+    case "head":
+      return juntas.head;
+    case "chest":
+      // um pouco abaixo do pescoco: e a altura do esterno
+      return entre(juntas.neck, juntas.hip, 0.28);
+    case "torso":
+      // meio do tronco, na altura do plexo
+      return entre(juntas.neck, juntas.hip, 0.62);
+    case "center":
+      return juntas.hip;
+    case "legs":
+      return juntas.kneeFront;
+  }
 };
 
 /**
@@ -95,7 +128,7 @@ export const posicaoDoAlvo = (
     facing: 1,
     scale: preset.scale,
   });
-  return juntas[JUNTA_DO_ALVO[ponto]];
+  return pontoDoAlvo(ponto, juntas);
 };
 
 /**
@@ -169,12 +202,16 @@ export const pontoDeContato = (
   atacante: FighterId,
   xAtacante: number,
   facing: 1 | -1,
-  alturaQuadril: number,
 ): Vec2 => {
   const alcance = alcanceDoGolpe(golpe, atacante);
+  // O quadril do atacante no quadro do golpe esta na altura que APOIA a pose
+  // do golpe no chao, nao numa altura fixa. Sem isto o efeito de impacto
+  // nascia alguns pixels acima do punho em qualquer golpe de perna dobrada.
+  const escala = escalaDoMundo(PRESETS[atacante].scale);
+  const baseY = -peMaisBaixo(POSES[golpe.pose]) * escala;
   return {
     x: xAtacante + alcance.x * facing,
-    y: -alturaQuadril + alcance.y,
+    y: baseY + alcance.y,
   };
 };
 

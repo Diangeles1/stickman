@@ -17,29 +17,16 @@
  */
 
 import React from "react";
-import {
-  alturaNoAr,
-  amostrar,
-  inclinacaoDesenhada,
-} from "../animation/sampler";
+import { corpoNoQuadro } from "../animation/corpo";
 import { ATAQUES } from "../attacks/registry";
 import { PRESETS } from "../characters/presets";
-import { ALTURA_QUADRIL, juntasNoMundo } from "../characters/skeleton";
-import { ALVO_PADRAO } from "../core/contact";
-import type { JointName, Timeline } from "../core/types";
+import { juntasNoMundo } from "../characters/skeleton";
+import { ALVO_PADRAO, pontoDoAlvo, type PontoAlvo } from "../core/contact";
+import type { Timeline } from "../core/types";
 
 export type DebugOverlayProps = {
   timeline: Timeline;
   frame: number;
-};
-
-/** Junta do alvo correspondente a cada ponto. Espelha JUNTA_DO_ALVO. */
-const JUNTA_DO_PONTO: Record<string, JointName> = {
-  head: "head",
-  chest: "neck",
-  torso: "hip",
-  legs: "kneeFront",
-  center: "hip",
 };
 
 /** Abaixo desta distancia consideramos que encostou (mao mais volume do corpo). */
@@ -62,31 +49,35 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({
     ALVO_PADRAO[move] ||
     "chest";
   const juntaAtacante = ATAQUES[move]?.contactJoint ?? "handFront";
-  const juntaAlvo = JUNTA_DO_PONTO[ponto] ?? "neck";
 
   const atacante = ataque && "attacker" in ataque ? ataque.attacker : fighterA;
   const alvo = ataque && "target" in ataque ? ataque.target : fighterB;
 
-  const a = amostrar(timeline.tracks[atacante], frame);
-  const b = amostrar(timeline.tracks[alvo], frame);
+  // MESMA funcao que a cena usa para desenhar: overlay que monta a
+  // transformacao por conta propria mede um corpo que a tela nao mostra
+  const a = corpoNoQuadro({
+    track: timeline.tracks[atacante],
+    outro: timeline.tracks[alvo],
+    frame,
+    preset: PRESETS[atacante],
+  });
+  const b = corpoNoQuadro({
+    track: timeline.tracks[alvo],
+    outro: timeline.tracks[atacante],
+    frame,
+    preset: PRESETS[alvo],
+    defasagem: Math.PI,
+  });
 
   const juntasA = juntasNoMundo(a.pose, {
-    baseX: a.x,
-    baseY: alturaNoAr(timeline.tracks[atacante], frame, ALTURA_QUADRIL),
-    facing: a.x <= b.x ? 1 : -1,
-    scale: PRESETS[atacante].scale,
-    spin: inclinacaoDesenhada(a) * (a.x <= b.x ? 1 : -1),
+    baseX: a.x, baseY: a.baseY, facing: a.facing, scale: a.scale, spin: a.spin,
   });
   const juntasB = juntasNoMundo(b.pose, {
-    baseX: b.x,
-    baseY: alturaNoAr(timeline.tracks[alvo], frame, ALTURA_QUADRIL),
-    facing: b.x <= a.x ? 1 : -1,
-    scale: PRESETS[alvo].scale,
-    spin: inclinacaoDesenhada(b) * (b.x <= a.x ? 1 : -1),
+    baseX: b.x, baseY: b.baseY, facing: b.facing, scale: b.scale, spin: b.spin,
   });
 
   const punho = juntasA[juntaAtacante];
-  const mira = juntasB[juntaAlvo];
+  const mira = pontoDoAlvo(ponto as PontoAlvo, juntasB);
   const distancia = Math.hypot(punho.x - mira.x, punho.y - mira.y);
   const tocando = distancia < ENCOSTOU;
 
@@ -95,7 +86,7 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({
   const impacto = timeline.impacts.find((i) => Math.abs(i.frame - frame) <= 3);
   const noContato = timeline.impacts.some((i) => i.frame === frame);
 
-  const textoY = -ALTURA_QUADRIL - 700;
+  const textoY = a.baseY - 700;
   const textoX = (a.x + b.x) / 2 - 420;
 
   return (

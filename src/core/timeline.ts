@@ -69,6 +69,17 @@ const RECUO_DA_CARGA = 46;
 const QUADROS_DA_REACAO = 2;
 
 /**
+ * Quadros que qualquer troca de pose IMPORTANTE ganha para acontecer.
+ *
+ * Existe porque duas chaves no mesmo quadro sao lidas pela amostragem como
+ * corte seco, e o diagnostico achou quatro dessas colisoes numa luta de dois
+ * segundos, incluindo "run1 -> coil": a corrida virava carga de golpe num
+ * unico quadro. A diretiva e explicita: nenhuma animacao troca
+ * instantaneamente.
+ */
+const QUADROS_DE_TRANSICAO = 4;
+
+/**
  * Distancia em que os dois ficam frente a frente sem estar golpeando.
  *
  * Escolhida pela CAMERA, nao pelo combate: com 420 de separacao o plano de
@@ -153,9 +164,30 @@ export const compilar = (spec: FightSpec): Timeline => {
 
     const quadros = Math.max(s(0.12), Math.round(distancia / VELOCIDADE_DE_CORRIDA));
 
-    // sai da pose atual correndo
-    estado[atacante].pose = distancia > distanciaAlvo * 1.5 ? "sprint1" : "run1";
+    // ---- SAIDA DA PARADA ---------------------------------------------------
+    // Uma chave com a pose ATUAL no quadro em que ele comeca a andar. Sem ela,
+    // a pose de corrida era escrita no mesmo quadro da pose anterior e virava
+    // corte seco: o diagnostico acusava "idle -> run1" no quadro 0.
     chave(atacante, cursor);
+
+    // ---- CORRIDA -----------------------------------------------------------
+    // A desaceleracao come os ultimos quadros: sem ela ele corria em
+    // velocidade cheia e a pose de carga era escrita no MESMO quadro da
+    // chegada ("run1 -> coil" no quadro 29), o que le como freada instantanea.
+    const travagem = Math.min(s(0.2), Math.max(s(0.07), Math.round(quadros * 0.4)));
+    const corrida = Math.max(1, quadros - travagem);
+
+    estado[atacante].pose = distancia > distanciaAlvo * 1.5 ? "sprint1" : "run1";
+    chave(atacante, cursor + 1);
+    // chega a 88% do caminho em velocidade de corrida
+    estado[atacante].x = estado[atacante].x + (destino - estado[atacante].x) * 0.88;
+    chave(atacante, cursor + corrida);
+
+    // ---- DESACELERACAO -----------------------------------------------------
+    // Os ultimos 12% do caminho em pose de passo, gastando o tempo da
+    // travagem. A inclinacao procedural faz o corpo tombar para TRAS sozinho,
+    // porque a aceleracao fica negativa aqui (ver inclinacaoDoCorpo).
+    estado[atacante].pose = "advance";
     estado[atacante].x = destino;
     chave(atacante, cursor + quadros);
 
@@ -216,9 +248,11 @@ export const compilar = (spec: FightSpec): Timeline => {
     const lado: 1 | -1 = estado[atacante].x <= estado[alvo].x ? 1 : -1;
     // ele JA esta na posicao carregada; o passo a frente acontece no disparo
     const xNoContato = estado[atacante].x + lado * RECUO_DA_CARGA;
-    // pose de CARGA, nao guarda: e ela que cria o arco que o punho percorre
+    // pose de CARGA, nao guarda: e ela que cria o arco que o punho percorre.
+    // A chave sai alguns quadros DEPOIS do cursor: no mesmo quadro ela
+    // colidia com a chave de chegada da aproximacao e virava corte seco.
     estado[atacante].pose = "coil";
-    chave(atacante, cursor);
+    chave(atacante, cursor + QUADROS_DE_TRANSICAO);
     // segura a carga ate o fim da preparacao. SEM esta chave o braco ja
     // comecava a se estender durante o windup, e o golpe nao tinha disparo.
     chave(atacante, cursor + windup);
@@ -275,13 +309,7 @@ export const compilar = (spec: FightSpec): Timeline => {
 
     // ONDE O MEMBRO REALMENTE CHEGA. O flash, a onda e as particulas nascem
     // daqui, e nao de um deslocamento fixo em relacao ao alvo.
-    const contato = pontoDeContato(
-      def,
-      atacante,
-      estado[atacante].x,
-      direcao,
-      ALTURA_DO_ESQUELETO,
-    );
+    const contato = pontoDeContato(def, atacante, estado[atacante].x, direcao);
 
     // ultimo quadro em que o ALVO recebe chave nesta sequencia. O compilador
     // precisa saber disso: a volta para a guarda era escrita em cursor+strike,
@@ -479,17 +507,24 @@ export const compilar = (spec: FightSpec): Timeline => {
     switch (beat.type) {
       case "approach": {
         const e = estado[beat.who];
-        e.pose = "run1";
+        // chave com a pose ATUAL antes de trocar: sem ela a troca para corrida
+        // caia no mesmo quadro e virava corte seco ("idle -> run1" no quadro 0)
         chave(beat.who, cursor);
+        e.pose = "run1";
+        chave(beat.who, cursor + QUADROS_DE_TRANSICAO);
         e.x = beat.toX;
         e.pose = "run2";
         chave(beat.who, cursor + beat.duration);
         // o oponente tambem se move, senao um corre e o outro fica plantado
         const outro = oposto(beat.who);
-        estado[outro].pose = "advance";
         chave(outro, cursor);
+        estado[outro].pose = "advance";
         estado[outro].x += (beat.toX > estado[outro].x ? -1 : 1) * 60;
         chave(outro, cursor + beat.duration);
+        // ele volta a GUARDA em vez de congelar na pose de passo: e o que o
+        // deixa esperando o golpe em vez de virar estatua no meio da arena
+        estado[outro].pose = "guard";
+        chave(outro, cursor + beat.duration + QUADROS_DE_TRANSICAO * 2);
         cameraKeys.push({
           frame: cursor,
           center: { x: 0, y: ALTURA_QUADRIL - 40 },

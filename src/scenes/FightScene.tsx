@@ -11,13 +11,8 @@
 
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
-import {
-  alturaNoAr,
-  amostrar,
-  inclinacaoDesenhada,
-  poseDeContato,
-  quadroEfetivo,
-} from "../animation/sampler";
+import { corpoNoQuadro } from "../animation/corpo";
+import { poseDeContato, quadroEfetivo } from "../animation/sampler";
 import { Arena } from "../backgrounds/Arena";
 import { cameraNoQuadro, transformDaCamera } from "../camera/camera";
 import { PRESETS } from "../characters/presets";
@@ -120,26 +115,27 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
   // tras (aura, linhas) e a da frente (corpos) leem daqui, entao nao existe a
   // possibilidade de uma camada discordar da outra.
   const lutadores = [fighterA, fighterB].map((id, indice) => {
-    const track = timeline.tracks[id];
-    const a = amostrar(track, frame);
-    const outro = amostrar(
-      timeline.tracks[indice === 0 ? fighterB : fighterA],
+    const corpo = corpoNoQuadro({
+      track: timeline.tracks[id],
+      outro: timeline.tracks[indice === 0 ? fighterB : fighterA],
       frame,
-    );
-    return {
-      id,
-      a,
-      // cada um sempre encara o outro: sem isso o golpe sai de costas
-      facing: (a.x <= outro.x ? 1 : -1) as 1 | -1,
-      baseY: alturaNoAr(track, frame, ALTURA_QUADRIL),
       preset: PRESETS[id],
       compressao: compressaoDe(id),
+      // meia volta de defasagem: os dois nao respiram em sincronia, que
+      // denunciaria que a respiracao e a mesma funcao
+      defasagem: indice * Math.PI,
+    });
+    return {
+      id,
+      corpo,
+      preset: PRESETS[id],
       // Em pose de contato (golpe dado ou recebido) nao ha linha de
       // velocidade: ela sujava justamente os quadros em que o corpo precisa
       // ser lido. No knockback ela continua, que e onde ela ganha o seu
       // salario.
       rapido:
-        Math.abs(a.velocidade) > LIMITE_LINHAS && !poseDeContato(a.poseNome),
+        Math.abs(corpo.velocidade) > LIMITE_LINHAS &&
+        !poseDeContato(corpo.poseNome),
     };
   });
 
@@ -192,11 +188,11 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
             velocidade do lutador empurrado atravessava o peito do outro, e no
             quadro do golpe isso vira sujeira em cima da acao. */}
         <g data-layer="atras-dos-corpos">
-          {lutadores.map(({ id, a, baseY, preset, rapido }) => (
+          {lutadores.map(({ id, corpo, preset, rapido }) => (
             <g key={`tras-${id}`}>
               {auraDe(id) > 0.02 && (
                 <Aura
-                  centro={{ x: a.x, y: baseY }}
+                  centro={{ x: corpo.x, y: corpo.baseY }}
                   cor={preset.auraColor}
                   forca={auraDe(id)}
                   frame={frame}
@@ -204,11 +200,11 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
               )}
               {rapido && (
                 <LinhasDeVelocidade
-                  origem={{ x: a.x, y: baseY }}
-                  direcao={Math.sign(a.velocidade)}
+                  origem={{ x: corpo.x, y: corpo.baseY }}
+                  direcao={Math.sign(corpo.velocidade)}
                   forca={Math.min(
                     1,
-                    (Math.abs(a.velocidade) - LIMITE_LINHAS) / 60,
+                    (Math.abs(corpo.velocidade) - LIMITE_LINHAS) / 60,
                   )}
                   seed={seed}
                   chave={`sl-${id}-${Math.round(frame / 3)}`}
@@ -218,22 +214,16 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
           ))}
         </g>
 
-        {lutadores.map(({ id, a, baseY, facing, preset, compressao }) => (
+        {lutadores.map(({ id, corpo, preset }) => (
           <Stickman
             key={id}
             preset={preset}
-            pose={a.pose}
-            baseX={a.x}
-            // o quadril desce junto com a compressao, para o pe nao sair do
-            // chao: o corpo afunda CONTRA o chao em vez de encolher no ar
-            baseY={baseY * compressao}
-            facing={facing}
-            scaleExtra={compressao}
-            // a inclinacao vem da velocidade: e o movimento corporal
-            // integrado. O sinal acompanha o lado para o qual ele olha.
-            // Em pose de ataque ela e zerada, senao o giro do corpo tira o
-            // punho do ponto onde a geometria calculou o contato.
-            spin={inclinacaoDesenhada(a) * facing}
+            pose={corpo.pose}
+            baseX={corpo.x}
+            baseY={corpo.baseY}
+            facing={corpo.facing}
+            scaleExtra={corpo.scale / preset.scale}
+            spin={corpo.spin}
           />
         ))}
 

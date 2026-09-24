@@ -186,20 +186,65 @@ const curvaPara = (destino: PoseName): ((t: number) => number) => {
  * parece caminhada.
  */
 const CICLOS: Partial<Record<PoseName, [PoseName, PoseName, number]>> = {
-  walk1: ["walk1", "walk2", 9],
-  walk2: ["walk1", "walk2", 9],
-  run1: ["run1", "run2", 5],
-  run2: ["run1", "run2", 5],
-  sprint1: ["sprint1", "sprint2", 4],
-  sprint2: ["sprint1", "sprint2", 4],
+  // o terceiro numero agora e o PASSO em unidades de mundo, nao em quadros
+  walk1: ["walk1", "walk2", 96],
+  walk2: ["walk1", "walk2", 96],
+  run1: ["run1", "run2", 132],
+  run2: ["run1", "run2", 132],
+  sprint1: ["sprint1", "sprint2", 152],
+  sprint2: ["sprint1", "sprint2", 152],
 };
 
-/** Se a pose faz parte de um ciclo, devolve a fase certa para este quadro. */
-const faseDoCiclo = (nome: PoseName, frame: number): PoseName => {
+/**
+ * Fase do ciclo de locomocao, dada pela DISTANCIA PERCORRIDA.
+ *
+ * Antes vinha do contador de quadros: a perna trocava a cada N quadros
+ * independentemente da velocidade do corpo. E exatamente isso que o olho le
+ * como personagem PATINANDO, porque a cadencia da perna nao tem relacao com o
+ * quanto o corpo andou.
+ *
+ * Agora um passo acontece a cada tantas unidades de mundo. Corpo lento da
+ * passada lenta, corpo rapido da passada rapida, e corpo parado nao mexe a
+ * perna, tudo sem ninguem precisar ajustar nada.
+ */
+const faseDoCiclo = (
+  nome: PoseName,
+  distancia: number,
+): PoseName => {
   const ciclo = CICLOS[nome];
   if (!ciclo) return nome;
-  const [a, b, periodo] = ciclo;
-  return Math.floor(frame / periodo) % 2 === 0 ? a : b;
+  const [a, b, passo] = ciclo;
+  return Math.floor(distancia / passo) % 2 === 0 ? a : b;
+};
+
+/**
+ * Distancia percorrida pela trilha ate o quadro pedido, em unidades de mundo.
+ *
+ * Calculada de forma exata e barata: entre duas chaves a posicao e monotona,
+ * entao o caminho andado naquele trecho e simplesmente |dx|. Soma os trechos
+ * completos e a parte do trecho atual.
+ *
+ * Funcao pura do quadro, como tudo aqui: nao acumula estado entre quadros.
+ */
+export const distanciaPercorrida = (
+  track: FighterTrack,
+  frame: number,
+): number => {
+  const keys = track.keys;
+  let soma = 0;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const a = keys[i];
+    const b = keys[i + 1];
+    if (frame >= b.frame) {
+      soma += Math.abs(b.x - a.x);
+      continue;
+    }
+    if (frame <= a.frame || b.frame <= a.frame) break;
+    const bruto = (frame - a.frame) / (b.frame - a.frame);
+    soma += Math.abs(b.x - a.x) * curvaPara(b.pose)(bruto);
+    break;
+  }
+  return soma;
 };
 
 /**
@@ -275,7 +320,7 @@ const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
     // que interpolar entre elas: o que vale e a fase do ciclo neste quadro.
     const cicloA = CICLOS[a.pose];
     if (cicloA && CICLOS[b.pose] && cicloA[0] === CICLOS[b.pose]![0]) {
-      const fase = faseDoCiclo(a.pose, frame);
+      const fase = faseDoCiclo(a.pose, distanciaPercorrida(track, frame));
       return {
         x: a.x + (b.x - a.x) * t,
         pose: POSES[fase],
@@ -360,6 +405,42 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
  * meio de proposito: subida mais rapida que a descida e o que da sensacao de
  * peso, em vez de flutuacao.
  */
+/**
+ * Altura do VOO no quadro pedido: quanto o corpo esta acima do chao por estar
+ * no ar. Zero quando ele esta apoiado.
+ *
+ * Separada de alturaNoAr porque quem desenha precisa somar isto a altura de
+ * APOIO da pose (ver animation/corpo.ts). Antes as duas coisas estavam
+ * misturadas numa unica funcao e a altura do quadril era uma constante, o que
+ * fazia qualquer pose de perna dobrada flutuar.
+ */
+export const alturaDoVoo = (
+  track: FighterTrack,
+  frame: number,
+  alturaMaxima = 520,
+): number => {
+  const trechos: { de: number; ate: number }[] = [];
+  let inicio: number | null = null;
+  for (const k of track.keys) {
+    if (k.airborne && inicio === null) inicio = k.frame;
+    if (!k.airborne && inicio !== null) {
+      trechos.push({ de: inicio, ate: k.frame });
+      inicio = null;
+    }
+  }
+  if (inicio !== null) {
+    trechos.push({ de: inicio, ate: track.keys[track.keys.length - 1].frame });
+  }
+  for (const t of trechos) {
+    if (frame < t.de || frame > t.ate) continue;
+    const dur = Math.max(1, t.ate - t.de);
+    const p = (frame - t.de) / dur;
+    // parabola com o topo em 0,45: sobe rapido, desce mais devagar
+    return Math.sin(Math.PI * Math.min(1, p / 0.9)) * alturaMaxima;
+  }
+  return 0;
+};
+
 export const alturaNoAr = (
   track: FighterTrack,
   frame: number,
