@@ -18,6 +18,7 @@ import {
   tremorDoHitStop,
 } from "../animation/sampler";
 import { Arena } from "../backgrounds/Arena";
+import { Rabisco } from "../backgrounds/Rabisco";
 import {
   cameraNoQuadro,
   enquadrarDois,
@@ -99,7 +100,8 @@ export const FightScene: React.FC<FightSceneProps> = ({
       });
   const fx = !semEfeitos;
   const { fighterA, fighterB, seed, scenario } = timeline.spec;
-  const limpo = scenario === "limpo";
+  // os cenarios de rabisco sao o limpo com desenho no fundo
+  const limpo = scenario !== "arena";
   const espetaculo = fx ? espetaculoDe(timeline) : null;
 
   // QUADRO DE IMPACTO (anime): nos golpes mais fortes, um ou dois quadros
@@ -229,7 +231,28 @@ export const FightScene: React.FC<FightSceneProps> = ({
       />
 
       <g transform={transformDaCamera(cam, width, height)}>
-        <Arena seed={seed} rachaduras={rachaduras} cenario={scenario} />
+        {(scenario === "vilarejo" || scenario === "cidade") && (
+          <Rabisco
+            seed={seed}
+            tema={scenario}
+            camX={cam.center.x}
+            frame={frameReal}
+          />
+        )}
+        <Arena
+          seed={seed}
+          rachaduras={rachaduras}
+          cenario={limpo ? "limpo" : "arena"}
+        />
+        {(scenario === "vilarejo" || scenario === "cidade") && (
+          <Rabisco
+            seed={seed}
+            tema={scenario}
+            camX={cam.center.x}
+            frame={frameReal}
+            parte="chao"
+          />
+        )}
 
         {/* poeira no ar: o cenario respira mesmo quando ninguem se move.
             No cenario limpo ela sai: nada deve competir com a silhueta. */}

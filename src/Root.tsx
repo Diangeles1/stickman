@@ -25,7 +25,15 @@ import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
 
 /** a luta completa com os papeis invertidos: o vermelho vence */
-const LUTA_VERMELHO_VENCE = trocarVencedor(LUTA_COMPLETA);
+const LUTA_VERMELHO_VENCE: typeof LUTA_COMPLETA = {
+  ...trocarVencedor(LUTA_COMPLETA),
+  scenario: "cidade",
+};
+/** a luta completa num vilarejo de rabisco */
+const LUTA_NO_VILAREJO: typeof LUTA_COMPLETA = {
+  ...LUTA_COMPLETA,
+  scenario: "vilarejo",
+};
 
 /** Alvo do projeto: vertical de Shorts/TikTok a 60fps. */
 export const VIDEO = {
@@ -165,11 +173,11 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="Escolha-PretoVence"
         component={Prototype}
-        durationInFrames={duracaoDoPrototipo(LUTA_COMPLETA, { escolha: true })}
+        durationInFrames={duracaoDoPrototipo(LUTA_NO_VILAREJO, { escolha: true })}
         fps={LUTA_COMPLETA.fps}
         width={LUTA_COMPLETA.width}
         height={LUTA_COMPLETA.height}
-        defaultProps={{ spec: LUTA_COMPLETA, escolha: true }}
+        defaultProps={{ spec: LUTA_NO_VILAREJO, escolha: true }}
       />
       <Composition
         id="Escolha-VermelhoVence"
