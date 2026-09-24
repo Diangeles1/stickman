@@ -227,6 +227,8 @@ export const compilar = (spec: FightSpec): Timeline => {
     move: AttackName,
     opcoes: {
       bloqueado?: boolean;
+      /** o alvo sai do caminho: golpe completo, nenhum impacto */
+      esquivado?: boolean;
       finalizador?: boolean;
       ponto?: PontoAlvo;
     } = {},
@@ -343,8 +345,55 @@ export const compilar = (spec: FightSpec): Timeline => {
     // que cai ANTES do fim do voo. Chave fora de ordem e invisivel no
     // TypeScript e some com o knockback inteiro na hora de amostrar.
     let fimDaReacao = frameContato;
+    /** quadro em que o corpo empurrado termina de se deslocar (ou pousa) */
+    let fimDoDeslocamento = frameContato;
 
-    if (opcoes.bloqueado) {
+    if (opcoes.esquivado) {
+      // ==== GOLPE QUE PASSA =================================================
+      // Nenhum ImpactEvent: sem impacto nao ha flash, tremor, som nem reacao,
+      // e e exatamente isso que faz a esquiva valer alguma coisa.
+      //
+      // O alvo sai ANTES do quadro do contato. Se saisse no contato, o olho
+      // leria "acertou e ele se mexeu depois"; saindo antes, le "ele viu
+      // vindo". A mira continua apontando para onde ele ESTAVA, entao o punho
+      // atravessa o espaco vazio, que e a leitura certa de um golpe errado.
+      chave(alvo, frameContato - s(0.2));
+
+      // golpe na cabeca se esquiva ABAIXANDO; no corpo, jogando o peso para
+      // tras. Duas leituras diferentes para dois golpes diferentes.
+      estado[alvo].pose = ponto === "head" ? "duck" : "dodge";
+      const saida = ponto === "head" ? 40 : 150;
+      estado[alvo].x += direcao * saida;
+      chave(alvo, frameContato - s(0.03));
+      // segura a esquiva enquanto o punho passa
+      chave(alvo, frameContato + s(0.1));
+
+      estado[alvo].pose = "guard";
+      chave(alvo, frameContato + s(0.34));
+      fimDaReacao = frameContato + s(0.34);
+
+      // o ritmo cai para o espectador LER que passou perto
+      slowMo.push({
+        from: frameContato - s(0.12),
+        to: frameContato + s(0.1),
+        factor: 0.55,
+      });
+
+      // a camera fecha um pouco, sem tremor: nao houve impacto
+      cameraKeys.push({
+        frame: frameContato - s(0.08),
+        center: { x: contato.x, y: ALTURA_QUADRIL - 60 },
+        zoom: 1.22,
+        ease: s(0.1),
+      });
+      cameraKeys.push({
+        frame: frameContato + s(0.2),
+        center: { x: 0, y: ALTURA_QUADRIL - 60 },
+        zoom: 0.95,
+        ease: s(0.3),
+        fit: true,
+      });
+    } else if (opcoes.bloqueado) {
       // sobe a guarda pouco antes: a defesa e uma reacao, precisa de tempo
       chave(alvo, frameContato - s(0.14));
       estado[alvo].pose = "block";
@@ -409,11 +458,20 @@ export const compilar = (spec: FightSpec): Timeline => {
 
       // FASE 3 - DESLOCAMENTO. Agora sim a pose de empurrado, com o resto do
       // caminho. A curva saidaRapida da a desaceleracao de corpo com massa.
+      //
+      // A chave entra no INICIO do deslocamento, e isso importa muito no golpe
+      // que LANCA. Antes ela era escrita so em frameContato + voo, ou seja no
+      // fim: o corpo percorria os 637 unidades do voo DESLIZANDO NO CHAO em
+      // pose de reacao, e virava "no ar" apenas nos ultimos 3 quadros, onde
+      // entao pulava 477 unidades de uma vez. O golpe que lanca nao lancava.
       estado[alvo].pose = voa ? "airborne" : "knockback";
       estado[alvo].airborne = voa;
+      chave(alvo, frameContato + s(0.13));
+
       estado[alvo].x = xAntes + direcao * empurrao;
       chave(alvo, frameContato + voo);
       fimDaReacao = frameContato + voo;
+      fimDoDeslocamento = frameContato + voo;
 
       // FASE 4 - FREADA. Ele planta o pe de tras e para de deslizar. Antes o
       // corpo empurrado voltava direto para a guarda, o que le como
@@ -510,6 +568,34 @@ export const compilar = (spec: FightSpec): Timeline => {
     estado[atacante].x -= lado * RECUO_DA_CARGA * 0.55;
     chave(atacante, cursor);
 
+    // ---- QUEM LANCA ANDA ATRAS ---------------------------------------------
+    // Sem isto os dois terminam o golpe a 900 unidades de distancia, o plano
+    // de dois nao cabe no zoom minimo legivel, e a camera tem que escolher um:
+    // a auditoria mediu 1,6s com o atacante cortado fora do quadro.
+    //
+    // Nao e concessao a camera, e o que um lutador faz: quem acerta um golpe
+    // que joga o outro longe avanca atras dele, nao fica parado olhando.
+    let ultimaDoAtacante = cursor;
+    if (!opcoes.bloqueado && !opcoes.esquivado && fimDaReacao > cursor + s(0.25)) {
+      const destinoFinal = estado[alvo].x - lado * DISTANCIA_NEUTRA;
+      // so avanca, nunca recua: o alvo pode ter caido perto
+      if ((destinoFinal - estado[atacante].x) * lado > 0) {
+        // Ele CHEGA junto com o pouso, nao depois dele. Terminando a caminhada
+        // em fimDaReacao (que inclui o tempo de acomodar no chao) ele ainda
+        // estava a caminho no quadro do toque, e a auditoria de camera pegou
+        // exatamente um quadro cortado ali: separacao 627 contra 620 que o
+        // piso de zoom cabe. Seguir o proprio golpe e chegar com ele.
+        const chegada = Math.min(fimDaReacao, fimDoDeslocamento + s(0.12));
+        estado[atacante].pose = "walk1";
+        chave(atacante, cursor + QUADROS_DE_TRANSICAO);
+        estado[atacante].x = destinoFinal;
+        chave(atacante, chegada);
+        estado[atacante].pose = "guard";
+        ultimaDoAtacante = chegada + s(0.12);
+        chave(atacante, ultimaDoAtacante);
+      }
+    }
+
     // O alvo so volta a guarda DEPOIS que a reacao termina. A versao anterior
     // escrevia esta chave em cursor+strike, que para um soco cai 13 quadros
     // ANTES do fim do voo: a chave saia fora de ordem e a amostragem, que
@@ -525,7 +611,7 @@ export const compilar = (spec: FightSpec): Timeline => {
 
     // o cursor nao pode terminar antes da ultima chave escrita, senao o
     // proximo beat escreve no passado
-    cursor = Math.max(cursor + recover, voltaDoAlvo);
+    cursor = Math.max(cursor + recover, voltaDoAlvo, ultimaDoAtacante + 1);
   };
 
   for (const beat of spec.beats) {
@@ -570,6 +656,13 @@ export const compilar = (spec: FightSpec): Timeline => {
       case "blocked":
         golpear(beat.attacker, beat.target, beat.move, {
           bloqueado: true,
+          ponto: beat.targetPoint,
+        });
+        break;
+
+      case "dodged":
+        golpear(beat.attacker, beat.target, beat.move, {
+          esquivado: true,
           ponto: beat.targetPoint,
         });
         break;

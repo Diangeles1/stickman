@@ -260,7 +260,11 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
 export const TETO_KNOCKBACK: Record<ImpactTier, number> = {
   light: corpos(0.45),    // um passo para tras
   medium: corpos(1.1),    // um corpo de distancia
-  extreme: corpos(2.2),   // voa, mas continua legivel na tela
+  // 2.2 ainda era demais: a auditoria de camera mediu 1,6s com o ATACANTE
+  // cortado fora do quadro depois do chute, porque a 900 unidades de
+  // separacao o plano de dois nao cabe no zoom minimo legivel e a camera tem
+  // que escolher um dos dois. 1.5 corpo continua sendo um lancamento.
+  extreme: corpos(1.5),
 };
 
 /** Aplica o bonus de forca e corta no teto da intensidade. */

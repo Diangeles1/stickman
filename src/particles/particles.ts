@@ -72,12 +72,20 @@ export const PERFIL_IMPACTO: Record<
     speedLines: true,
   },
   extreme: {
-    particulas: 96,
+    // 96 estilhacos por 52 quadros mais 46 de poeira viravam uma nuvem branca
+    // que cobria o corpo do lutador lancado. A regra e dura na diretiva: o
+    // efeito reforca a animacao, nao esconde uma animacao ruim, e aqui a
+    // animacao e justamente o que se quer ver.
+    particulas: 46,
     velocidade: 2100,
-    vida: 52,
-    raio: [5, 22],
-    poeiraDoChao: 46,
-    flash: 0.14,
+    vida: 32,
+    raio: [5, 16],
+    poeiraDoChao: 22,
+    // 0.14 de branco sobre a tela inteira lavava a imagem por 0,2s, porque o
+    // hit stop de 8 quadros congela o quadro logico e o flash fica parado
+    // junto. Quem marca o impacto e o clarao radial no ponto de contato; a
+    // tela cheia so da a piscada, e piscada e curta.
+    flash: 0.07,
     ondas: 2,
     speedLines: true,
   },
@@ -147,8 +155,8 @@ export const particulasDoImpacto = (
     };
     saida.push({
       pos,
-      raio: entre(`${id}-r`, semente, 10, 34),
-      opacidade: Math.max(0, 1 - idade / vidaDesta) * 0.3,
+      raio: entre(`${id}-r`, semente, 10, 26),
+      opacidade: Math.max(0, 1 - idade / vidaDesta) * 0.2,
     });
   }
 

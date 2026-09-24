@@ -12,6 +12,7 @@ import { Composition } from "remotion";
 import { PoseSheet } from "./compositions/PoseSheet";
 import { Prototype, duracaoDoPrototipo } from "./compositions/Prototype";
 import { PROTOTIPO } from "./data/fights/prototype";
+import { BENCHMARK } from "./data/fights/benchmark";
 import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
 
@@ -75,6 +76,29 @@ export const RemotionRoot: React.FC = () => {
         width={PROTOTIPO.width}
         height={PROTOTIPO.height}
         defaultProps={{ spec: PROTOTIPO }}
+      />
+
+      {/*
+        BENCHMARK do motor: os 15 passos da diretiva em 5 a 8 segundos. E este
+        que decide se o motor esta pronto para uma luta inteira.
+      */}
+      <Composition
+        id="Benchmark"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(BENCHMARK)}
+        fps={BENCHMARK.fps}
+        width={BENCHMARK.width}
+        height={BENCHMARK.height}
+        defaultProps={{ spec: BENCHMARK, debug: false }}
+      />
+      <Composition
+        id="Benchmark-Debug"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(BENCHMARK)}
+        fps={BENCHMARK.fps}
+        width={BENCHMARK.width}
+        height={BENCHMARK.height}
+        defaultProps={{ spec: BENCHMARK, debug: true }}
       />
 
       {/*

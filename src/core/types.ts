@@ -171,6 +171,21 @@ export type Beat =
       targetPoint?: PontoAlvo;
     }
   | { type: "dodge"; who: FighterId; duration: number }
+  /**
+   * Golpe que PASSA: o atacante desfere, o alvo sai do caminho, e nao ha
+   * impacto nenhum.
+   *
+   * Sem isto uma luta nao tem erro, e luta em que todo golpe acerta nao tem
+   * tensao. Diferente de "blocked", onde o golpe encosta na guarda: aqui ele
+   * nao encosta em nada, e e justamente isso que da valor a esquiva.
+   */
+  | {
+      type: "dodged";
+      attacker: FighterId;
+      target: FighterId;
+      move: AttackName;
+      targetPoint?: PontoAlvo;
+    }
   | { type: "combo"; attacker: FighterId; target: FighterId; moves: AttackName[] }
   | { type: "knockback"; who: FighterId; distance: number; duration: number }
   | { type: "powerUp"; who: FighterId; duration: number }
