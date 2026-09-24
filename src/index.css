@@ -1,1 +1,20 @@
-@import "tailwindcss";
+/**
+ * Estilos globais do motor.
+ *
+ * O Tailwind foi removido do projeto (ver remotion.config.ts): o motor e quase
+ * todo SVG e o plugin so adicionava trabalho ao bundler no render.
+ *
+ * Regra importante do Remotion: NAO usar transition nem animation de CSS aqui.
+ * Animacao que nao e dirigida por useCurrentFrame() causa flicker no video
+ * final, porque cada quadro e renderizado de forma independente.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #0e0f13;
+}
