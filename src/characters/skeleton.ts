@@ -105,19 +105,81 @@ export const poseBase = (): Required<Pose> => ({
   footFront: { ...BASE.footFront },
 });
 
-/** Comprimento do osso pescoco-cabeca na pose base. Osso nao estica. */
-const PESCOCO = Math.hypot(BASE.head.x - BASE.neck.x, BASE.head.y - BASE.neck.y);
+/**
+ * OSSOS RIGIDOS, do tronco para as pontas.
+ *
+ * A ordem importa: o pai e corrigido antes do filho, senao corrigir o pai
+ * desloca um filho que ja estava certo.
+ */
+const OSSOS_RIGIDOS: [JointName, JointName][] = [
+  ["neck", "head"],
+  ["shoulderFront", "elbowFront"],
+  ["elbowFront", "handFront"],
+  ["shoulderBack", "elbowBack"],
+  ["elbowBack", "handBack"],
+  ["hip", "kneeFront"],
+  ["kneeFront", "footFront"],
+  ["hip", "kneeBack"],
+  ["kneeBack", "footBack"],
+];
+
+const distancia = (a: Vec2, b: Vec2) => Math.hypot(b.x - a.x, b.y - a.y);
+
+/** Comprimento de cada osso na pose base. E a medida do personagem. */
+const COMPRIMENTO = OSSOS_RIGIDOS.map(([a, b]) => distancia(BASE[a], BASE[b]));
+
+/** Comprimento do tronco. Este pode comprimir um pouco (ver completar). */
+const TRONCO = distancia(BASE.hip, BASE.neck);
 
 /**
- * Completa uma pose parcial com os deslocamentos base.
+ * Compressao maxima do tronco.
  *
- * Alem de completar, IMPOE o comprimento do pescoco. Varias poses escritas a
- * mao tinham a cabeca longe demais do pescoco (hitHead esticava 50%, downed
- * 32%) e na tela a cabeca parecia solta do corpo. Corrigir pose por pose nao
- * resolve: a proxima pose escrita a mao repete o erro.
+ * Diferente dos membros, o tronco PODE encurtar: e o squash da animacao
+ * classica, e poses como land, squash e hitChest usam isso de proposito. O que
+ * nao pode e encurtar sem limite, que seria erro disfarcado de estilo.
+ */
+const SQUASH_DO_TRONCO = 0.2;
+
+/**
+ * Ombro no referencial do TRONCO, nao do quadril.
  *
- * A DIRECAO da cabeca continua sendo o que a pose pediu; so a distancia e
- * travada. Vale tambem para poses MISTURADAS, porque a mistura passa por aqui.
+ * Guardado como (ao longo do tronco, perpendicular ao tronco) para que o ombro
+ * acompanhe o tronco quando ele se inclina ou comprime.
+ */
+const ombroNoTronco = (ombro: Vec2) => {
+  // na pose base o tronco aponta para cima: u = (0,-1), perpendicular = (1,0)
+  const dx = ombro.x - BASE.neck.x;
+  const dy = ombro.y - BASE.neck.y;
+  return { aoLongo: -dy, perpendicular: dx };
+};
+const OMBRO_FRENTE = ombroNoTronco(BASE.shoulderFront);
+const OMBRO_TRAS = ombroNoTronco(BASE.shoulderBack);
+
+/**
+ * Completa uma pose parcial com os deslocamentos base e IMPOE O ESQUELETO.
+ *
+ * Duas correcoes, e as duas existem porque pose escrita a mao e uma lista de
+ * posicoes sem nenhuma restricao entre elas. Auditadas com um script que mede
+ * cada osso em todas as poses:
+ *
+ * 1. OSSO NAO ESTICA. O braco de tras chegava a 400% do comprimento em
+ *    "downed", o antebraco a 226% no "uppercut", e as pernas encurtavam 64%
+ *    em "getUp". Parado isso passa por estilo; em movimento a interpolacao faz
+ *    o comprimento variar quadro a quadro e a mao estica e encolhe como
+ *    borracha. Aqui a DIRECAO continua sendo o que a pose pediu, e so a
+ *    distancia e travada.
+ *
+ * 2. O OMBRO ACOMPANHA O TRONCO. Nenhuma das poses declara ombro, entao os
+ *    ombros ficavam cravados no deslocamento base enquanto o pescoco se movia
+ *    livre: em hitChest o pescoco vai para y=-46 e o ombro continuava em -68,
+ *    ou seja 22 unidades ACIMA do pescoco. Os bracos nasciam de um ponto solto
+ *    no espaco, sem relacao com o corpo. Agora o ombro e derivado do tronco e
+ *    gira com ele.
+ *
+ * Vale tambem para poses MISTURADAS, porque a mistura passa por aqui. Isso
+ * resolve de graca o problema que misturar() admitia no comentario: a mao
+ * agora percorre um ARCO de raio constante em volta do cotovelo, em vez de
+ * cortar reto e encurtar o membro no meio do caminho.
  */
 export const completar = (pose: Pose): Required<Pose> => {
   const saida = poseBase();
@@ -126,15 +188,67 @@ export const completar = (pose: Pose): Required<Pose> => {
     if (v) saida[junta] = v;
   }
 
-  const dx = saida.head.x - saida.neck.x;
-  const dy = saida.head.y - saida.neck.y;
-  const comprimento = Math.hypot(dx, dy);
-  if (comprimento > 0.001) {
-    saida.head = {
-      x: saida.neck.x + (dx / comprimento) * PESCOCO,
-      y: saida.neck.y + (dy / comprimento) * PESCOCO,
+  // ---- tronco: comprimento limitado, direcao livre -------------------------
+  let ux = saida.neck.x - saida.hip.x;
+  let uy = saida.neck.y - saida.hip.y;
+  const dTronco = Math.hypot(ux, uy);
+  if (dTronco > 0.001) {
+    const limitado = Math.max(
+      TRONCO * (1 - SQUASH_DO_TRONCO),
+      Math.min(TRONCO * (1 + SQUASH_DO_TRONCO), dTronco),
+    );
+    ux /= dTronco;
+    uy /= dTronco;
+    saida.neck = {
+      x: saida.hip.x + ux * limitado,
+      y: saida.hip.y + uy * limitado,
+    };
+  } else {
+    ux = 0;
+    uy = -1;
+  }
+
+  // ---- ombros: penduram no tronco e giram com ele --------------------------
+  // perpendicular ao tronco, no sentido da frente
+  const px = -uy;
+  const py = ux;
+  const ombro = (o: { aoLongo: number; perpendicular: number }): Vec2 => ({
+    x: saida.neck.x + ux * o.aoLongo + px * o.perpendicular,
+    y: saida.neck.y + uy * o.aoLongo + py * o.perpendicular,
+  });
+  // as direcoes ORIGINAIS dos bracos sao medidas a partir do ombro que a pose
+  // assumia (o da base), entao guardamos o ombro antigo antes de mover
+  const ombroAntigoFrente = saida.shoulderFront;
+  const ombroAntigoTras = saida.shoulderBack;
+  saida.shoulderFront = ombro(OMBRO_FRENTE);
+  saida.shoulderBack = ombro(OMBRO_TRAS);
+
+  const antigo: Partial<Record<JointName, Vec2>> = {
+    shoulderFront: ombroAntigoFrente,
+    shoulderBack: ombroAntigoTras,
+  };
+
+  // ---- membros e cabeca: comprimento exato, direcao da pose ---------------
+  for (let i = 0; i < OSSOS_RIGIDOS.length; i++) {
+    const [pai, filho] = OSSOS_RIGIDOS[i];
+    // a intencao da pose e a direcao medida ANTES de qualquer correcao
+    const origemDaDirecao = antigo[pai] ?? saida[pai];
+    let dx = saida[filho].x - origemDaDirecao.x;
+    let dy = saida[filho].y - origemDaDirecao.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 0.001) {
+      // sem direcao declarada: usa a da pose base
+      dx = BASE[filho].x - BASE[pai].x;
+      dy = BASE[filho].y - BASE[pai].y;
+    }
+    const norma = Math.hypot(dx, dy) || 1;
+    antigo[filho] = saida[filho];
+    saida[filho] = {
+      x: saida[pai].x + (dx / norma) * COMPRIMENTO[i],
+      y: saida[pai].y + (dy / norma) * COMPRIMENTO[i],
     };
   }
+
   return saida;
 };
 
