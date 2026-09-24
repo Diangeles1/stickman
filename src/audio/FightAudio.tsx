@@ -17,6 +17,7 @@ import { Audio, Sequence, staticFile, useVideoConfig } from "remotion";
 import { duracaoReal, logicoParaReal } from "../core/tempo";
 import type { Timeline } from "../core/types";
 import { espetaculoDe } from "../effects/espetaculo";
+import { FALAS } from "./falas";
 import { TEMPO_DA_DANCA } from "../animation/danca";
 import { BUSCA, PUXA } from "../animation/placa";
 import {
@@ -33,6 +34,7 @@ import {
   SOM_QUEDA,
   SOM_VENCEDOR,
   TRILHA,
+  NARRADOR,
   SOM_AURA,
   SONS,
   type CamadaDeSom,
@@ -119,6 +121,13 @@ export const FightAudio: React.FC<FightAudioProps> = ({ timeline }) => {
       const d = f - e.ko.real;
       if (d >= 0 && d < 90) v = Math.min(v, TRILHA.volume * 0.25);
       else if (d >= 90 && d < 120) v = Math.min(v, TRILHA.volume * (0.25 + 0.75 * ((d - 90) / 30)));
+    }
+    // o narrador fala por cima da trilha, nao contra ela
+    for (const fl of e.falas) {
+      const dur = FALAS[fl.fala].segundos * fps;
+      if (f >= fl.real - 4 && f <= fl.real + dur + 6) {
+        v = Math.min(v, TRILHA.volume * NARRADOR.trilhaSobFala);
+      }
     }
     // entra em 10 quadros e sai no ultimo segundo
     v *= Math.min(1, f / 10);
@@ -231,6 +240,13 @@ export const FightAudio: React.FC<FightAudioProps> = ({ timeline }) => {
             />
           </React.Fragment>
         ))}
+
+      {/* narrador */}
+      {e.falas.map((fl, i) => (
+        <Sequence key={`fala-${i}`} from={fl.real} layout="none">
+          <Audio src={staticFile(FALAS[fl.fala].arquivo)} volume={NARRADOR.volume} />
+        </Sequence>
+      ))}
 
       {/* aura: disparada no inicio do beat de powerUp */}
       {timeline.scheduled
