@@ -15,7 +15,8 @@
  *   ESQUIVAS            cada um faz o outro errar uma vez
  *   GOLPE PESADO        o soco pesado do vermelho encontra o preto: knockback,
  *                       queda e recuperacao
- *   COMBATE AEREO       o preto pula e golpeia de cima
+ *   COMBATE AEREO       o preto pula e soca de cima (sem lancar: o lancamento
+ *                       grande fica para o finalizador)
  *   CHOQUE              troca de golpes nas duas guardas
  *   ESCALADA FINAL      combo do vermelho segurado; combo do preto que entra
  *   FINALIZADOR         chute giratorio do preto: o vermelho voa na direcao
@@ -71,8 +72,13 @@ export const LUTA_COMPLETA: FightSpec = {
     { type: "recover", who: "black", duration: s(1.0) },
 
     // ---- COMBATE AEREO ---------------------------------------------------
-    { type: "attack", attacker: "black", target: "red", move: "diveAttack", targetPoint: "chest" },
-    { type: "recover", who: "red", duration: s(1.0) },
+    // soco aereo (medio): acerta sem lancar. Um lancamento aqui roubava o
+    // efeito do finalizador e quebrava a escalada da luta
+    // na CABECA: de cima, o punho que desce ate o peito perde alcance e o
+    // pulo terminava com um corpo dentro do outro (170 de distancia contra
+    // 330 mirando na cabeca)
+    { type: "attack", attacker: "black", target: "red", move: "airAttack", targetPoint: "head" },
+    { type: "recover", who: "red", duration: s(0.4) },
 
     // ---- CHOQUE ----------------------------------------------------------
     { type: "blocked", attacker: "black", target: "red", move: "punch", targetPoint: "chest" },

@@ -448,9 +448,13 @@ export const compilar = (spec: FightSpec): Timeline => {
     let frameContato = cursor + contactAt;
     let pouso = 0;
     if (aereo) {
-      estado[atacante].pose = "jump";
+      // decola AINDA CARREGADO (a pose de carga, no ar): o braco que vai
+      // golpear fica guardado ate o disparo. Com a pose de pulo (bracos para
+      // cima), o movimento mais rapido do golpe era o braco subindo na
+      // decolagem, e o soco em si saia mais lento que ela.
+      estado[atacante].pose = "coil";
       estado[atacante].airborne = true;
-      chave(atacante, cursor + 3);
+      chave(atacante, cursor + 3, perfil.carga);
       frameContato = cursor + 3 + Math.round(TEMPO_NO_AR * 0.6);
       pouso = cursor + 3 + TEMPO_NO_AR;
     }
