@@ -32,6 +32,7 @@ import {
   SOM_KO,
   SOM_QUEDA,
   SOM_VENCEDOR,
+  TRILHA,
   SOM_AURA,
   SONS,
   type CamadaDeSom,
@@ -91,11 +92,54 @@ export const FightAudio: React.FC<FightAudioProps> = ({ timeline }) => {
   const e = espetaculoDe(timeline);
   const vence = e.rotulos.find((r) => r.vaga === "vence");
 
+  // A trilha comeca deslocada para a grade dela cair em cima da danca: o
+  // tempo 1 da danca coincide com um tempo da musica.
+  const danca = timeline.scheduled.find((b) => b.beat.type === "danca");
+  const inicioDaTrilha = danca
+    ? Math.round(paraQuadroReal(timeline, danca.from)) % TEMPO_DA_DANCA
+    : 0;
+  const golpesReais = timeline.impacts.map((i) =>
+    Math.round(paraQuadroReal(timeline, i.frame)),
+  );
+  /** volume da trilha no quadro real: abaixa em cada golpe e no nocaute */
+  const volumeDaTrilha = (f: number): number => {
+    let v = TRILHA.volume;
+    for (const g of golpesReais) {
+      const d = f - g;
+      if (d < -TRILHA.antecipacao || d > TRILHA.retorno) continue;
+      // desce durante o whoosh, fica no fundo no contato, volta devagar
+      const k = d < 0 ? 1 + d / TRILHA.antecipacao : 1 - d / TRILHA.retorno;
+      v = Math.min(v, TRILHA.volume * (1 - (1 - TRILHA.duckNoGolpe) * k));
+    }
+    // nocaute: a trilha quase some durante a camera lenta e volta com o K.O.
+    if (e.ko) {
+      const d = f - e.ko.real;
+      if (d >= 0 && d < 90) v = Math.min(v, TRILHA.volume * 0.25);
+      else if (d >= 90 && d < 120) v = Math.min(v, TRILHA.volume * (0.25 + 0.75 * ((d - 90) / 30)));
+    }
+    // entra em 10 quadros e sai no ultimo segundo
+    v *= Math.min(1, f / 10);
+    v *= Math.min(1, (durationInFrames - f) / 60);
+    return Math.max(0, v);
+  };
+
   return (
     <>
       {/* ambiente: um leito grave que roda o video inteiro, bem baixo */}
       <Sequence from={0} durationInFrames={durationInFrames} layout="none">
         <Audio src={staticFile(AMBIENTE.arquivo)} volume={AMBIENTE.volume} loop />
+      </Sequence>
+
+      {/* trilha de fundo, com ducking nos golpes */}
+      <Sequence
+        from={inicioDaTrilha}
+        durationInFrames={durationInFrames - inicioDaTrilha}
+        layout="none"
+      >
+        <Audio
+          src={staticFile(TRILHA.arquivo)}
+          volume={(f) => volumeDaTrilha(f + inicioDaTrilha)}
+        />
       </Sequence>
 
       {/* um som composto por impacto, ancorado no quadro de contato */}

@@ -207,3 +207,26 @@ export const SOM_PLACA: SomComposto = [
   { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.7, offset: 0.02 },
   { arquivo: `${A}/impacts/impact_light_01.wav`, volume: 0.5, offset: 0.05 },
 ];
+
+/**
+ * TRILHA DE FUNDO: batalha no estilo anime, ORIGINAL (composta por
+ * scripts/compor-trilha.mts, sem trecho de musica de terceiros), no mesmo
+ * andamento da danca.
+ *
+ * Volume baixo de proposito e com "ducking" (ver FightAudio): em cada golpe
+ * ela abaixa por um instante para o impacto passar por cima. Trilha que
+ * compete com o soco tira o peso do soco.
+ */
+export const TRILHA = {
+  arquivo: `${A}/music/batalha_anime_01.mp3`,
+  // Medido: o soco tem RMS de ~0,025 nos 80ms do impacto e a trilha 0,26.
+  // A 0,11 a trilha fica em ~0,029 e, abaixada no golpe, em ~0,009: o
+  // impacto passa uns 8 dB por cima dela.
+  volume: 0.11,
+  /** quanto sobra da trilha no instante do golpe (0.3 = cai para 30%) */
+  duckNoGolpe: 0.3,
+  /** quadros ANTES do contato em que ela ja comeca a abaixar (o whoosh) */
+  antecipacao: 10,
+  /** quadros para voltar ao volume normal depois do golpe */
+  retorno: 24,
+};
