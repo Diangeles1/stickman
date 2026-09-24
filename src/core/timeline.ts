@@ -158,7 +158,6 @@ export const compilar = (spec: FightSpec): Timeline => {
   const aims: AimEvent[] = [];
   const cameraKeys: CameraKey[] = [];
   const slowMo: Timeline["slowMo"] = [];
-  const rumoACamera: NonNullable<Timeline["rumoACamera"]> = [];
 
   let cursor = 0;
 
@@ -689,10 +688,6 @@ export const compilar = (spec: FightSpec): Timeline => {
       chave(alvo, fim);
       fimDaReacao = fim;
       fimDoDeslocamento = fim;
-      // O FINALIZADOR joga o corpo na direcao de quem assiste
-      if (opcoes.finalizador && voa) {
-        rumoACamera.push({ who: alvo, de: f3, ate: fim + 2 });
-      }
 
       // FASE 4 - FREADA. Ele planta o pe de tras e para de deslizar. Antes o
       // corpo empurrado voltava direto para a guarda, o que le como
@@ -1095,6 +1090,5 @@ export const compilar = (spec: FightSpec): Timeline => {
     cameraKeys,
     tracks,
     slowMo,
-    rumoACamera,
   };
 };

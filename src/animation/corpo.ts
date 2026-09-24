@@ -270,34 +270,6 @@ const QUADROS_DO_AVANCO = 6;
 const DUR_COMPRESSAO = 5;
 
 /**
- * ARREMESSO NA DIRECAO DA CAMERA: quanto o corpo cresce na tela.
- *
- * O finalizador pede o corpo voando para perto de quem assiste. Num plano
- * lateral isso e ESCALA: o corpo cresce na primeira metade do voo, passa
- * perto de quem assiste, e volta ao tamanho normal ao cair. 1,3 e o pico:
- * a 1,6 o corpo no meio do voo ficava gigante ao lado do outro lutador.
- */
-const MAXIMO_DA_APROXIMACAO = 1.3;
-/** Quanto o chao do primeiro plano desce na tela, por unidade de escala. */
-const CHAO_DO_PRIMEIRO_PLANO = 140;
-
-const aproximacaoDaCamera = (
-  timeline: Timeline,
-  id: FighterId,
-  frame: number,
-): number => {
-  for (const r of timeline.rumoACamera ?? []) {
-    if (r.who !== id || frame < r.de || frame > r.ate) continue;
-    const p = (frame - r.de) / Math.max(1, r.ate - r.de);
-    // Vem na direcao da camera no meio do voo e VOLTA ao tamanho normal ate
-    // cair. Ficando grande depois do pouso, o corpo deitado virava um
-    // gigante ao lado do outro lutador ate o fim do video.
-    return 1 + (MAXIMO_DA_APROXIMACAO - 1) * Math.sin(Math.PI * p);
-  }
-  return 1;
-};
-
-/**
  * ABSORCAO DO IMPACTO: o corpo do atingido comprime por alguns quadros.
  *
  * E o squash da animacao classica aplicado ao corpo inteiro. Sem ele a reacao
@@ -439,7 +411,6 @@ const corpoBase = (
 
   const compressao = compressaoDe(timeline, id, frame);
   const escala = escalaDoMundo(preset.scale);
-  const perto = aproximacaoDaCamera(timeline, id, frame);
 
   // PIVO NO PE DE APOIO. Com a base ja fechada (ver giroNoQuadro), girar em
   // volta do quadril ainda arrastava o pe de apoio num arco pelo chao. Aqui o
@@ -495,10 +466,9 @@ const corpoBase = (
 
   return {
     x: a.x + pivo,
-    // mais perto da camera o chao dele fica mais BAIXO na tela (perspectiva)
-    baseY: (-apoio - voo) * compressao * perto + (perto - 1) * CHAO_DO_PRIMEIRO_PLANO,
+    baseY: (-apoio - voo) * compressao,
     facing,
-    scale: preset.scale * compressao * perto,
+    scale: preset.scale * compressao,
     spin,
     giro,
     pose,

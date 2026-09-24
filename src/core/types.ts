@@ -358,12 +358,6 @@ export type Timeline = {
   cameraKeys: CameraKey[];
   /** trechos em camera lenta */
   slowMo: { from: number; to: number; factor: number }[];
-  /**
-   * Arremessos na direcao da CAMERA (o finalizador): entre `de` e `ate` o
-   * corpo cresce na tela como quem voa para perto de quem assiste, e fica
-   * em primeiro plano depois de cair.
-   */
-  rumoACamera?: { who: FighterId; de: number; ate: number }[];
 };
 
 export type CameraKey = {
