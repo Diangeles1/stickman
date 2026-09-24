@@ -14,7 +14,7 @@
 
 import React from "react";
 import { Audio, Sequence, staticFile, useVideoConfig } from "remotion";
-import { logicoParaReal } from "../core/tempo";
+import { duracaoReal, logicoParaReal } from "../core/tempo";
 import type { Timeline } from "../core/types";
 import { espetaculoDe } from "../effects/espetaculo";
 import { TEMPO_DA_DANCA } from "../animation/danca";
@@ -88,7 +88,10 @@ const Disparo: React.FC<{ som: CamadaDeSom[]; quadro: number; fps: number }> = (
 );
 
 export const FightAudio: React.FC<FightAudioProps> = ({ timeline }) => {
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps } = useVideoConfig();
+  // a duracao da LUTA, e nao da composicao: com a tela de escolha antes, a
+  // composicao e mais longa e o fim da trilha sairia do lugar
+  const durationInFrames = duracaoReal(timeline);
   const e = espetaculoDe(timeline);
   const vence = e.rotulos.find((r) => r.vaga === "vence");
 

@@ -10,7 +10,9 @@
 
 import React from "react";
 import { FightAudio } from "../audio/FightAudio";
+import { Sequence } from "remotion";
 import { Espetaculo } from "../effects/Espetaculo";
+import { QUADROS_DE_ESCOLHA, TelaDeEscolha } from "../effects/TelaDeEscolha";
 import { FightScene } from "../scenes/FightScene";
 import { compilar } from "../core/timeline";
 import { duracaoReal } from "../core/tempo";
@@ -34,6 +36,8 @@ export type PrototypeProps = {
   /** usadas pela composicao gerada; o spec chega pronto via calculateMetadata */
   seed?: number;
   segundos?: number;
+  /** abre com a tela "ESCOLHA UM PERSONAGEM!" e a contagem de 5 segundos */
+  escolha?: boolean;
 };
 
 export const Prototype: React.FC<PrototypeProps> = ({
@@ -42,6 +46,7 @@ export const Prototype: React.FC<PrototypeProps> = ({
   semEfeitos = false,
   seed = 1,
   segundos = 30,
+  escolha = false,
 }) => {
   // sem spec, a luta vem da semente: e o caminho da composicao gerada
   const usado = React.useMemo(
@@ -49,11 +54,22 @@ export const Prototype: React.FC<PrototypeProps> = ({
     [spec, seed, segundos],
   );
   const timeline = React.useMemo(() => compilar(usado), [usado]);
-  return (
+  const luta = (
     <>
       <FightScene timeline={timeline} debug={debug} semEfeitos={semEfeitos} />
       {semEfeitos ? null : <Espetaculo timeline={timeline} />}
       {semEfeitos ? null : <FightAudio timeline={timeline} />}
+    </>
+  );
+  if (!escolha) return luta;
+  // a luta inteira comeca depois da escolha: dentro da Sequence o quadro
+  // volta a contar do zero, entao nada da luta precisa saber da tela antes
+  return (
+    <>
+      <Sequence durationInFrames={QUADROS_DE_ESCOLHA}>
+        <TelaDeEscolha a={usado.fighterA} b={usado.fighterB} />
+      </Sequence>
+      <Sequence from={QUADROS_DE_ESCOLHA}>{luta}</Sequence>
     </>
   );
 };
@@ -65,6 +81,9 @@ export const Prototype: React.FC<PrototypeProps> = ({
  * durationInFrames na hora de registrar a composicao, nao na hora de desenhar.
  * O hit stop e a camera lenta somam quadros reais, entao entram na conta.
  */
-export const duracaoDoPrototipo = (spec: FightSpec): number => {
-  return duracaoReal(compilar(spec));
+export const duracaoDoPrototipo = (
+  spec: FightSpec,
+  opcoes: { escolha?: boolean } = {},
+): number => {
+  return duracaoReal(compilar(spec)) + (opcoes.escolha ? QUADROS_DE_ESCOLHA : 0);
 };

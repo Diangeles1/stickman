@@ -20,8 +20,12 @@ import { BENCHMARK } from "./data/fights/benchmark";
 import { BENCHMARK2 } from "./data/fights/benchmark2";
 import { LUTA_COMPLETA } from "./data/fights/luta-completa";
 import { gerarLuta } from "./data/gerador";
+import { trocarVencedor } from "./data/trocar";
 import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
+
+/** a luta completa com os papeis invertidos: o vermelho vence */
+const LUTA_VERMELHO_VENCE = trocarVencedor(LUTA_COMPLETA);
 
 /** Alvo do projeto: vertical de Shorts/TikTok a 60fps. */
 export const VIDEO = {
@@ -152,6 +156,29 @@ export const RemotionRoot: React.FC = () => {
         width={LUTA_COMPLETA.width}
         height={LUTA_COMPLETA.height}
         defaultProps={{ spec: LUTA_COMPLETA, debug: false }}
+      />
+      {/*
+        EPISODIO "ESCOLHA UM PERSONAGEM": a tela de escolha com a contagem e
+        depois a luta completa. Dois finais da mesma coreografia: o preto
+        vence, ou os papeis se invertem e o vermelho vence (data/trocar.ts).
+      */}
+      <Composition
+        id="Escolha-PretoVence"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(LUTA_COMPLETA, { escolha: true })}
+        fps={LUTA_COMPLETA.fps}
+        width={LUTA_COMPLETA.width}
+        height={LUTA_COMPLETA.height}
+        defaultProps={{ spec: LUTA_COMPLETA, escolha: true }}
+      />
+      <Composition
+        id="Escolha-VermelhoVence"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(LUTA_VERMELHO_VENCE, { escolha: true })}
+        fps={LUTA_COMPLETA.fps}
+        width={LUTA_COMPLETA.width}
+        height={LUTA_COMPLETA.height}
+        defaultProps={{ spec: LUTA_VERMELHO_VENCE, escolha: true }}
       />
       <Composition
         id="LutaCompleta-SemEfeitos"
