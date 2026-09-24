@@ -257,6 +257,16 @@ export const compilar = (spec: FightSpec): Timeline => {
     // colidia com a chave de chegada da aproximacao e virava corte seco.
     estado[atacante].pose = "coil";
     chave(atacante, cursor + QUADROS_DE_TRANSICAO);
+
+    // O PASSO A FRENTE TERMINA NO FIM DA PREPARACAO, nao no contato.
+    //
+    // E assim que um lutador soca: o pe planta primeiro, e so depois o braco
+    // dispara. Antes o deslocamento do corpo terminava junto com o golpe, e o
+    // efeito era medivel: scripts/cadeia.mts mostrava quadril, joelho, pe,
+    // pescoco e ombro atingindo a velocidade maxima NO MESMO QUADRO do punho,
+    // porque a velocidade de todas as juntas era dominada pela translacao do
+    // corpo inteiro. Corpo que acelera junto le como bloco, nao como corrente.
+    estado[atacante].x = xNoContato;
     // segura a carga ate o fim da preparacao. SEM esta chave o braco ja
     // comecava a se estender durante o windup, e o golpe nao tinha disparo.
     chave(atacante, cursor + windup);
@@ -301,8 +311,8 @@ export const compilar = (spec: FightSpec): Timeline => {
     const frameContato = cursor + contactAt;
     const direcao = lado;
     estado[atacante].pose = def.pose;
-    // o passo a frente entra DENTRO do golpe: o peso do corpo vai junto
-    estado[atacante].x = xNoContato;
+    // x nao muda aqui: o corpo ja chegou no fim da preparacao, e agora quem
+    // se move e o membro. E essa separacao que faz a cadeia se ler.
     chave(atacante, frameContato);
 
     // ---- 3. CONTATO -------------------------------------------------------
@@ -338,6 +348,9 @@ export const compilar = (spec: FightSpec): Timeline => {
       // entra durante o disparo e sai depois de segurar o contato
       from: cursor,
       to: frameContato + parada + s(0.1),
+      direcao,
+      // golpe mais pesado passa mais alem: e a massa do membro que continua
+      avanco: def.tier === "extreme" ? 54 : def.tier === "medium" ? 34 : 20,
     });
 
     // ultimo quadro em que o ALVO recebe chave nesta sequencia. O compilador

@@ -30,7 +30,9 @@
 import {
   alturaDoVoo,
   amostrar,
+  entradaLenta,
   inclinacaoDesenhada,
+  progressoDoVoo,
   suave,
 } from "./sampler";
 import { PRESETS } from "../characters/presets";
@@ -107,6 +109,22 @@ const respirar = (pose: Pose, frame: number, defasagem: number): Pose => {
   };
 };
 
+/**
+ * GIRO DA QUEDA, em graus.
+ *
+ * Corpo lancado nao viaja reto: ele roda. Sem isto o lancamento era translacao
+ * pura seguida de uma troca para pose horizontal, que e exatamente o que a
+ * diretiva chama de "personagem simplesmente mudando para uma pose deitada".
+ *
+ * O giro vai a zero no fim do arco, entao o corpo chega ao chao alinhado com a
+ * pose de pouso: girar ate o ultimo quadro faria o pe aterrissar de lado e o
+ * apoio colocaria o personagem torto.
+ */
+const GIRO_DA_QUEDA = 52;
+
+/** Em quantos quadros o membro completa o avanco e volta. */
+const QUADROS_DO_AVANCO = 6;
+
 /** Duracao da absorcao do impacto, em quadros logicos. */
 const DUR_COMPRESSAO = 5;
 
@@ -146,7 +164,10 @@ const pesoDaMira = (aim: AimEvent, frame: number): number => {
   if (frame < aim.from || frame > aim.to) return 0;
   if (frame <= aim.contact) {
     const dur = Math.max(1, aim.contact - aim.from);
-    return suave((frame - aim.from) / dur);
+    // ACELERA ate o contato. Com curva suave a correcao tinha a maior taxa no
+    // MEIO do caminho, e o punho atingia a velocidade maxima 2 quadros ANTES
+    // do contato: o golpe chegava e o corpo vinha atras, cadeia invertida.
+    return entradaLenta((frame - aim.from) / dur);
   }
   const dur = Math.max(1, aim.to - aim.contact);
   return 1 - suave((frame - aim.contact) / dur);
@@ -217,7 +238,15 @@ const corpoBase = (
   // Em pose de ataque ou de reacao a inclinacao e zerada: a pose ja tem a
   // atitude do corpo desenhada, e girar o corpo no quadro do contato tirava o
   // punho do ponto onde a geometria calculou o contato.
-  const spin = inclinacaoDesenhada(a) * facing;
+  let spin = inclinacaoDesenhada(a) * facing;
+
+  // GIRO DA QUEDA. Sobe e volta a zero ao longo do arco (meia volta de seno),
+  // no sentido em que o corpo esta viajando.
+  const arco = progressoDoVoo(timeline.tracks[id], frame);
+  if (arco >= 0) {
+    spin += Math.sin(arco * Math.PI) * GIRO_DA_QUEDA * Math.sign(a.velocidade || 1);
+  }
+
   const compressao = compressaoDe(timeline, id, frame);
   const escala = escalaDoMundo(preset.scale);
 
@@ -281,6 +310,17 @@ export const corpoNoQuadro = (
 
   const alvo = corpoBase(timeline, aim.alvo, frame);
   const noMundo = pontoDoAlvo(aim.ponto as PontoAlvo, juntasDoCorpo(alvo));
+
+  // FOLLOW-THROUGH: depois do contato o alvo da mira avanca, entao o membro
+  // PASSA do ponto antes de voltar. Membro que para exatamente onde acertou
+  // le como golpe sem massa; o que da peso e ele continuar e ser recolhido.
+  const depois = frame - aim.contact;
+  if (depois > 0) {
+    const t = Math.min(1, depois / QUADROS_DO_AVANCO);
+    // sobe rapido e volta: sin de meia volta
+    noMundo.x += Math.sin(t * Math.PI) * aim.avanco * aim.direcao;
+  }
+
   const alvoLocal = paraLocal(noMundo, transformDoCorpo(eu));
 
   const r = mirarMembro(eu.pose, aim.joint, alvoLocal, peso);

@@ -489,14 +489,80 @@ export const mirarMembro = (
  * caminho, mas completar() reimpoe o comprimento depois, entao a mao percorre
  * um arco de raio constante.
  */
-export const misturar = (a: Pose, b: Pose, t: number): Required<Pose> => {
+/**
+ * ATRASO POR JUNTA: a acao sobrepondo (overlapping action).
+ *
+ * O PROBLEMA QUE ISTO RESOLVE, e e o maior de todos: a mistura usava um unico
+ * fator de tempo para o corpo inteiro, entao TODAS as juntas partiam e
+ * chegavam no mesmo instante. Medido com scripts/cadeia.mts: quadril, joelho,
+ * pe, pescoco e ombro atingiam a velocidade maxima no MESMO quadro, com
+ * espalhamento zero, e o punho picava 2 quadros ANTES do quadril, ou seja com
+ * a cadeia invertida.
+ *
+ * Corpo que parte e chega junto e lido como posicao sendo trocada. Corpo em
+ * que cada parte tem o seu tempo e lido como corpo se movendo. E a diferenca
+ * entre animacao interpolada e animacao.
+ *
+ * Aqui cada junta recebe uma fracao de atraso. No fator 1 todas chegam a 1,
+ * entao a pose no QUADRO-CHAVE continua exata: o atraso muda o caminho, nao
+ * o destino. Isso importa porque o contato e garantido nos quadros-chave.
+ */
+export type PerfilDeAtraso = Partial<Record<JointName, number>>;
+
+/**
+ * ATAQUE: o movimento nasce no chao e sobe.
+ * pe -> perna -> quadril -> tronco -> ombro -> braco -> punho
+ */
+export const ATRASO_DO_ATAQUE: PerfilDeAtraso = {
+  hip: 0,
+  kneeBack: 0.05, kneeFront: 0.05,
+  footBack: 0.11, footFront: 0.11,
+  neck: 0.12,
+  shoulderBack: 0.15, shoulderFront: 0.15,
+  head: 0.2,
+  elbowBack: 0.24, elbowFront: 0.24,
+  handBack: 0.34, handFront: 0.34,
+};
+
+/**
+ * REACAO: o movimento nasce no PONTO ATINGIDO e se espalha.
+ * tronco -> cabeca -> bracos -> quadril -> pernas -> pes
+ *
+ * E o inverso do ataque de proposito. Quem leva um golpe no peito tem o
+ * tronco cedendo primeiro e os pes por ultimo; usar o perfil do ataque aqui
+ * poria o quadril reagindo antes do peito que foi atingido.
+ */
+export const ATRASO_DA_REACAO: PerfilDeAtraso = {
+  neck: 0,
+  head: 0.1,
+  shoulderBack: 0.08, shoulderFront: 0.08,
+  hip: 0.14,
+  elbowBack: 0.18, elbowFront: 0.18,
+  handBack: 0.28, handFront: 0.28,
+  kneeBack: 0.22, kneeFront: 0.22,
+  footBack: 0.3, footFront: 0.3,
+};
+
+export const misturar = (
+  a: Pose,
+  b: Pose,
+  t: number,
+  atrasos?: PerfilDeAtraso,
+): Required<Pose> => {
   const ca = completar(a);
   const cb = completar(b);
   const saida = poseBase();
   for (const junta of TODAS_AS_JUNTAS) {
+    const atraso = atrasos?.[junta] ?? 0;
+    // reescala o tempo da junta: ela so comeca depois do seu atraso, e chega
+    // exatamente junto com as outras no fim
+    const tj =
+      atraso <= 0
+        ? t
+        : Math.max(0, Math.min(1, (t - atraso) / (1 - atraso)));
     saida[junta] = {
-      x: ca[junta].x + (cb[junta].x - ca[junta].x) * t,
-      y: ca[junta].y + (cb[junta].y - ca[junta].y) * t,
+      x: ca[junta].x + (cb[junta].x - ca[junta].x) * tj,
+      y: ca[junta].y + (cb[junta].y - ca[junta].y) * tj,
     };
   }
   return saida;

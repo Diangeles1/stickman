@@ -14,7 +14,13 @@
 
 import { interpolate } from "remotion";
 import { POSES } from "../characters/poses";
-import { completar, misturar } from "../characters/skeleton";
+import {
+  ATRASO_DA_REACAO,
+  ATRASO_DO_ATAQUE,
+  completar,
+  misturar,
+  type PerfilDeAtraso,
+} from "../characters/skeleton";
 import type { FighterTrack, Pose, PoseName, Timeline } from "../core/types";
 
 /** Aceleracao e desaceleracao suaves. Serve para quase tudo. */
@@ -141,6 +147,52 @@ export const inclinacaoDesenhada = (a: {
  * Fazer isso aqui, e nao em cada beat, garante que o mesmo tipo de movimento
  * tenha sempre o mesmo peso no video inteiro.
  */
+/**
+ * Perfil de atraso das juntas, escolhido pela pose de DESTINO.
+ *
+ * Feito aqui, e nao em cada beat, para que o mesmo tipo de movimento tenha
+ * sempre a mesma cadeia no video inteiro.
+ */
+const atrasoPara = (destino: PoseName): PerfilDeAtraso | undefined => {
+  switch (destino) {
+    // corpo atingido: a forca entra no ponto do golpe e se espalha
+    case "hitHead":
+    case "hitChest":
+    case "hitBody":
+    case "hitLeg":
+    case "knockback":
+    case "stagger":
+    case "downed":
+    case "land":
+    case "squash":
+      return ATRASO_DA_REACAO;
+    // golpe e locomocao: o movimento nasce no chao e sobe
+    case "punch":
+    case "punchFast":
+    case "punchHeavy":
+    case "uppercut":
+    case "kick":
+    case "kickLow":
+    case "kickHigh":
+    case "spinKick":
+    case "knee":
+    case "elbow":
+    case "charge":
+    case "coil":
+    case "walk1":
+    case "walk2":
+    case "run1":
+    case "run2":
+    case "sprint1":
+    case "sprint2":
+    case "advance":
+    case "retreat":
+      return ATRASO_DO_ATAQUE;
+    default:
+      return undefined;
+  }
+};
+
 const curvaPara = (destino: PoseName): ((t: number) => number) => {
   switch (destino) {
     // corpo atingido: o movimento NASCE no impacto. Quase todo o deslocamento
@@ -336,7 +388,7 @@ const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
 
     return {
       x: a.x + (b.x - a.x) * t,
-      pose: misturar(POSES[a.pose], POSES[b.pose], t),
+      pose: misturar(POSES[a.pose], POSES[b.pose], t, atrasoPara(b.pose)),
       poseNome: t > 0.5 ? b.pose : a.pose,
       airborne: t > 0.5 ? b.airborne : a.airborne,
       velocidade, aceleracao, inclinacao,
@@ -418,6 +470,42 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
  * misturadas numa unica funcao e a altura do quadril era uma constante, o que
  * fazia qualquer pose de perna dobrada flutuar.
  */
+/**
+ * Progresso do voo: 0 ao sair do chao, 1 ao tocar de novo. -1 quando o corpo
+ * nao esta no ar.
+ *
+ * Serve para quem precisa saber ONDE no arco o corpo esta, e nao so a altura:
+ * a rotacao da queda depende disso.
+ */
+export const progressoDoVoo = (
+  track: FighterTrack,
+  frame: number,
+): number => {
+  const trechos = trechosNoAr(track);
+  for (const t of trechos) {
+    if (frame < t.de || frame > t.ate) continue;
+    return (frame - t.de) / Math.max(1, t.ate - t.de);
+  }
+  return -1;
+};
+
+/** Trechos em que a trilha esta no ar. */
+const trechosNoAr = (track: FighterTrack) => {
+  const trechos: { de: number; ate: number }[] = [];
+  let inicio: number | null = null;
+  for (const k of track.keys) {
+    if (k.airborne && inicio === null) inicio = k.frame;
+    if (!k.airborne && inicio !== null) {
+      trechos.push({ de: inicio, ate: k.frame });
+      inicio = null;
+    }
+  }
+  if (inicio !== null && track.keys.length > 0) {
+    trechos.push({ de: inicio, ate: track.keys[track.keys.length - 1].frame });
+  }
+  return trechos;
+};
+
 export const alturaDoVoo = (
   track: FighterTrack,
   frame: number,

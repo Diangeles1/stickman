@@ -262,6 +262,16 @@ export type AimEvent = {
   from: number;
   /** e sai completamente aqui */
   to: number;
+  /** +1 quando o golpe vai para a direita, -1 para a esquerda */
+  direcao: number;
+  /**
+   * FOLLOW-THROUGH: quanto o membro passa ALEM do ponto de contato, em
+   * unidades de mundo, nos quadros seguintes ao contato.
+   *
+   * Membro que para exatamente no alvo le como golpe sem massa. Passar um
+   * pouco e voltar e o que da a sensacao de peso e velocidade.
+   */
+  avanco: number;
 };
 
 /** Onde cada lutador esta e o que faz, num beat. */
