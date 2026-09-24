@@ -67,6 +67,34 @@ const inclinacaoDoCorpo = (v: number, a: number): number => {
 };
 
 /**
+ * Poses em que o corpo NAO recebe inclinacao procedural.
+ *
+ * A inclinacao derivada da velocidade existe para dar peso a locomocao e ao
+ * knockback. Num golpe ela atrapalha duas vezes: a pose do ataque JA tem a
+ * inclinacao do corpo desenhada nela (senao nao seria um golpe), e girar o
+ * corpo inteiro no quadro do contato tira o punho de onde a geometria calculou
+ * que ele estaria. Medido: a distancia punho-alvo pulava de 16 para 79
+ * unidades de um quadro para o outro so por causa disso.
+ */
+const POSES_DE_ATAQUE = new Set<PoseName>([
+  "punch", "punchFast", "punchHeavy", "uppercut",
+  "kick", "kickLow", "kickHigh", "spinKick",
+  "knee", "elbow", "airAttack", "diveAttack",
+]);
+
+/**
+ * Inclinacao que de fato vai para a tela.
+ *
+ * Existe como funcao para que a cena, o overlay de depuracao e o medidor de
+ * contato desenhem e MEÇAM o mesmo corpo. Overlay que discorda do desenho e
+ * pior que overlay nenhum.
+ */
+export const inclinacaoDesenhada = (a: {
+  poseNome: PoseName;
+  inclinacao: number;
+}): number => (POSES_DE_ATAQUE.has(a.poseNome) ? 0 : a.inclinacao);
+
+/**
  * Curva usada entre duas chaves, escolhida pela pose de DESTINO.
  *
  * Fazer isso aqui, e nao em cada beat, garante que o mesmo tipo de movimento

@@ -11,7 +11,12 @@
 
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
-import { alturaNoAr, amostrar, quadroEfetivo } from "../animation/sampler";
+import {
+  alturaNoAr,
+  amostrar,
+  inclinacaoDesenhada,
+  quadroEfetivo,
+} from "../animation/sampler";
 import { Arena } from "../backgrounds/Arena";
 import { cameraNoQuadro, transformDaCamera } from "../camera/camera";
 import { PRESETS } from "../characters/presets";
@@ -19,16 +24,20 @@ import { ALTURA_QUADRIL } from "../characters/skeleton";
 import { Stickman } from "../characters/Stickman";
 import {
   Aura,
+  Clarao,
   Flash,
   LinhasDeVelocidade,
   Ondas,
   Particulas,
 } from "../effects/Impact";
+import { DebugOverlay } from "../debug/DebugOverlay";
 import { poeiraAmbiente } from "../particles/particles";
 import type { Timeline } from "../core/types";
 
 export type FightSceneProps = {
   timeline: Timeline;
+  /** liga o overlay de medicao (punho, alvo, distancia). Desligado no render final. */
+  debug?: boolean;
 };
 
 /** Enquadramento inicial, usado antes da primeira chave de camera. */
@@ -42,7 +51,7 @@ const CAMERA_PADRAO = {
 /** Acima desta velocidade (unidades por quadro) aparecem linhas de velocidade. */
 const LIMITE_LINHAS = 26;
 
-export const FightScene: React.FC<FightSceneProps> = ({ timeline }) => {
+export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false }) => {
   const frameReal = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
 
@@ -80,6 +89,31 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline }) => {
     return forca;
   };
 
+  // Estado dos dois lutadores neste quadro, resolvido UMA vez. As camadas de
+  // tras (aura, linhas) e a da frente (corpos) leem daqui, entao nao existe a
+  // possibilidade de uma camada discordar da outra.
+  const lutadores = [fighterA, fighterB].map((id, indice) => {
+    const track = timeline.tracks[id];
+    const a = amostrar(track, frame);
+    const outro = amostrar(
+      timeline.tracks[indice === 0 ? fighterB : fighterA],
+      frame,
+    );
+    return {
+      id,
+      a,
+      // cada um sempre encara o outro: sem isso o golpe sai de costas
+      facing: (a.x <= outro.x ? 1 : -1) as 1 | -1,
+      baseY: alturaNoAr(track, frame, ALTURA_QUADRIL),
+      preset: PRESETS[id],
+      // Em pose de ataque nao ha linha de velocidade: ela sujava justamente o
+      // quadro do golpe. A mesma regra do spin (ver inclinacaoDesenhada).
+      rapido:
+        Math.abs(a.velocidade) > LIMITE_LINHAS &&
+        inclinacaoDesenhada(a) === a.inclinacao,
+    };
+  });
+
   return (
     <svg
       width={width}
@@ -112,27 +146,25 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline }) => {
           ))}
         </g>
 
-        {[fighterA, fighterB].map((id, indice) => {
-          const track = timeline.tracks[id];
-          const a = amostrar(track, frame);
-          const outro = amostrar(
-            timeline.tracks[indice === 0 ? fighterB : fighterA],
-            frame,
-          );
-          // cada um sempre encara o outro: sem isso o golpe sai de costas
-          const facing: 1 | -1 = a.x <= outro.x ? 1 : -1;
-          const baseY = alturaNoAr(track, frame, ALTURA_QUADRIL);
-          const preset = PRESETS[id];
-          const forcaAura = auraDe(id);
-          const rapido = Math.abs(a.velocidade) > LIMITE_LINHAS;
+        {/*
+          O clarao de contato vai ATRAS dos lutadores. Na frente ele cobriria
+          exatamente o punho e o peito, que sao as duas coisas que o
+          espectador precisa ver no quadro do golpe. Atras, ele recorta a
+          silhueta dos dois contra a luz, que e o efeito que se quer.
+        */}
+        <Clarao impactos={timeline.impacts} frame={frame} />
 
-          return (
-            <g key={id}>
-              {forcaAura > 0.02 && (
+        {/* aura e linhas de velocidade FICAM ATRAS dos dois corpos. A linha de
+            velocidade do lutador empurrado atravessava o peito do outro, e no
+            quadro do golpe isso vira sujeira em cima da acao. */}
+        <g data-layer="atras-dos-corpos">
+          {lutadores.map(({ id, a, baseY, preset, rapido }) => (
+            <g key={`tras-${id}`}>
+              {auraDe(id) > 0.02 && (
                 <Aura
                   centro={{ x: a.x, y: baseY }}
                   cor={preset.auraColor}
-                  forca={forcaAura}
+                  forca={auraDe(id)}
                   frame={frame}
                 />
               )}
@@ -148,19 +180,25 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline }) => {
                   chave={`sl-${id}-${Math.round(frame / 3)}`}
                 />
               )}
-              <Stickman
-                preset={preset}
-                pose={a.pose}
-                baseX={a.x}
-                baseY={baseY}
-                facing={facing}
-                // a inclinacao vem da velocidade: e o movimento corporal
-                // integrado. O sinal acompanha o lado para o qual ele olha.
-                spin={a.inclinacao * facing}
-              />
             </g>
-          );
-        })}
+          ))}
+        </g>
+
+        {lutadores.map(({ id, a, baseY, facing, preset }) => (
+          <Stickman
+            key={id}
+            preset={preset}
+            pose={a.pose}
+            baseX={a.x}
+            baseY={baseY}
+            facing={facing}
+            // a inclinacao vem da velocidade: e o movimento corporal
+            // integrado. O sinal acompanha o lado para o qual ele olha.
+            // Em pose de ataque ela e zerada, senao o giro do corpo tira o
+            // punho do ponto onde a geometria calculou o contato.
+            spin={inclinacaoDesenhada(a) * facing}
+          />
+        ))}
 
         <Particulas
           impactos={timeline.impacts}
@@ -169,6 +207,8 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline }) => {
           fps={fps}
         />
         <Ondas impactos={timeline.impacts} frame={frame} />
+
+        {debug && <DebugOverlay timeline={timeline} frame={frame} />}
       </g>
 
       {/* o flash cobre a TELA, nao o mundo: fica fora do grupo da camera */}

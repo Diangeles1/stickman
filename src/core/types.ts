@@ -6,6 +6,8 @@
  * consome.
  */
 
+import type { PontoAlvo } from "./contact";
+
 export type Vec2 = { x: number; y: number };
 
 /** Nome das juntas. O esqueleto inteiro deriva desta lista. */
@@ -60,6 +62,10 @@ export type PoseName =
   | "elbow"
   | "airAttack"
   | "diveAttack"
+  | "hitHead"
+  | "hitChest"
+  | "hitBody"
+  | "hitLeg"
   | "knockback"
   | "squash"
   | "downed"
@@ -147,8 +153,21 @@ export type AttackDef = {
 /** Um beat do roteiro. E isto que vira JSON e o que a geracao aleatoria monta. */
 export type Beat =
   | { type: "approach"; who: FighterId; toX: number; duration: number }
-  | { type: "attack"; attacker: FighterId; target: FighterId; move: AttackName }
-  | { type: "blocked"; attacker: FighterId; target: FighterId; move: AttackName }
+  | {
+      type: "attack";
+      attacker: FighterId;
+      target: FighterId;
+      move: AttackName;
+      /** onde o golpe acerta; sem isso usa ALVO_PADRAO do golpe */
+      targetPoint?: PontoAlvo;
+    }
+  | {
+      type: "blocked";
+      attacker: FighterId;
+      target: FighterId;
+      move: AttackName;
+      targetPoint?: PontoAlvo;
+    }
   | { type: "dodge"; who: FighterId; duration: number }
   | { type: "combo"; attacker: FighterId; target: FighterId; moves: AttackName[] }
   | { type: "knockback"; who: FighterId; distance: number; duration: number }
@@ -156,7 +175,13 @@ export type Beat =
   | { type: "airborne"; who: FighterId; duration: number }
   | { type: "recover"; who: FighterId; duration: number }
   | { type: "hold"; duration: number; label?: string }
-  | { type: "finisher"; attacker: FighterId; target: FighterId; move: AttackName }
+  | {
+      type: "finisher";
+      attacker: FighterId;
+      target: FighterId;
+      move: AttackName;
+      targetPoint?: PontoAlvo;
+    }
   | { type: "cta"; duration: number }
   | { type: "hook"; duration: number };
 
@@ -185,6 +210,7 @@ export type ScheduledBeat = {
 /** Um evento de impacto no tempo, consumido pelos efeitos e pela camera. */
 export type ImpactEvent = {
   frame: number;
+  /** ponto REAL onde o membro encostou, em coordenada de mundo */
   at: Vec2;
   tier: ImpactTier;
   direction: number;

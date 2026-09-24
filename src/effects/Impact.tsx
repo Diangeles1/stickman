@@ -46,8 +46,10 @@ export const Ondas: React.FC<{ impactos: ImpactEvent[]; frame: number }> = ({
             ry={raio * 0.82}
             fill="none"
             stroke={k === 0 ? "#fffdf4" : "#ffe08a"}
-            strokeWidth={Math.max(2, 26 * forca * (1 - atraso))}
-            opacity={Math.max(0, forca * (1 - atraso)) * 0.9}
+            strokeWidth={Math.max(2, 18 * forca * (1 - atraso))}
+            // opacidade baixada de 0.9 para 0.42: o anel passava por cima do
+            // personagem e o briefing pede que nenhum efeito esconda quem luta
+            opacity={Math.max(0, forca * (1 - atraso)) * 0.42}
           />
         );
       }).filter(Boolean);
@@ -128,11 +130,58 @@ export const LinhasDeVelocidade: React.FC<{
 };
 
 /**
+ * Clarao NO PONTO DE CONTATO.
+ *
+ * Substitui o que o flash de tela cheia fazia. O retangulo branco sobre a tela
+ * inteira clareava o fundo, o chao e os dois personagens junto, e por tres
+ * quadros de hit stop a cena virava um borrao cinza: exatamente o que o
+ * briefing proibe ("os efeitos nao podem esconder os personagens").
+ *
+ * O clarao radial faz o contrario: marca ONDE o golpe acertou e deixa o resto
+ * da imagem intacto. Vai dentro do grupo da camera, porque pertence ao mundo.
+ */
+export const Clarao: React.FC<{ impactos: ImpactEvent[]; frame: number }> = ({
+  impactos,
+  frame,
+}) => (
+  <g data-layer="contact-glow">
+    {impactos.flatMap((imp) => {
+      const idade = frame - imp.frame;
+      if (idade < 0 || idade > DUR_FLASH + 2) return [];
+      const forca = 1 - idade / (DUR_FLASH + 2);
+      const perfil = PERFIL_IMPACTO[imp.tier];
+      const raio =
+        (imp.tier === "extreme" ? 340 : imp.tier === "medium" ? 190 : 120) *
+        (0.6 + idade * 0.18);
+      return [
+        <g key={imp.frame}>
+          <circle
+            cx={imp.at.x}
+            cy={imp.at.y}
+            r={raio}
+            fill="#fffbe8"
+            opacity={forca * (perfil.ondas > 1 ? 0.3 : 0.22)}
+          />
+          <circle
+            cx={imp.at.x}
+            cy={imp.at.y}
+            r={raio * 0.45}
+            fill="#ffffff"
+            opacity={forca * 0.45}
+          />
+        </g>,
+      ];
+    })}
+  </g>
+);
+
+/**
  * Flash de tela.
  *
  * Fica FORA do grupo da camera, porque cobre a tela inteira e nao o mundo.
- * Intensidade vem do perfil do impacto: o briefing pede flash pequeno no golpe
- * leve e forte no golpe final.
+ * Sobrou para o golpe final, onde a piscada da tela inteira e o efeito
+ * desejado. Nos golpes comuns o perfil ja traz um valor baixo o bastante para
+ * nao lavar a cena (ver PERFIL_IMPACTO).
  */
 export const Flash: React.FC<{
   impactos: ImpactEvent[];

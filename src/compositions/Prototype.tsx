@@ -16,13 +16,14 @@ import type { FightSpec } from "../core/types";
 
 export type PrototypeProps = {
   spec: FightSpec;
+  debug?: boolean;
 };
 
-export const Prototype: React.FC<PrototypeProps> = ({ spec }) => {
+export const Prototype: React.FC<PrototypeProps> = ({ spec, debug = false }) => {
   const timeline = React.useMemo(() => compilar(spec), [spec]);
   return (
     <>
-      <FightScene timeline={timeline} />
+      <FightScene timeline={timeline} debug={debug} />
       <FightAudio timeline={timeline} />
     </>
   );

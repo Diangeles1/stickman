@@ -45,30 +45,39 @@ export const PERFIL_IMPACTO: Record<
   light: {
     particulas: 14,
     velocidade: 620,
-    vida: 26,
+    vida: 20,
     raio: [3, 8],
     poeiraDoChao: 0,
-    flash: 0.1,
+    // o clarao radial no ponto de contato substituiu o flash de tela
+    flash: 0,
     ondas: 1,
     speedLines: false,
   },
   medium: {
-    particulas: 40,
+    // 40 particulas por 40 quadros deixavam uma nuvem parada no ar por dois
+    // tercos de segundo depois de um soco. Estilhaco tem que sumir rapido.
+    particulas: 15,
     velocidade: 1150,
-    vida: 40,
+    vida: 18,
     raio: [4, 13],
-    poeiraDoChao: 14,
-    flash: 0.2,
+    // soco no peito nao levanta poeira do CHAO. Isso e para golpe que bate
+    // no solo, e era o que fazia uma bola branca aparecer aos pes do alvo.
+    poeiraDoChao: 0,
+    // 0.2 de branco sobre um fundo quase preto clareia a cena inteira, e com
+    // o hit stop a lavagem durava 7 quadros. Quem marca o golpe agora e o
+    // clarao radial no ponto de contato (ver Clarao). Tela cheia ficou so
+    // para o golpe final.
+    flash: 0,
     ondas: 1,
     speedLines: true,
   },
   extreme: {
     particulas: 96,
     velocidade: 2100,
-    vida: 62,
+    vida: 52,
     raio: [5, 22],
     poeiraDoChao: 46,
-    flash: 0.34,
+    flash: 0.14,
     ondas: 2,
     speedLines: true,
   },
@@ -129,8 +138,11 @@ export const particulasDoImpacto = (
     if (idade > vidaDesta) continue;
     const ang = entre(`${id}-a`, semente, -Math.PI, 0);
     const vel = entre(`${id}-v`, semente, 0.2, 0.7) * perfil.velocidade * 0.5;
+    // espalhamento inicial: sem ele as particulas nascem TODAS no mesmo ponto
+    // e no quadro do impacto a nuvem e uma bola solida
+    const espalha = entre(`${id}-e`, semente, -90, 90);
     const pos: Vec2 = {
-      x: origem.x + Math.cos(ang) * vel * t,
+      x: origem.x + espalha + Math.cos(ang) * vel * t,
       y: Math.min(0, Math.sin(ang) * vel * t + (GRAVIDADE * 0.12 * t * t) / 2),
     };
     saida.push({

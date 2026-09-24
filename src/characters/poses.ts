@@ -334,6 +334,75 @@ export const POSES: Record<PoseName, Pose> = {
   }),
 
   // --- reacoes -------------------------------------------------------------
+  /**
+   * REACOES POR REGIAO ATINGIDA.
+   *
+   * O briefing e explicito: golpe no rosto nao pode produzir a mesma reacao de
+   * golpe na perna. Cada uma dobra o corpo de um jeito reconhecivel, e todas
+   * sao mais extremas do que pareceria certo numa pose parada: elas ficam na
+   * tela por poucos quadros, e reacao timida simplesmente nao se le.
+   */
+
+  /** Soco no rosto: a cabeca CHICOTEIA para tras e o tronco vem atras. */
+  hitHead: p({
+    neck: { x: -22, y: -70 },
+    head: { x: -76, y: -96 },
+    elbowFront: { x: -6, y: -54 },
+    handFront: { x: -30, y: -78 },
+    elbowBack: { x: -30, y: -44 },
+    handBack: { x: -54, y: -58 },
+    kneeFront: { x: 26, y: 50 },
+    footFront: { x: 44, y: 92 },
+    kneeBack: { x: -34, y: 54 },
+    footBack: { x: -64, y: 90 },
+  }),
+
+  /** Soco no peito: o tronco DOBRA sobre o golpe e os bracos recuam. */
+  hitChest: p({
+    hip: { x: -10, y: 14 },
+    neck: { x: -34, y: -54 },
+    head: { x: -60, y: -84 },
+    elbowFront: { x: -20, y: -36 },
+    handFront: { x: -46, y: -46 },
+    elbowBack: { x: -42, y: -30 },
+    handBack: { x: -70, y: -40 },
+    kneeFront: { x: 32, y: 54 },
+    footFront: { x: 48, y: 92 },
+    kneeBack: { x: -30, y: 56 },
+    footBack: { x: -58, y: 92 },
+  }),
+
+  /** Chute no tronco: o corpo GIRA e e deslocado de lado. */
+  hitBody: p({
+    hip: { x: -16, y: 10 },
+    neck: { x: -44, y: -58 },
+    head: { x: -84, y: -78 },
+    elbowFront: { x: -34, y: -30 },
+    handFront: { x: -66, y: -18 },
+    elbowBack: { x: -56, y: -34 },
+    handBack: { x: -88, y: -26 },
+    kneeFront: { x: 24, y: 56 },
+    footFront: { x: 30, y: 92 },
+    kneeBack: { x: -44, y: 58 },
+    footBack: { x: -78, y: 88 },
+  }),
+
+  /** Chute na perna: o joelho cede e o corpo perde o equilibrio. */
+  hitLeg: p({
+    hip: { x: -6, y: 40 },
+    neck: { x: -16, y: -36 },
+    head: { x: -30, y: -70 },
+    elbowFront: { x: 18, y: -16 },
+    handFront: { x: 34, y: 14 },
+    elbowBack: { x: -30, y: -14 },
+    handBack: { x: -54, y: 12 },
+    // a perna atingida dobra para dentro
+    kneeFront: { x: 10, y: 48 },
+    footFront: { x: -14, y: 90 },
+    kneeBack: { x: -40, y: 44 },
+    footBack: { x: -70, y: 88 },
+  }),
+
   knockback: p({
     neck: { x: -24, y: -70 },
     head: { x: -44, y: -104 },

@@ -12,6 +12,7 @@ import { Composition } from "remotion";
 import { PoseSheet } from "./compositions/PoseSheet";
 import { Prototype, duracaoDoPrototipo } from "./compositions/Prototype";
 import { PROTOTIPO } from "./data/fights/prototype";
+import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
 
 /** Alvo do projeto: vertical de Shorts/TikTok a 60fps. */
@@ -74,6 +75,31 @@ export const RemotionRoot: React.FC = () => {
         width={PROTOTIPO.width}
         height={PROTOTIPO.height}
         defaultProps={{ spec: PROTOTIPO }}
+      />
+
+      {/*
+        Teste de UM soco. Existe para responder uma pergunta so: o punho
+        encosta? Duas versoes do MESMO dado: uma limpa, para julgar, e uma com
+        o overlay de medicao, para conferir o numero. Nunca duas lutas
+        diferentes, senao a conferencia nao vale.
+      */}
+      <Composition
+        id="UmSoco"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(UM_SOCO)}
+        fps={UM_SOCO.fps}
+        width={UM_SOCO.width}
+        height={UM_SOCO.height}
+        defaultProps={{ spec: UM_SOCO, debug: false }}
+      />
+      <Composition
+        id="UmSoco-Debug"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(UM_SOCO)}
+        fps={UM_SOCO.fps}
+        width={UM_SOCO.width}
+        height={UM_SOCO.height}
+        defaultProps={{ spec: UM_SOCO, debug: true }}
       />
 
       <Composition
