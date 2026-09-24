@@ -100,7 +100,11 @@ const POSES_COM_INCLINACAO = new Set<PoseName>([
   "walk1", "walk2", "run1", "run2", "sprint1", "sprint2",
   "advance", "retreat",
   "jump", "airborne",
-  "charge", "dodge", "duck",
+  // "charge" NAO entra: ela e uma pose de ATAQUE (o ombro e a junta de
+  // contato). A inclinacao procedural movia o ombro depois da distancia de
+  // combate ter sido calculada, e a auditoria de mira pegou o resultado: o
+  // ombro passava a 93 unidades do alvo em vez de 16.
+  "dodge", "duck",
 ]);
 
 /**

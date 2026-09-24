@@ -11,10 +11,8 @@
  * Uso: npx tsx scripts/contato.mts
  */
 
-import { corpoNoQuadro } from "../src/animation/corpo";
+import { corpoNoQuadro, juntasDoCorpo } from "../src/animation/corpo";
 import { ATAQUES } from "../src/attacks/registry";
-import { PRESETS } from "../src/characters/presets";
-import { juntasNoMundo } from "../src/characters/skeleton";
 import {
   ALVO_PADRAO,
   distanciaDeCombate,
@@ -47,20 +45,10 @@ const juntaAtacante = def.contactJoint;
  * tres rodadas de analise visual.
  */
 const medir = (frame: number) => {
-  const a = corpoNoQuadro({
-    track: t.tracks[atacante], outro: t.tracks[alvo], frame,
-    preset: PRESETS[atacante],
-  });
-  const b = corpoNoQuadro({
-    track: t.tracks[alvo], outro: t.tracks[atacante], frame,
-    preset: PRESETS[alvo], defasagem: Math.PI,
-  });
-  const ja = juntasNoMundo(a.pose, {
-    baseX: a.x, baseY: a.baseY, facing: a.facing, scale: a.scale, spin: a.spin,
-  });
-  const jb = juntasNoMundo(b.pose, {
-    baseX: b.x, baseY: b.baseY, facing: b.facing, scale: b.scale, spin: b.spin,
-  });
+  const a = corpoNoQuadro(t, atacante, frame);
+  const b = corpoNoQuadro(t, alvo, frame);
+  const ja = juntasDoCorpo(a);
+  const jb = juntasDoCorpo(b);
   const p = ja[juntaAtacante];
   const q = pontoDoAlvo(ponto as PontoAlvo, jb);
   return {

@@ -226,6 +226,29 @@ export type ImpactEvent = {
   victim?: FighterId;
 };
 
+/**
+ * MIRA: o membro `joint` de `who` tem que encostar em `ponto` de `alvo` no
+ * quadro `contact`.
+ *
+ * Existe porque a distancia de combate resolve o eixo horizontal por
+ * construcao, mas o vertical vinha da pose escrita a mao. O compilador declara
+ * a intencao aqui e quem desenha resolve por cinematica inversa, o que faz o
+ * golpe encostar nos dois eixos sem ninguem ajustar pose.
+ */
+export type AimEvent = {
+  who: FighterId;
+  /** ponta do membro atacante: handFront, footFront... */
+  joint: JointName;
+  alvo: FighterId;
+  ponto: string;
+  /** quadro em que a ponta tem que estar exatamente no ponto */
+  contact: number;
+  /** a correcao entra a partir daqui */
+  from: number;
+  /** e sai completamente aqui */
+  to: number;
+};
+
 /** Onde cada lutador esta e o que faz, num beat. */
 export type FighterTrack = {
   id: FighterId;
@@ -243,6 +266,8 @@ export type Timeline = {
   durationInFrames: number;
   scheduled: ScheduledBeat[];
   impacts: ImpactEvent[];
+  /** intencoes de mira, resolvidas por IK na hora de desenhar */
+  aims: AimEvent[];
   tracks: Record<string, FighterTrack>;
   /** momentos de camera, resolvidos em quadro */
   cameraKeys: CameraKey[];

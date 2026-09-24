@@ -24,6 +24,7 @@ import {
   type PontoAlvo,
 } from "./contact";
 import type {
+  AimEvent,
   AttackName,
   CameraKey,
   FightSpec,
@@ -118,6 +119,7 @@ export const compilar = (spec: FightSpec): Timeline => {
 
   const scheduled: ScheduledBeat[] = [];
   const impacts: ImpactEvent[] = [];
+  const aims: AimEvent[] = [];
   const cameraKeys: CameraKey[] = [];
   const slowMo: Timeline["slowMo"] = [];
 
@@ -309,7 +311,32 @@ export const compilar = (spec: FightSpec): Timeline => {
 
     // ONDE O MEMBRO REALMENTE CHEGA. O flash, a onda e as particulas nascem
     // daqui, e nao de um deslocamento fixo em relacao ao alvo.
-    const contato = pontoDeContato(def, atacante, estado[atacante].x, direcao);
+    const contato = pontoDeContato(
+      ponto,
+      alvo,
+      estado[alvo].x,
+      // o alvo olha para o lado contrario ao do golpe
+      (-direcao) as 1 | -1,
+    );
+
+    // ---- MIRA ------------------------------------------------------------
+    // O compilador declara a INTENCAO: esta junta tem que encostar neste
+    // ponto neste quadro. Quem desenha resolve por cinematica inversa.
+    //
+    // A distancia de combate ja resolve o eixo horizontal por construcao, mas
+    // o vertical vinha da pose: medido, o punho acertava 58 unidades abaixo do
+    // peito e a correcao era mexer nos numeros da pose a mao. Isso nao escala
+    // para 16 ataques vezes 5 pontos de alvo.
+    aims.push({
+      who: atacante,
+      joint: def.contactJoint,
+      alvo,
+      ponto,
+      contact: frameContato,
+      // entra durante o disparo e sai depois de segurar o contato
+      from: cursor,
+      to: frameContato + parada + s(0.1),
+    });
 
     // ultimo quadro em que o ALVO recebe chave nesta sequencia. O compilador
     // precisa saber disso: a volta para a guarda era escrita em cursor+strike,
@@ -679,6 +706,7 @@ export const compilar = (spec: FightSpec): Timeline => {
     durationInFrames: Math.max(1, cursor),
     scheduled,
     impacts,
+    aims,
     cameraKeys,
     tracks,
     slowMo,

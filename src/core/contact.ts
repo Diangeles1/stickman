@@ -15,6 +15,8 @@
 import { POSES } from "../characters/poses";
 import { PRESETS } from "../characters/presets";
 import {
+  CADEIA_DO_MEMBRO,
+  alcanceDaCadeia,
   escalaDoMundo,
   juntasNoMundo,
   peMaisBaixo,
@@ -169,19 +171,62 @@ export const distanciaDeCombate = (
   alvo: FighterId,
   ponto: PontoAlvo,
 ): number => {
-  const alcance = alcanceDoGolpe(golpe, atacante);
-  const noAlvo = posicaoDoAlvo(ponto, alvo);
-
   // os membros sao tracos grossos: a superficie do corpo fica meia espessura
   // a frente do eixo da junta, dos dois lados
   const meioTronco = (PRESETS[alvo].limbWidth * PRESETS[alvo].scale) / 2;
   const meioPunho = (PRESETS[atacante].limbWidth * PRESETS[atacante].scale) / 2;
   const superficie = meioTronco + meioPunho;
+  const folga = superficie - AFUNDAMENTO;
 
-  return Math.max(
-    120,
-    alcance.x + noAlvo.x + superficie - AFUNDAMENTO,
-  );
+  const noAlvo = posicaoDoAlvo(ponto, alvo);
+  const cadeia = CADEIA_DO_MEMBRO[golpe.contactJoint];
+
+  if (!cadeia) {
+    // Junta de contato que nao e ponta de membro (o ombro do charge, por
+    // exemplo): nao ha cadeia para esticar, entao a distancia sai da posicao
+    // da junta na propria pose. Fica sem controle vertical, e e uma limitacao
+    // conhecida: o golpe encosta no eixo horizontal e nao no vertical.
+    const alcance = alcanceDoGolpe(golpe, atacante);
+    return Math.max(120, alcance.x + noAlvo.x + folga);
+  }
+
+  // ---- ALCANCE QUE SOBRA DEPOIS DE SUBIR OU DESCER ATE O ALVO -------------
+  //
+  // Um membro de comprimento R que precisa vencer uma diferenca de altura dy
+  // so tem sqrt(R^2 - dy^2) de alcance horizontal. Ignorar isso era o que
+  // fazia o chute alto parar a 100 unidades da cabeca: a distancia era
+  // calculada como se a perna fosse reta para frente, e ela tem que subir.
+  //
+  //            alvo
+  //            /|
+  //         R / | dy
+  //          /  |
+  //       raiz--+
+  //        sqrt(R^2 - dy^2)
+  //
+  const escalaA = escalaDoMundo(PRESETS[atacante].scale);
+  const juntasAtacante = juntasNoMundo(POSES[golpe.pose], {
+    baseX: 0,
+    baseY: -peMaisBaixo(POSES[golpe.pose]) * escalaA,
+    facing: 1,
+    scale: PRESETS[atacante].scale,
+  });
+  const raiz = juntasAtacante[cadeia[0]];
+  const R = alcanceDaCadeia(cadeia) * escalaA;
+
+  const escalaB = escalaDoMundo(PRESETS[alvo].scale);
+  const juntasAlvo = juntasNoMundo(POSES.guard, {
+    baseX: 0,
+    baseY: -peMaisBaixo(POSES.guard) * escalaB,
+    facing: 1,
+    scale: PRESETS[alvo].scale,
+  });
+  const alvoP = pontoDoAlvo(ponto, juntasAlvo);
+
+  const dy = alvoP.y - raiz.y;
+  const horizontal = Math.sqrt(Math.max(0, R * R - dy * dy));
+
+  return Math.max(120, raiz.x + horizontal + noAlvo.x + folga);
 };
 
 /** Folga que a distancia de combate persegue: usada pelo medidor de contato. */
@@ -198,21 +243,26 @@ export const folgaDesejada = (atacante: FighterId, alvo: FighterId): number =>
  * lugar que nao tinha nada a ver com onde o membro chegou.
  */
 export const pontoDeContato = (
-  golpe: AttackDef,
-  atacante: FighterId,
-  xAtacante: number,
-  facing: 1 | -1,
+  ponto: PontoAlvo,
+  alvo: FighterId,
+  xAlvo: number,
+  /** para onde o ALVO olha, que e o contrario da direcao do golpe */
+  facingDoAlvo: 1 | -1,
 ): Vec2 => {
-  const alcance = alcanceDoGolpe(golpe, atacante);
-  // O quadril do atacante no quadro do golpe esta na altura que APOIA a pose
-  // do golpe no chao, nao numa altura fixa. Sem isto o efeito de impacto
-  // nascia alguns pixels acima do punho em qualquer golpe de perna dobrada.
-  const escala = escalaDoMundo(PRESETS[atacante].scale);
-  const baseY = -peMaisBaixo(POSES[golpe.pose]) * escala;
-  return {
-    x: xAtacante + alcance.x * facing,
-    y: baseY + alcance.y,
-  };
+  // E o PONTO DO ALVO, nao a ponta do membro.
+  //
+  // Antes era a ponta do membro na pose crua, e as duas coisas divergiam
+  // sempre que a pose nao acertava o alvo exatamente. Agora o IK poe o membro
+  // NESTE ponto, entao usar o ponto do alvo e mais simples e nunca fica
+  // alguns pixels ao lado, que e o que a diretiva proibe.
+  const escala = escalaDoMundo(PRESETS[alvo].scale);
+  const juntas = juntasNoMundo(POSES.guard, {
+    baseX: xAlvo,
+    baseY: -peMaisBaixo(POSES.guard) * escala,
+    facing: facingDoAlvo,
+    scale: PRESETS[alvo].scale,
+  });
+  return pontoDoAlvo(ponto, juntas);
 };
 
 /**

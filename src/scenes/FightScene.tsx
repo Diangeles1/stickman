@@ -72,32 +72,6 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
     [seed, frame, fps],
   );
 
-  /**
-   * ABSORCAO DO IMPACTO: o corpo do atingido comprime por alguns quadros.
-   *
-   * E o "squash" da animacao classica aplicado ao corpo inteiro. Sem ele a
-   * reacao era so troca de pose, e troca de pose sozinha nao comunica que uma
-   * forca entrou no corpo. Devolve o fator de escala do lutador.
-   *
-   * A altura do quadril e multiplicada pelo MESMO fator na hora de desenhar,
-   * senao o corpo encolheria e os pes sairiam do chao: aqui ele comprime
-   * CONTRA o chao, que e o que acontece de verdade.
-   */
-  const compressaoDe = (id: string): number => {
-    const DUR = 5;
-    let fator = 1;
-    for (const imp of timeline.impacts) {
-      if (imp.victim !== id) continue;
-      const idade = frame - imp.frame;
-      if (idade < 0 || idade > DUR) continue;
-      const forca = 1 - idade / DUR;
-      const fundo =
-        imp.tier === "extreme" ? 0.11 : imp.tier === "medium" ? 0.065 : 0.03;
-      fator = Math.min(fator, 1 - fundo * forca);
-    }
-    return fator;
-  };
-
   /** Forca da aura de um lutador neste quadro, vinda dos beats de powerUp. */
   const auraDe = (id: string): number => {
     let forca = 0;
@@ -114,17 +88,8 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
   // Estado dos dois lutadores neste quadro, resolvido UMA vez. As camadas de
   // tras (aura, linhas) e a da frente (corpos) leem daqui, entao nao existe a
   // possibilidade de uma camada discordar da outra.
-  const lutadores = [fighterA, fighterB].map((id, indice) => {
-    const corpo = corpoNoQuadro({
-      track: timeline.tracks[id],
-      outro: timeline.tracks[indice === 0 ? fighterB : fighterA],
-      frame,
-      preset: PRESETS[id],
-      compressao: compressaoDe(id),
-      // meia volta de defasagem: os dois nao respiram em sincronia, que
-      // denunciaria que a respiracao e a mesma funcao
-      defasagem: indice * Math.PI,
-    });
+  const lutadores = [fighterA, fighterB].map((id) => {
+    const corpo = corpoNoQuadro(timeline, id, frame);
     return {
       id,
       corpo,

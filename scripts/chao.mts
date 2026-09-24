@@ -15,10 +15,8 @@
  * Uso: npx tsx scripts/chao.mts
  */
 
-import { corpoNoQuadro } from "../src/animation/corpo";
+import { corpoNoQuadro, juntasDoCorpo } from "../src/animation/corpo";
 import { amostrar } from "../src/animation/sampler";
-import { PRESETS } from "../src/characters/presets";
-import { juntasNoMundo } from "../src/characters/skeleton";
 import { compilar } from "../src/core/timeline";
 import { UM_SOCO } from "../src/data/fights/um-soco";
 import type { FighterId, PoseName } from "../src/core/types";
@@ -35,16 +33,9 @@ const TOLERANCIA = 12;
 const spec = UM_SOCO;
 const t = compilar(spec);
 
-const medir = (id: FighterId, outroId: FighterId, frame: number) => {
-  const c = corpoNoQuadro({
-    track: t.tracks[id],
-    outro: t.tracks[outroId],
-    frame,
-    preset: PRESETS[id],
-  });
-  const j = juntasNoMundo(c.pose, {
-    baseX: c.x, baseY: c.baseY, facing: c.facing, scale: c.scale, spin: c.spin,
-  });
+const medir = (id: FighterId, _outroId: FighterId, frame: number) => {
+  const c = corpoNoQuadro(t, id, frame);
+  const j = juntasDoCorpo(c);
   return {
     pe: Math.max(j.footFront.y, j.footBack.y),
     pose: c.poseNome,

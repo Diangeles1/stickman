@@ -13,32 +13,44 @@
  *    altura de corpo, e no video os pes do lutador nao tocavam o chao em
  *    nenhum quadro da corrida.
  *
- * Aqui o personagem e APOIADO: a altura do quadril e derivada do pe mais baixo
- * da pose. Isso da de graca o que antes faltava, porque perna que dobra baixa
- * o quadril:
+ * Ordem do que e resolvido aqui:
  *
- *   - oscilacao vertical na corrida (o corpo sobe e desce a cada passada)
- *   - o corpo afunda ao carregar um golpe e ao aterrissar
- *   - centro de massa coerente com as pernas, sem ninguem animar isso na mao
+ *   amostragem -> respiracao -> apoio no chao -> compressao do impacto -> IK
+ *
+ * APOIO: a altura do quadril e derivada do pe mais baixo. Isso da de graca o
+ * que antes faltava, porque perna que dobra baixa o quadril: oscilacao vertical
+ * na corrida, corpo que afunda ao carregar o golpe, centro de massa coerente
+ * com as pernas, sem ninguem animar nada disso na mao.
+ *
+ * IK: a distancia de combate resolve o eixo horizontal por construcao, mas o
+ * vertical vinha da pose escrita a mao. O compilador declara a intencao
+ * (AimEvent) e aqui ela e resolvida por cinematica inversa de dois ossos.
  */
 
 import {
   alturaDoVoo,
   amostrar,
   inclinacaoDesenhada,
+  suave,
 } from "./sampler";
+import { PRESETS } from "../characters/presets";
 import {
   ALTURA_QUADRIL,
   PE_NO_CHAO,
   escalaDoMundo,
   juntasNoMundo,
+  mirarMembro,
+  paraLocal,
   peMaisBaixo,
+  type Transformacao,
 } from "../characters/skeleton";
+import { pontoDoAlvo, type PontoAlvo } from "../core/contact";
 import type {
-  FighterPreset,
-  FighterTrack,
+  AimEvent,
+  FighterId,
   Pose,
   PoseName,
+  Timeline,
   Vec2,
 } from "../core/types";
 
@@ -56,12 +68,10 @@ const POSES_QUE_RESPIRAM = new Set<PoseName>(["idle", "guard"]);
  * peito se move, que e como respiracao funciona. Os ombros acompanham sozinhos
  * porque agora sao derivados do tronco (ver skeleton.completar).
  *
- * Amplitude minima de proposito. Respiracao que se nota deixa de ser
- * respiracao e vira balanco.
+ * 1.6 unidades de pose davam 4px na tela: invisivel, e o lutador continuava
+ * lendo como manequim. 4.2 da ~12 unidades de mundo, que se percebe sem virar
+ * balanco. O limite e o squash do tronco (20% de 74 = 14.8).
  */
-// 1.6 unidades de pose davam 4px na tela: invisivel, e o lutador continuava
-// lendo como manequim. 4.2 da ~12 unidades de mundo, que se percebe sem virar
-// balanco. O limite e o squash do tronco (20% de 74 = 14.8).
 const AMPLITUDE_DO_PEITO = 4.2;
 const AMPLITUDE_DOS_BRACOS = 2.6;
 /** Periodo em quadros. 96 a 60fps = 1,6s por ciclo, ritmo de quem espera. */
@@ -97,12 +107,57 @@ const respirar = (pose: Pose, frame: number, defasagem: number): Pose => {
   };
 };
 
+/** Duracao da absorcao do impacto, em quadros logicos. */
+const DUR_COMPRESSAO = 5;
+
+/**
+ * ABSORCAO DO IMPACTO: o corpo do atingido comprime por alguns quadros.
+ *
+ * E o squash da animacao classica aplicado ao corpo inteiro. Sem ele a reacao
+ * era so troca de pose, e troca de pose sozinha nao comunica que uma forca
+ * entrou no corpo.
+ */
+const compressaoDe = (
+  timeline: Timeline,
+  id: FighterId,
+  frame: number,
+): number => {
+  let fator = 1;
+  for (const imp of timeline.impacts) {
+    if (imp.victim !== id) continue;
+    const idade = frame - imp.frame;
+    if (idade < 0 || idade > DUR_COMPRESSAO) continue;
+    const forca = 1 - idade / DUR_COMPRESSAO;
+    const fundo =
+      imp.tier === "extreme" ? 0.11 : imp.tier === "medium" ? 0.065 : 0.03;
+    fator = Math.min(fator, 1 - fundo * forca);
+  }
+  return fator;
+};
+
+/**
+ * Peso da correcao de mira neste quadro.
+ *
+ * Entra durante o disparo, vale 1 EXATAMENTE no quadro do contato, e sai
+ * depois. Sem essa janela a correcao apareceria de um quadro para o outro e o
+ * membro daria um estalo.
+ */
+const pesoDaMira = (aim: AimEvent, frame: number): number => {
+  if (frame < aim.from || frame > aim.to) return 0;
+  if (frame <= aim.contact) {
+    const dur = Math.max(1, aim.contact - aim.from);
+    return suave((frame - aim.from) / dur);
+  }
+  const dur = Math.max(1, aim.to - aim.contact);
+  return 1 - suave((frame - aim.contact) / dur);
+};
+
 export type Corpo = {
   /** posicao do quadril no mundo */
   x: number;
   baseY: number;
   facing: 1 | -1;
-  /** escala do preset, ja pronta para juntasNoMundo */
+  /** escala ja pronta para juntasNoMundo */
   scale: number;
   spin: number;
   pose: Pose;
@@ -111,57 +166,66 @@ export type Corpo = {
   aceleracao: number;
   /** quanto o quadril baixou em relacao ao apoio neutro, em unidades de mundo */
   agachamento: number;
+  /** quanto o IK precisou corrigir a ponta do membro, em unidades de pose */
+  correcaoDaMira: number;
+  /** false quando o alvo estava fora do alcance do membro */
+  alcancou: boolean;
 };
 
-/**
- * Resolve o corpo de um lutador no quadro pedido.
- *
- * `compressao` vem da absorcao do impacto e multiplica a altura do quadril,
- * comprimindo o corpo CONTRA o chao em vez de encolher no ar.
- */
-export const corpoNoQuadro = (args: {
-  track: FighterTrack;
-  outro: FighterTrack;
-  frame: number;
-  preset: FighterPreset;
-  compressao?: number;
-  /** defasagem da respiracao, para os dois nao respirarem em sincronia */
-  defasagem?: number;
-}): Corpo => {
-  const {
-    track,
-    outro,
-    frame,
-    preset,
-    compressao = 1,
-    defasagem = 0,
-  } = args;
+/** A transformacao de desenho de um corpo. */
+export const transformDoCorpo = (c: Corpo): Transformacao => ({
+  baseX: c.x,
+  baseY: c.baseY,
+  facing: c.facing,
+  scale: c.scale,
+  spin: c.spin,
+});
 
-  const a = amostrar(track, frame);
-  const b = amostrar(outro, frame);
+/** Juntas do corpo em coordenadas de mundo. */
+export const juntasDoCorpo = (c: Corpo) =>
+  juntasNoMundo(c.pose, transformDoCorpo(c));
+
+/**
+ * Corpo SEM correcao de mira.
+ *
+ * Separado porque o IK de um lutador precisa saber onde esta o ponto do outro,
+ * e resolver os dois com IK ao mesmo tempo seria dependencia circular. O ponto
+ * do alvo e lido do corpo sem mira, que nao depende de ninguem.
+ */
+const corpoBase = (
+  timeline: Timeline,
+  id: FighterId,
+  frame: number,
+): Corpo => {
+  const { fighterA, fighterB } = timeline.spec;
+  const outroId = id === fighterA ? fighterB : fighterA;
+  const preset = PRESETS[id];
+
+  const a = amostrar(timeline.tracks[id], frame);
+  const b = amostrar(timeline.tracks[outroId], frame);
 
   // cada um sempre encara o outro: sem isso o golpe sai de costas
   const facing: 1 | -1 = a.x <= b.x ? 1 : -1;
 
+  // meia volta de defasagem para o segundo lutador: os dois respirando em
+  // sincronia denunciaria que a respiracao e a mesma funcao
+  const defasagem = id === fighterA ? 0 : Math.PI;
   const pose = POSES_QUE_RESPIRAM.has(a.poseNome)
     ? respirar(a.pose, frame, defasagem)
     : a.pose;
-
-  const escala = escalaDoMundo(preset.scale);
 
   // Em pose de ataque ou de reacao a inclinacao e zerada: a pose ja tem a
   // atitude do corpo desenhada, e girar o corpo no quadro do contato tirava o
   // punho do ponto onde a geometria calculou o contato.
   const spin = inclinacaoDesenhada(a) * facing;
+  const compressao = compressaoDe(timeline, id, frame);
+  const escala = escalaDoMundo(preset.scale);
 
-  // APOIO: o pe mais baixo encosta no chao. Quando a perna dobra, o quadril
-  // baixa, e e dai que sai o peso do movimento.
-  //
-  // Medido no corpo JA INCLINADO E ESPELHADO, e nao na pose crua. A primeira
-  // versao usava a pose crua e deixava 20 quadros com o pe fora do chao, o
-  // pior a 53 unidades: o spin gira o esqueleto em volta do quadril, entao o
-  // pe mais baixo da pose deixa de ser o pe mais baixo na tela. Corpo
-  // inclinado tem que apoiar no pe que de fato chega mais perto do chao.
+  // APOIO: o pe mais baixo encosta no chao. Medido no corpo JA INCLINADO E
+  // ESPELHADO, e nao na pose crua: o spin gira o esqueleto em volta do
+  // quadril, entao o pe mais baixo da pose deixa de ser o pe mais baixo na
+  // tela. A primeira versao usava a pose crua e deixava 20 quadros com o pe
+  // fora do chao, o pior a 53 unidades.
   const local = juntasNoMundo(pose, {
     baseX: 0,
     baseY: 0,
@@ -170,7 +234,7 @@ export const corpoNoQuadro = (args: {
     spin,
   });
   const apoio = Math.max(local.footFront.y, local.footBack.y);
-  const voo = alturaDoVoo(track, frame);
+  const voo = alturaDoVoo(timeline.tracks[id], frame);
 
   return {
     x: a.x,
@@ -183,20 +247,60 @@ export const corpoNoQuadro = (args: {
     velocidade: a.velocidade,
     aceleracao: a.aceleracao,
     agachamento: apoio - PE_NO_CHAO * escala,
+    correcaoDaMira: 0,
+    alcancou: true,
   };
 };
 
+/** A mira ativa deste lutador neste quadro, se houver. */
+const miraAtiva = (
+  timeline: Timeline,
+  id: FighterId,
+  frame: number,
+): AimEvent | undefined =>
+  timeline.aims.find((m) => m.who === id && frame >= m.from && frame <= m.to);
+
 /**
- * Altura do quadril de uma pose APOIADA, sem consultar trilha nenhuma.
+ * Resolve o corpo de um lutador no quadro pedido, ja com a mira corrigida.
  *
- * O compilador precisa disto para saber onde o membro atacante vai estar no
- * quadro do contato, e o compilador roda antes de existir trilha.
+ * O APOIO e calculado antes do IK de proposito: o IK move apenas o membro
+ * atacante, e o membro atacante nunca e o pe de apoio. Assim a altura do
+ * quadril continua valida e o personagem nao sai do chao ao golpear.
  */
-export const baseYDaPose = (pose: Pose, escalaDoLutador: number): number =>
-  -peMaisBaixo(pose) * escalaDoMundo(escalaDoLutador);
+export const corpoNoQuadro = (
+  timeline: Timeline,
+  id: FighterId,
+  frame: number,
+): Corpo => {
+  const eu = corpoBase(timeline, id, frame);
+  const aim = miraAtiva(timeline, id, frame);
+  if (!aim) return eu;
+
+  const peso = pesoDaMira(aim, frame);
+  if (peso <= 0.001) return eu;
+
+  const alvo = corpoBase(timeline, aim.alvo, frame);
+  const noMundo = pontoDoAlvo(aim.ponto as PontoAlvo, juntasDoCorpo(alvo));
+  const alvoLocal = paraLocal(noMundo, transformDoCorpo(eu));
+
+  const r = mirarMembro(eu.pose, aim.joint, alvoLocal, peso);
+  return {
+    ...eu,
+    pose: r.pose,
+    correcaoDaMira: r.erro,
+    alcancou: r.alcancou,
+  };
+};
 
 /** Altura do quadril neutra, para quem so precisa de uma referencia. */
 export const BASE_Y_NEUTRO = -ALTURA_QUADRIL;
+
+/**
+ * Altura do quadril de uma pose APOIADA, sem consultar trilha nenhuma.
+ * O compilador precisa disto e roda antes de existir trilha.
+ */
+export const baseYDaPose = (pose: Pose, escalaDoLutador: number): number =>
+  -peMaisBaixo(pose) * escalaDoMundo(escalaDoLutador);
 
 /** Ponto do mundo no meio do corpo, util para camera e efeitos. */
 export const centroDoCorpo = (c: Corpo): Vec2 => ({

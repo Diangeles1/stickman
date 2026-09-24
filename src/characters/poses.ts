@@ -365,17 +365,36 @@ export const POSES: Record<PoseName, Pose> = {
     elbowFront: { x: 20, y: -70 },
     handFront: { x: 10, y: -104 },
   }),
+  /**
+   * INVESTIDA DE OMBRO.
+   *
+   * A pose anterior tinha o tronco RETO (pescoco em x=0), e a junta de contato
+   * deste golpe e o ombro. Duas consequencias medidas pela auditoria de mira:
+   *
+   *   - o ombro nao se projetava para frente, entao a distancia derivada dava
+   *     80 unidades e caia no piso de 120. O piso somava 40 unidades de erro
+   *     horizontal, que nenhum IK corrige, porque o ombro e RAIZ de cadeia e
+   *     nao ponta: nao ha membro para esticar.
+   *   - o ombro ficava 124 unidades ACIMA do tronco do adversario.
+   *
+   * Agora e uma investida BAIXA: o tronco mergulha para frente e para baixo, o
+   * quadril recua como contrapeso e as pernas empurram. O ombro vai a frente e
+   * na altura do tronco do outro, que e onde uma investida acerta.
+   */
   charge: p({
-    neck: { x: 0, y: -80 },
-    head: { x: 0, y: -120 },
-    elbowBack: { x: -30, y: -46 },
-    handBack: { x: -18, y: -18 },
-    elbowFront: { x: 30, y: -46 },
-    handFront: { x: 18, y: -18 },
-    kneeBack: { x: -30, y: 50 },
-    footBack: { x: -50, y: 92 },
-    kneeFront: { x: 30, y: 50 },
-    footFront: { x: 50, y: 92 },
+    hip: { x: -16, y: 14 },
+    neck: { x: 24, y: -56 },
+    head: { x: 40, y: -84 },
+    // bracos recolhidos junto ao corpo, como quem protege a entrada
+    elbowBack: { x: -14, y: -30 },
+    handBack: { x: 6, y: -14 },
+    elbowFront: { x: 16, y: -28 },
+    handFront: { x: 38, y: -20 },
+    // as duas pernas empurram para tras: e delas que vem a investida
+    kneeBack: { x: -44, y: 46 },
+    footBack: { x: -84, y: 92 },
+    kneeFront: { x: 16, y: 52 },
+    footFront: { x: 34, y: 92 },
   }),
 
   // --- reacoes -------------------------------------------------------------

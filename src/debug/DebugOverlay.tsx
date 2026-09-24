@@ -17,10 +17,8 @@
  */
 
 import React from "react";
-import { corpoNoQuadro } from "../animation/corpo";
+import { corpoNoQuadro, juntasDoCorpo } from "../animation/corpo";
 import { ATAQUES } from "../attacks/registry";
-import { PRESETS } from "../characters/presets";
-import { juntasNoMundo } from "../characters/skeleton";
 import { ALVO_PADRAO, pontoDoAlvo, type PontoAlvo } from "../core/contact";
 import type { Timeline } from "../core/types";
 
@@ -55,26 +53,11 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({
 
   // MESMA funcao que a cena usa para desenhar: overlay que monta a
   // transformacao por conta propria mede um corpo que a tela nao mostra
-  const a = corpoNoQuadro({
-    track: timeline.tracks[atacante],
-    outro: timeline.tracks[alvo],
-    frame,
-    preset: PRESETS[atacante],
-  });
-  const b = corpoNoQuadro({
-    track: timeline.tracks[alvo],
-    outro: timeline.tracks[atacante],
-    frame,
-    preset: PRESETS[alvo],
-    defasagem: Math.PI,
-  });
+  const a = corpoNoQuadro(timeline, atacante, frame);
+  const b = corpoNoQuadro(timeline, alvo, frame);
 
-  const juntasA = juntasNoMundo(a.pose, {
-    baseX: a.x, baseY: a.baseY, facing: a.facing, scale: a.scale, spin: a.spin,
-  });
-  const juntasB = juntasNoMundo(b.pose, {
-    baseX: b.x, baseY: b.baseY, facing: b.facing, scale: b.scale, spin: b.spin,
-  });
+  const juntasA = juntasDoCorpo(a);
+  const juntasB = juntasDoCorpo(b);
 
   const punho = juntasA[juntaAtacante];
   const mira = pontoDoAlvo(ponto as PontoAlvo, juntasB);
