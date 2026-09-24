@@ -194,3 +194,16 @@ export const BATIDA_ESTALO: CamadaDeSom = {
   volume: 0.4,
   offset: 0,
 };
+
+/** a mao vai buscar a placa: o ar cortando */
+export const SOM_BUSCA_PLACA: SomComposto = [
+  { arquivo: `${A}/whoosh/whoosh_medium.wav`, volume: 0.55, offset: 0 },
+];
+
+/** a placa sai de tras e chega no alto: puxao, pancada e grave */
+export const SOM_PLACA: SomComposto = [
+  { arquivo: `${A}/whoosh/whoosh_heavy.wav`, volume: 0.65, offset: -0.2 },
+  { arquivo: `${A}/heavy/heavy_hit_01.wav`, volume: 0.6, offset: 0 },
+  { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.7, offset: 0.02 },
+  { arquivo: `${A}/impacts/impact_light_01.wav`, volume: 0.5, offset: 0.05 },
+];

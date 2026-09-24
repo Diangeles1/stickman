@@ -75,6 +75,8 @@ export type Espetaculo = {
   abertura: { vs: number; lute: number; fim: number };
   /** quando o placar entra */
   entradaDoPlacar: number;
+  /** quando a placa do vencedor comeca: o placar e os letreiros saem */
+  saidaDoPlacar: number;
 };
 
 /** Dano por golpe limpo. Bloqueio so arranha. */
@@ -254,13 +256,16 @@ const montar = (t: Timeline): Espetaculo => {
     });
   }
   const fimReal = real(t.durationInFrames);
+  const cenaDaPlaca = t.scheduled.find((b) => b.beat.type === "placa");
+  // o K.O. e o nome do vencedor saem quando a placa comeca: a tela e dela
+  const ateAPlaca = cenaDaPlaca ? real(cenaDaPlaca.from) + 20 : fimReal;
   if (ko) {
     // o K.O. espera o voo abrir: no quadro do golpe a camera esta fechada
     // nos dois e o letreiro cobria justamente a cabeca que levou o chute
     const koNaTela = ko.real + 45;
     rotulos.push({
       inicio: koNaTela,
-      duracao: fimReal - koNaTela,
+      duracao: ateAPlaca - koNaTela,
       texto: "K.O.!",
       cor: COR.ko,
       tamanho: 290,
@@ -269,10 +274,10 @@ const montar = (t: Timeline): Espetaculo => {
       vaga: "centro",
       pancada: true,
     });
-    const vence = Math.min(fimReal - 50, koNaTela + 70);
+    const vence = Math.min(ateAPlaca - 50, koNaTela + 70);
     rotulos.push({
       inicio: vence,
-      duracao: fimReal - vence,
+      duracao: ateAPlaca - vence,
       texto: `${NOMES[ko.vencedor]} VENCE!`,
       sub: "QUEM GANHA A REVANCHE?",
       cor: COR.vence,
@@ -306,6 +311,7 @@ const montar = (t: Timeline): Espetaculo => {
     ko,
     abertura,
     entradaDoPlacar: abertura.lute,
+    saidaDoPlacar: ateAPlaca,
   };
 };
 

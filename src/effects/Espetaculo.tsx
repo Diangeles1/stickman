@@ -340,12 +340,20 @@ export const Espetaculo: React.FC<{ timeline: Timeline }> = ({ timeline }) => {
   const { fighterA, fighterB } = timeline.spec;
 
   // placar: entra junto com o LUTE!
-  const entrada = interpolate(
-    frame,
-    [e.entradaDoPlacar, e.entradaDoPlacar + 12],
-    [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
+  // e sai quando a placa do vencedor sobe: a placa ocupa o alto da tela
+  const entrada =
+    interpolate(
+      frame,
+      [e.entradaDoPlacar, e.entradaDoPlacar + 12],
+      [0, 1],
+      { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+    ) *
+    interpolate(
+      frame,
+      [e.saidaDoPlacar - 14, e.saidaDoPlacar],
+      [1, 0],
+      { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+    );
 
   // letreiros: em cada vaga so aparece o mais recente
   const porVaga = new Map<string, Rotulo>();

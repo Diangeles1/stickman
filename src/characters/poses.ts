@@ -68,6 +68,23 @@ const ESCRITAS: Record<PoseName, Pose> = {
     footFront: { x: 40, y: 92 },
   }),
 
+  /**
+   * DE FRENTE PARA A TELA, base da cena da placa (ver animation/placa.ts):
+   * tudo simetrico em volta do quadril.
+   */
+  placa: p({
+    neck: { x: 0, y: -74 },
+    head: { x: 0, y: -114 },
+    elbowFront: { x: 24, y: -44 },
+    handFront: { x: 30, y: -18 },
+    elbowBack: { x: -24, y: -44 },
+    handBack: { x: -30, y: -18 },
+    kneeFront: { x: 22, y: 46 },
+    footFront: { x: 36, y: 92 },
+    kneeBack: { x: -22, y: 46 },
+    footBack: { x: -36, y: 92 },
+  }),
+
   // --- locomocao -----------------------------------------------------------
   // duas poses por ciclo, alternadas. Tres ou mais nao melhoraram a leitura no
   // prototipo e so aumentaram o trabalho de ajuste.

@@ -21,7 +21,8 @@
  *   ESCALADA FINAL      combo do vermelho segurado; combo do preto que entra
  *   FINALIZADOR         chute giratorio do preto: o vermelho voa na direcao
  *                       da camera
- *   COMEMORACAO         o preto faz o passinho do Jamal
+ *   COMEMORACAO         o preto faz o passinho do Jamal, vira de frente e
+ *                       puxa das costas a placa "da like e se inscreve"
  *
  * Personalidade sem efeito nenhum: o preto golpeia rapido e em sequencia, o
  * vermelho golpeia uma vez, carregado, e quando acerta derruba.
@@ -109,6 +110,13 @@ export const LUTA_COMPLETA: FightSpec = {
 
     // ---- COMEMORACAO -------------------------------------------------------
     // o vencedor faz o passinho do Jamal por cima do vermelho caido
-    { type: "danca", who: "black", duration: s(3.6) },
+    { type: "danca", who: "black", duration: s(3.2) },
+    // e vira de frente para a tela com a placa
+    {
+      type: "placa",
+      who: "black",
+      duration: s(3.6),
+      linhas: ["DÁ LIKE", "E SE INSCREVE", "NO CANAL!"],
+    },
   ],
 };

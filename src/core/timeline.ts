@@ -1110,6 +1110,30 @@ export const compilar = (spec: FightSpec): Timeline => {
         break;
       }
 
+      case "placa": {
+        // o movimento e procedural (animation/placa.ts); aqui so a troca de
+        // pose, para os pes plantados soltarem e o corpo girar de frente
+        chave(beat.who, cursor);
+        estado[beat.who].pose = "placa";
+        chave(beat.who, cursor + 12);
+        chave(beat.who, cursor + beat.duration);
+        // abre e sobe: a placa fica bem acima da cabeca. Puxada um pouco
+        // para o lado do derrotado, que continua no quadro caido
+        cameraKeys.push({
+          frame: cursor + 20,
+          center: {
+            x:
+              estado[beat.who].x +
+              (estado[oposto(beat.who)].x - estado[beat.who].x) * 0.4,
+            y: ALTURA_QUADRIL - 320,
+          },
+          zoom: 0.85,
+          ease: s(0.45),
+        });
+        cursor += beat.duration;
+        break;
+      }
+
       case "hold":
       case "cta":
       case "hook":

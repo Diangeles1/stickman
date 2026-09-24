@@ -37,6 +37,7 @@ import {
 import { ArcoDoGolpe } from "../effects/Arco";
 import { espetaculoDe } from "../effects/espetaculo";
 import { EstrelaDeImpacto, PoeiraDaQueda } from "../effects/Queda";
+import { Placa } from "../effects/Placa";
 import { DebugOverlay } from "../debug/DebugOverlay";
 import { poeiraAmbiente } from "../particles/particles";
 import type { Timeline } from "../core/types";
@@ -314,6 +315,9 @@ export const FightScene: React.FC<FightSceneProps> = ({
             ))}
           </g>
         )}
+
+        {/* a placa do vencedor fica ATRAS do corpo: sai de tras da cabeca */}
+        <Placa timeline={timeline} frame={frame} lutadores={lutadores} />
 
         {lutadores.map(({ id, corpo, preset, tremor }) => (
           <Stickman

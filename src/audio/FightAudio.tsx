@@ -18,12 +18,15 @@ import { logicoParaReal } from "../core/tempo";
 import type { Timeline } from "../core/types";
 import { espetaculoDe } from "../effects/espetaculo";
 import { TEMPO_DA_DANCA } from "../animation/danca";
+import { BUSCA, PUXA } from "../animation/placa";
 import {
   AMBIENTE,
   BATIDA_ESTALO,
   BATIDA_GRAVE,
   REFORCO_HITSTOP,
   SOM_ABERTURA_LUTE,
+  SOM_BUSCA_PLACA,
+  SOM_PLACA,
   SOM_ABERTURA_VS,
   SOM_ESQUIVA,
   SOM_KO,
@@ -139,7 +142,7 @@ export const FightAudio: React.FC<FightAudioProps> = ({ timeline }) => {
       {/* batida do passinho: grave no tempo (quando o joelho afunda),
           estalo no contratempo */}
       {timeline.scheduled
-        .filter((b) => b.beat.type === "danca")
+        .filter((b) => b.beat.type === "danca" || b.beat.type === "placa")
         .flatMap((b) => {
           const tempos = Math.floor((b.to - b.from) / TEMPO_DA_DANCA);
           return Array.from({ length: tempos }, (_, k) => {
@@ -163,6 +166,24 @@ export const FightAudio: React.FC<FightAudioProps> = ({ timeline }) => {
             );
           });
         })}
+
+      {/* placa: a mao busca atras da cabeca, depois o puxao */}
+      {timeline.scheduled
+        .filter((b) => b.beat.type === "placa")
+        .map((b, i) => (
+          <React.Fragment key={`placa-${i}`}>
+            <Disparo
+              som={SOM_BUSCA_PLACA}
+              quadro={paraQuadroReal(timeline, b.from + BUSCA - 10)}
+              fps={fps}
+            />
+            <Disparo
+              som={SOM_PLACA}
+              quadro={paraQuadroReal(timeline, b.from + PUXA - 4)}
+              fps={fps}
+            />
+          </React.Fragment>
+        ))}
 
       {/* aura: disparada no inicio do beat de powerUp */}
       {timeline.scheduled
