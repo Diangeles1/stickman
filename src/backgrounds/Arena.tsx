@@ -115,10 +115,10 @@ export const Arena: React.FC<ArenaProps> = ({
         y={CHAO_Y}
         width={extensao * 2}
         height={2400}
-        fill="#1a1d24"
+        fill="#101319"
       />
       {/* faixa de luz no horizonte, que separa o piso do fundo */}
-      <rect x={-extensao} y={CHAO_Y - 4} width={extensao * 2} height={8} fill="#2b3040" />
+      <rect x={-extensao} y={CHAO_Y - 4} width={extensao * 2} height={8} fill="#333a4e" />
 
       {manchas.map((m, i) => (
         <ellipse
@@ -127,7 +127,7 @@ export const Arena: React.FC<ArenaProps> = ({
           cy={m.y}
           rx={m.r}
           ry={m.r * 0.22}
-          fill="#12141a"
+          fill="#0a0b10"
           opacity={0.55}
         />
       ))}

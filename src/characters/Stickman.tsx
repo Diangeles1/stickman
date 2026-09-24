@@ -35,6 +35,22 @@ export type StickmanProps = {
   profundidade?: boolean;
 };
 
+/**
+ * Contorno do personagem: espessura extra de cada lado, em unidades de mundo.
+ *
+ * Pequeno de proposito. O que ele precisa fazer e separar um corpo do outro
+ * quando se encostam, nao virar uma borda de adesivo.
+ */
+const CONTORNO = 5;
+
+/**
+ * Cor do contorno: mais escura que o fundo da arena.
+ *
+ * Contra o fundo ele some (e e o que se quer, senao vira borda desenhada);
+ * contra o outro lutador ele aparece e corta a silhueta.
+ */
+const COR_DO_CONTORNO = "#050609";
+
 /** Escurece uma cor hex por um fator. Usado no membro de tras. */
 const escurecer = (hex: string, fator: number): string => {
   const n = parseInt(hex.slice(1), 16);
@@ -64,10 +80,43 @@ export const Stickman: React.FC<StickmanProps> = ({
   };
   const j: Record<JointName, Vec2> = juntasNoMundo(pose, transformacao);
   const largura = preset.limbWidth * preset.scale * scaleExtra;
-  const corFundo = escurecer(preset.stroke, 0.62);
+  // 0.62 jogava o membro de tras para razao de contraste 1.8 contra o fundo:
+  // ele sumia em vez de ficar atras. Sobre fundo quase preto, escurecer para
+  // dar profundidade sempre custa legibilidade, entao aqui a cor cede e a
+  // ESPESSURA assume parte do trabalho (ver larguraFundo).
+  const corFundo = escurecer(preset.stroke, 0.8);
+  // membro de tras tambem e mais FINO. Profundidade por duas vias (cor e
+  // espessura) custa menos luminancia do que por uma so, e luminancia e
+  // exatamente o que esta escasso contra este fundo.
+  const larguraFundo = largura * 0.86;
+  const raioCabeca = preset.headRadius * preset.scale * scaleExtra;
 
   return (
     <g data-fighter={preset.id} opacity={opacity}>
+      {/*
+        CONTORNO. O mesmo esqueleto desenhado antes, mais grosso e quase preto.
+        Resolve o problema que so aparece quando os dois se encostam: no quadro
+        do golpe o corpo escuro passava por dentro do vermelho e os dois viravam
+        uma mancha so. Com o contorno, cada silhueta tem borda propria.
+
+        Vem por baixo de tudo, entao nao muda a cor de nenhum personagem: so
+        aparece onde ha borda.
+      */}
+      <g data-part="contorno" stroke={COR_DO_CONTORNO} fill={COR_DO_CONTORNO}>
+        {OSSOS.map(([de, para]) => (
+          <line
+            key={`c-${de}-${para}`}
+            x1={j[de].x}
+            y1={j[de].y}
+            x2={j[para].x}
+            y2={j[para].y}
+            strokeWidth={largura + CONTORNO * 2}
+            strokeLinecap="round"
+          />
+        ))}
+        <circle cx={j.head.x} cy={j.head.y} r={raioCabeca + CONTORNO} />
+      </g>
+
       {OSSOS.map(([de, para]) => {
         // o osso e "de tras" quando qualquer ponta dele e de tras
         const atras =
@@ -81,7 +130,7 @@ export const Stickman: React.FC<StickmanProps> = ({
             x2={j[para].x}
             y2={j[para].y}
             stroke={atras ? corFundo : preset.stroke}
-            strokeWidth={largura}
+            strokeWidth={atras ? larguraFundo : largura}
             strokeLinecap="round"
           />
         );
@@ -91,7 +140,7 @@ export const Stickman: React.FC<StickmanProps> = ({
         data-part="head"
         cx={j.head.x}
         cy={j.head.y}
-        r={preset.headRadius * preset.scale * scaleExtra}
+        r={raioCabeca}
         fill={preset.stroke}
       />
     </g>

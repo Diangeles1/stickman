@@ -148,12 +148,12 @@ export const FightScene: React.FC<FightSceneProps> = ({ timeline, debug = false 
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      style={{ background: "#0e0f13" }}
+      style={{ background: "#06070a" }}
     >
       <defs>
         <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0b0c10" />
-          <stop offset="100%" stopColor="#171a22" />
+          <stop offset="0%" stopColor="#050609" />
+          <stop offset="100%" stopColor="#0d0f15" />
         </linearGradient>
       </defs>
       <rect width={width} height={height} fill="url(#ceu)" />

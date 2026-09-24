@@ -47,9 +47,10 @@ export const Ondas: React.FC<{ impactos: ImpactEvent[]; frame: number }> = ({
             fill="none"
             stroke={k === 0 ? "#fffdf4" : "#ffe08a"}
             strokeWidth={Math.max(2, 18 * forca * (1 - atraso))}
-            // opacidade baixada de 0.9 para 0.42: o anel passava por cima do
-            // personagem e o briefing pede que nenhum efeito esconda quem luta
-            opacity={Math.max(0, forca * (1 - atraso)) * 0.42}
+            // 0.9 escondia o personagem; 0.42 ainda pesava depois que o fundo
+            // escureceu, porque a mesma opacidade rende mais contraste sobre
+            // fundo escuro. 0.3 marca o impacto sem virar disco de luz.
+            opacity={Math.max(0, forca * (1 - atraso)) * 0.3}
           />
         );
       }).filter(Boolean);
@@ -160,14 +161,14 @@ export const Clarao: React.FC<{ impactos: ImpactEvent[]; frame: number }> = ({
             cy={imp.at.y}
             r={raio}
             fill="#fffbe8"
-            opacity={forca * (perfil.ondas > 1 ? 0.3 : 0.22)}
+            opacity={forca * (perfil.ondas > 1 ? 0.22 : 0.15)}
           />
           <circle
             cx={imp.at.x}
             cy={imp.at.y}
             r={raio * 0.45}
             fill="#ffffff"
-            opacity={forca * 0.45}
+            opacity={forca * 0.34}
           />
         </g>,
       ];

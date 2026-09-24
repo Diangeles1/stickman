@@ -18,7 +18,18 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
   // prototipo em Python (ver references/prototipo-python).
   black: {
     id: "black",
-    stroke: "#464b58",
+    // Medido com scripts/contraste.mts contra o fundo da arena:
+    //   #464b58  razao 2.10  (abaixo do minimo de 3.0 para uma forma se ler)
+    //   #5b6278  razao 3.07  (passa, mas o membro de tras cai para 2.07)
+    //   #6d7590  razao 4.04  (membro de tras sobe para 2.87)
+    //
+    // O que obriga a subir tanto e o membro de TRAS: ele e escurecido para dar
+    // profundidade, entao a cor principal precisa de folga acima do limite
+    // para o membro escurecido nao afundar no fundo.
+    //
+    // Continua lendo como "o preto" porque e cinza-azulado dessaturado: a
+    // diferenca para o vermelho e de matiz, nao de claridade.
+    stroke: "#6d7590",
     auraColor: "#8fa2c8",
     limbWidth: 26,
     headRadius: 62,

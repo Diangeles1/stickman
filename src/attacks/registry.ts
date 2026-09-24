@@ -36,7 +36,15 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     recover: 16,
     contactAt: 6,
     tier: "medium",
-    knockback: 260,
+    // 260 rendia 357 unidades depois do bonus de forca e do cambaleio, ou
+    // seja 0,6 corpo de deslocamento para um soco reto. Alem de exagerado por
+    // si, empurrava o alvo para fora do que o plano de dois cabe no zoom
+    // minimo legivel, e a camera passava a cortar o atacante por 0,6s.
+    //
+    // O peso do golpe nao vem da distancia: vem da dobra do corpo, do hit
+    // stop, do fechamento da camera e do cambaleio. Ja aprendemos isso no
+    // finalizador, que a 4,7 corpos lia como teletransporte.
+    knockback: 190,
     hitStop: 3,
     contactJoint: "handFront",
     sound: "punch",

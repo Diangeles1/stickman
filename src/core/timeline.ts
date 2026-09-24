@@ -44,8 +44,13 @@ import type {
  * corpo de distancia. O golpe era animado no vazio.
  *
  * Este valor sobrou so como distancia de espera, quando ninguem esta atacando.
+ *
+ * Baixado de 620 para 380 porque 620 punha os dois a 1240 de distancia no
+ * quadro ZERO: nem no zoom minimo eles cabiam, e o primeiro quadro do video (o
+ * que decide se alguem continua assistindo) saia com os dois cortados nas
+ * bordas. Com 380 o plano de dois abre com os dois inteiros.
  */
-const DISTANCIA_DE_ESPERA = 620;
+const DISTANCIA_DE_ESPERA = 380;
 
 /**
  * Passo para tras na preparacao do golpe, em unidades de mundo.
@@ -62,6 +67,16 @@ const RECUO_DA_CARGA = 46;
  * le como "se moveu", nao como "levou".
  */
 const QUADROS_DA_REACAO = 2;
+
+/**
+ * Distancia em que os dois ficam frente a frente sem estar golpeando.
+ *
+ * Escolhida pela CAMERA, nao pelo combate: com 420 de separacao o plano de
+ * dois cabe em zoom 1.04, ou seja o corpo ocupa 32% da altura da tela. Acima
+ * de ~600 a camera tem que abrir abaixo do piso legivel e passa a cortar um
+ * dos dois.
+ */
+const DISTANCIA_NEUTRA = 420;
 
 /**
  * Altura do quadril, em coordenada de mundo (negativo = acima do chao).
@@ -379,13 +394,30 @@ export const compilar = (spec: FightSpec): Timeline => {
         fimDaReacao = frameContato + voo + s(0.46);
       }
 
+      // ==== CAMERA DO GOLPE ================================================
+      // Esta chave tinha zoom, centro E fit: true ao mesmo tempo. Como fit
+      // recalcula os dois a partir da separacao, o zoom e o centro escritos
+      // aqui nunca chegavam a tela: o fechamento no golpe era codigo morto, e
+      // a camera ABRIA no momento do impacto em vez de fechar.
+
+      // 1. FECHA NO PONTO DE CONTATO, rapido. E o movimento que mais vale numa
+      //    luta: a tela vem para onde o golpe aconteceu.
       cameraKeys.push({
         frame: frameContato,
-        center: { x: estado[alvo].x, y: ALTURA_QUADRIL - 60 },
-        zoom: def.tier === "extreme" ? 0.85 : 1.1,
-        ease: def.tier === "extreme" ? 8 : 5,
+        center: { x: contato.x, y: ALTURA_QUADRIL - 60 },
+        zoom: def.tier === "extreme" ? 1.42 : def.tier === "medium" ? 1.28 : 1.18,
+        ease: 3,
         shake: def.tier === "extreme" ? 46 : def.tier === "medium" ? 24 : 10,
-        // o corpo voa longe: sem plano de dois o outro sai do quadro
+      });
+
+      // 2. Depois de segurar o fechamento pela absorcao, volta ao plano de
+      //    dois. O plano de dois tem piso de zoom e, quando eles nao cabem,
+      //    segue o atingido (ver enquadrarDois).
+      cameraKeys.push({
+        frame: frameContato + s(0.18),
+        center: { x: 0, y: ALTURA_QUADRIL - 60 },
+        zoom: 0.95,
+        ease: s(0.3),
         fit: true,
       });
 
@@ -549,6 +581,24 @@ export const compilar = (spec: FightSpec): Timeline => {
       }
 
       case "recover": {
+        // O OUTRO VOLTA A ENTRAR. Depois de um knockback os dois ficavam
+        // parados na distancia em que o empurrao os deixou, e a camera, para
+        // caber os dois, abria ate o piso e ainda cortava o atacante. Nao era
+        // problema de camera: era composicao. Lutador nao fica parado olhando
+        // o adversario se recompor, ele fecha a distancia.
+        const outroLado = oposto(beat.who);
+        const rival = estado[outroLado];
+        const separacao = Math.abs(rival.x - estado[beat.who].x);
+        if (separacao > DISTANCIA_NEUTRA) {
+          const lado = rival.x <= estado[beat.who].x ? -1 : 1;
+          rival.pose = "walk1";
+          chave(outroLado, cursor);
+          rival.x = estado[beat.who].x + lado * DISTANCIA_NEUTRA;
+          chave(outroLado, cursor + Math.round(beat.duration * 0.8));
+          rival.pose = "guard";
+          chave(outroLado, cursor + beat.duration);
+        }
+
         // LEVANTAR SO SE ELE CAIU. Antes este beat forcava a pose getUp
         // sempre, e getUp tem o quadril agachado: um lutador que apenas levou
         // um soco em pe agachava e se levantava, o que conta ao espectador uma

@@ -32,11 +32,38 @@ export type EstadoCamera = {
  * 900 sem ter renderizado o 899.
  */
 /**
+ * Folga horizontal do plano de dois, em unidades de mundo.
+ *
+ * Cobre a largura dos dois corpos mais o membro estendido de um golpe. Estava
+ * em 900, o que era quase um corpo e meio de ar desperdicado: num quadro
+ * VERTICAL a largura e o recurso escasso, e cada unidade de folga tira tamanho
+ * do personagem.
+ */
+const FOLGA_LATERAL = 620;
+
+/**
+ * Zoom minimo em que o corpo ainda se le num celular.
+ *
+ * Com o corpo de 597 unidades numa tela de 1920, 0.88 deixa o personagem com
+ * 27% da altura. Abaixo disso, em Shorts, o boneco vira formiga.
+ *
+ * E este piso, e nao o enquadramento, que manda. Quando os dois nao cabem
+ * juntos neste zoom, a camera PREFERE perder um deles de vista a encolher a
+ * acao: era isso que acontecia depois do knockback, com os dois pequenos no
+ * meio de uma tela vazia.
+ */
+const ZOOM_MINIMO_LEGIVEL = 0.88;
+
+/** Teto: acima disso a camera fecha tanto que corta os proprios lutadores. */
+const ZOOM_MAXIMO = 1.2;
+
+/**
  * Plano de dois: centro e zoom que fazem os DOIS lutadores caberem na tela.
  *
- * Calculado no quadro, a partir da posicao real de cada um. O zoom tem teto
- * para a camera nao fechar demais quando eles estao colados, e piso para nao
- * afastar tanto que o boneco vire formiga.
+ * Quando eles nao cabem no zoom minimo legivel, o enquadramento passa a seguir
+ * o PONTO DE ACAO (quem levou o ultimo golpe), puxado na direcao do meio para
+ * o outro nao sumir de vez. Perder um pedaco do atacante e melhor do que
+ * perder a leitura dos dois.
  */
 export const enquadrarDois = (
   timeline: Timeline,
@@ -50,13 +77,28 @@ export const enquadrarDois = (
 
   const meio = (a.x + b.x) / 2;
   const separacao = Math.abs(a.x - b.x);
-  // a folga inclui o corpo de cada um e o membro estendido de um golpe
-  const larguraNecessaria = separacao + 900;
-  // piso 0.42 deixava o corpo com 8% da tela quando eles se separavam muito.
-  // 0.58 e o limite em que a silhueta ainda se le num celular.
-  const zoom = Math.min(1.15, Math.max(0.58, larguraTela / larguraNecessaria));
+  const zoomQueCabe = larguraTela / (separacao + FOLGA_LATERAL);
 
-  return { center: { x: meio, y: alturaQuadril - 120 }, zoom };
+  if (zoomQueCabe >= ZOOM_MINIMO_LEGIVEL) {
+    return {
+      center: { x: meio, y: alturaQuadril - 120 },
+      zoom: Math.min(ZOOM_MAXIMO, zoomQueCabe),
+    };
+  }
+
+  // Nao cabem. Quem manda agora e a acao: o ultimo lutador atingido.
+  const ultimo = timeline.impacts
+    .filter((i) => i.victim && i.frame <= frame)
+    .pop();
+  const foco =
+    ultimo?.victim === fighterB ? b.x : ultimo?.victim === fighterA ? a.x : meio;
+
+  // 0.72 no foco e 0.28 no meio: o atingido fica folgado no quadro e o outro
+  // entra pela borda, o que mantem a relacao entre os dois legivel.
+  return {
+    center: { x: foco * 0.72 + meio * 0.28, y: alturaQuadril - 120 },
+    zoom: ZOOM_MINIMO_LEGIVEL,
+  };
 };
 
 export const cameraNoQuadro = (
