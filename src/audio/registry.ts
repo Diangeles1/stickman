@@ -1,0 +1,137 @@
+/**
+ * Registro de som, em CAMADAS.
+ *
+ * Um golpe nunca usa um som so. O briefing e explicito e a razao e acustica:
+ * "POW" sozinho soa a desenho; o que faz parecer que algo bateu de verdade e a
+ * soma de tres coisas em frequencias diferentes:
+ *
+ *   whoosh  (agudo, ANTES do contato)  = o ar sendo cortado
+ *   impact  (medio, NO contato)        = a colisao
+ *   low     (grave, NO contato)        = o corpo, o peso
+ *
+ * Cada camada tem volume proprio e um deslocamento em SEGUNDOS em relacao ao
+ * quadro de contato. Deslocamento negativo = comeca antes do contato, que e o
+ * caso do whoosh: ele tem que terminar quando o golpe encosta, senao o som
+ * chega depois da imagem.
+ *
+ * Trocar um arquivo por gravacao de verdade nao exige mexer em nada aqui,
+ * desde que o nome do arquivo seja o mesmo.
+ */
+
+import type { ImpactTier } from "../core/types";
+
+export type CamadaDeSom = {
+  /** caminho dentro de public/assets/audio */
+  arquivo: string;
+  /** 0 a 1 */
+  volume: number;
+  /**
+   * Deslocamento em segundos em relacao ao quadro de CONTATO.
+   * Negativo comeca antes; zero e exatamente no contato.
+   */
+  offset: number;
+};
+
+/** Um som composto: varias camadas tocadas juntas. */
+export type SomComposto = CamadaDeSom[];
+
+const A = "assets/audio";
+
+/**
+ * Sons por chave de golpe. A chave vem de AttackDef.sound, entao adicionar um
+ * golpe com som novo e acrescentar uma entrada aqui.
+ */
+export const SONS: Record<string, SomComposto> = {
+  /** soco medio: ar + colisao + um pouco de corpo */
+  punch: [
+    { arquivo: `${A}/whoosh/whoosh_medium.wav`, volume: 0.5, offset: -0.3 },
+    { arquivo: `${A}/punches/punch_01.wav`, volume: 0.9, offset: 0 },
+    { arquivo: `${A}/impacts/impact_light_01.wav`, volume: 0.55, offset: 0 },
+  ],
+
+  /** soco leve: mais agudo, sem grave, para contrastar com o pesado */
+  punchLight: [
+    { arquivo: `${A}/whoosh/whoosh_light.wav`, volume: 0.42, offset: -0.22 },
+    { arquivo: `${A}/punches/punch_light_01.wav`, volume: 0.8, offset: 0 },
+  ],
+
+  /** chute: whoosh mais longo e corpo mais grave que o soco */
+  kick: [
+    { arquivo: `${A}/whoosh/whoosh_medium.wav`, volume: 0.55, offset: -0.3 },
+    { arquivo: `${A}/kicks/kick_01.wav`, volume: 0.9, offset: 0 },
+    { arquivo: `${A}/impacts/impact_body_01.wav`, volume: 0.6, offset: 0 },
+  ],
+
+  kickLight: [
+    { arquivo: `${A}/whoosh/whoosh_light.wav`, volume: 0.45, offset: -0.22 },
+    { arquivo: `${A}/kicks/kick_light_01.wav`, volume: 0.78, offset: 0 },
+  ],
+
+  /**
+   * Golpe pesado: quatro camadas. O low_boom e o que da a sensacao de peso,
+   * e ele entra um tiquinho DEPOIS do impacto de proposito: grave chega ao
+   * ouvido como consequencia, nao como parte do estalo.
+   */
+  heavyHit: [
+    { arquivo: `${A}/whoosh/whoosh_heavy.wav`, volume: 0.6, offset: -0.5 },
+    { arquivo: `${A}/heavy/heavy_hit_01.wav`, volume: 0.95, offset: 0 },
+    { arquivo: `${A}/impacts/impact_body_01.wav`, volume: 0.6, offset: 0 },
+    { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.85, offset: 0.02 },
+  ],
+
+  /** bloqueio: metalico e curto, sem grave. Nao e golpe limpo. */
+  block: [
+    { arquivo: `${A}/whoosh/whoosh_medium.wav`, volume: 0.4, offset: -0.3 },
+    { arquivo: `${A}/impacts/block_01.wav`, volume: 0.9, offset: 0 },
+  ],
+
+  /** investida: so o ar, porque o contato dela e de ombro e nao de golpe */
+  whoosh: [
+    { arquivo: `${A}/whoosh/whoosh_heavy.wav`, volume: 0.65, offset: -0.4 },
+    { arquivo: `${A}/impacts/impact_body_01.wav`, volume: 0.5, offset: 0 },
+  ],
+
+  /**
+   * Finalizador: a pilha completa que o briefing pede. Whoosh longo, impacto
+   * pesado, estalo do chao, grave, cascalho e o ronco de camera.
+   */
+  explosion: [
+    { arquivo: `${A}/whoosh/whoosh_heavy.wav`, volume: 0.7, offset: -0.62 },
+    { arquivo: `${A}/heavy/heavy_hit_01.wav`, volume: 1.0, offset: 0 },
+    { arquivo: `${A}/debris/crack_01.wav`, volume: 0.7, offset: 0.01 },
+    { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.95, offset: 0.03 },
+    { arquivo: `${A}/explosions/explosion_01.wav`, volume: 0.8, offset: 0.02 },
+    { arquivo: `${A}/debris/debris_01.wav`, volume: 0.5, offset: 0.12 },
+    { arquivo: `${A}/heavy/camera_rumble_01.wav`, volume: 0.6, offset: 0.02 },
+  ],
+};
+
+/** Som de aura ligando, disparado pelos beats de powerUp. */
+export const SOM_AURA: SomComposto = [
+  { arquivo: `${A}/energy/aura_charge_01.wav`, volume: 0.6, offset: 0 },
+  { arquivo: `${A}/energy/aura_burst_01.wav`, volume: 0.7, offset: 0.55 },
+];
+
+/**
+ * Ambiente. Volume MUITO baixo de proposito: o briefing pede que nao compita
+ * com os golpes, e ambiente alto e o erro mais comum de mixagem amadora.
+ */
+export const AMBIENTE: CamadaDeSom = {
+  arquivo: `${A}/ambience/wind_low_01.wav`,
+  volume: 0.16,
+  offset: 0,
+};
+
+/**
+ * Reforco do hit stop: um grave curto no meio do congelamento, que "sustenta"
+ * o silencio visual. Sem ele o hit stop soa como travada de video.
+ */
+export const REFORCO_HITSTOP: Record<ImpactTier, CamadaDeSom | null> = {
+  light: null,
+  medium: null,
+  extreme: {
+    arquivo: `${A}/heavy/low_boom_01.wav`,
+    volume: 0.4,
+    offset: 0.04,
+  },
+};

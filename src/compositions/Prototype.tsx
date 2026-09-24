@@ -9,6 +9,7 @@
  */
 
 import React from "react";
+import { FightAudio } from "../audio/FightAudio";
 import { FightScene } from "../scenes/FightScene";
 import { compilar } from "../core/timeline";
 import type { FightSpec } from "../core/types";
@@ -19,7 +20,12 @@ export type PrototypeProps = {
 
 export const Prototype: React.FC<PrototypeProps> = ({ spec }) => {
   const timeline = React.useMemo(() => compilar(spec), [spec]);
-  return <FightScene timeline={timeline} />;
+  return (
+    <>
+      <FightScene timeline={timeline} />
+      <FightAudio timeline={timeline} />
+    </>
+  );
 };
 
 /**

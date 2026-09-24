@@ -11,8 +11,9 @@
  * motion. Quem desenha depois so interpola entre chaves.
  */
 
-import { ATAQUES, escalaDuracao } from "../attacks/registry";
+import { ATAQUES, escalaDuracao, knockbackEfetivo } from "../attacks/registry";
 import { PRESETS } from "../characters/presets";
+import { s } from "./time";
 import { ALTURA_QUADRIL as ALTURA_DO_ESQUELETO, ESCALA_POSE } from "../characters/skeleton";
 import type {
   AttackName,
@@ -82,10 +83,51 @@ export const compilar = (spec: FightSpec): Timeline => {
 
   const oposto = (quem: FighterId): FighterId => (quem === A ? B : A);
 
-  /** Coloca atacante e alvo a distancia de golpe, sem teletransporte brusco. */
-  const aproximar = (atacante: FighterId, alvo: FighterId) => {
+  /**
+   * Leva o atacante ate a distancia de golpe PERCORRENDO o caminho.
+   *
+   * A primeira versao so atribuia a posicao nova, o que teletransportava o
+   * personagem. O diagnostico pegou isso: o preto ia de -1073 para +37 em
+   * 0,26s, ou seja piscava de um lado da arena para o outro.
+   *
+   * Agora o deslocamento vira tempo: ele corre ate lá, com pose de corrida, a
+   * uma velocidade fixa. Devolve quantos quadros isso consumiu, para o
+   * chamador avancar o cursor.
+   */
+  const VELOCIDADE_DE_CORRIDA = 26; // unidades de mundo por quadro
+
+  const aproximar = (atacante: FighterId, alvo: FighterId): number => {
     const lado = estado[atacante].x <= estado[alvo].x ? -1 : 1;
-    estado[atacante].x = estado[alvo].x + lado * ALCANCE;
+    const destino = estado[alvo].x + lado * ALCANCE;
+    const distancia = Math.abs(destino - estado[atacante].x);
+
+    // ja esta no alcance: nao gasta tempo
+    if (distancia < ALCANCE * 0.25) {
+      estado[atacante].x = destino;
+      return 0;
+    }
+
+    const quadros = Math.max(s(0.12), Math.round(distancia / VELOCIDADE_DE_CORRIDA));
+
+    // sai da pose atual correndo
+    estado[atacante].pose = distancia > ALCANCE * 1.5 ? "sprint1" : "run1";
+    chave(atacante, cursor);
+    estado[atacante].x = destino;
+    chave(atacante, cursor + quadros);
+
+    // A camera acompanha a corrida. SEM isto ela ficava estacionada na ultima
+    // coordenada (o diagnostico pegou: travada em x=-1162 por 1,5s enquanto o
+    // lutador corria para +37, com os DOIS fora do quadro).
+    cameraKeys.push({
+      frame: cursor,
+      center: { x: 0, y: ALTURA_QUADRIL - 60 },
+      zoom: 0.95,
+      ease: quadros,
+      fit: true,
+    });
+
+    cursor += quadros;
+    return quadros;
   };
 
   const duracaoDe = (quem: FighterId, move: AttackName) => {
@@ -165,23 +207,36 @@ export const compilar = (spec: FightSpec): Timeline => {
       estado[alvo].airborne = voa;
       chave(alvo, frameContato);
 
-      // knockback em unidades de MUNDO. Dividir por 60 (como se fosse por
-      // segundo) dava ~5 unidades de recuo, imperceptivel numa figura de
-      // 597 unidades de altura.
-      const empurrao = def.knockback * (1 + preset[atacante].profile.power * 0.6);
+      // knockback em unidades de MUNDO, cortado no teto da intensidade
+      // (ver TETO_KNOCKBACK). Sem o teto o finalizador jogava o alvo para fora
+      // do cenario e a composicao se desfazia.
+      const empurrao = knockbackEfetivo(
+        def.knockback,
+        def.tier,
+        preset[atacante].profile.power,
+      );
       const voo = Math.round(strike * (voa ? 3.2 : 1.6));
       estado[alvo].x += direcao * empurrao;
       chave(alvo, frameContato + voo);
 
       if (voa) {
-        // pousa: encosta o pe e amortece
+        // POUSO EM QUATRO TEMPOS. Trocar direto para "downed" fazia o corpo
+        // mudar de pose de um quadro para o outro, o que le como troca de
+        // desenho e nao como queda.
         estado[alvo].airborne = false;
-        estado[alvo].pose = "land";
-        chave(alvo, frameContato + voo + 4);
-        // o quique: escorrega um pouco mais depois de pousar
-        estado[alvo].x += direcao * empurrao * 0.12;
-        estado[alvo].pose = "downed";
-        chave(alvo, frameContato + voo + 14);
+        estado[alvo].pose = "land";          // 1. toca o chao
+        chave(alvo, frameContato + voo + s(0.05));
+
+        estado[alvo].pose = "squash";        // 2. o corpo comprime
+        estado[alvo].x += direcao * empurrao * 0.1;
+        chave(alvo, frameContato + voo + s(0.14));
+
+        estado[alvo].pose = "land";          // 3. quique curto de volta
+        chave(alvo, frameContato + voo + s(0.24));
+
+        estado[alvo].pose = "downed";        // 4. acomoda no chao
+        estado[alvo].x += direcao * empurrao * 0.05;
+        chave(alvo, frameContato + voo + s(0.46));
       }
 
       cameraKeys.push({
@@ -193,11 +248,33 @@ export const compilar = (spec: FightSpec): Timeline => {
         // o corpo voa longe: sem plano de dois o outro sai do quadro
         fit: true,
       });
+
+      // no golpe extremo a camera ACOMPANHA o corpo voando (item 11), em vez
+      // de so enquadrar os dois de longe
+      if (def.tier === "extreme") {
+        cameraKeys.push({
+          frame: frameContato + Math.round(strike * 0.8),
+          center: { x: 0, y: ALTURA_QUADRIL - 80 },
+          zoom: 0.78,
+          ease: Math.round(strike * 1.6),
+          follow: alvo,
+        });
+      }
     }
 
     cursor += strike;
 
-    // recuperacao
+    // recuperacao: a camera volta para o plano de dois (o briefing pede
+    // "voltar para plano aberto quando necessario"). Isso tambem e a rede de
+    // seguranca contra a camera parar numa coordenada velha.
+    cameraKeys.push({
+      frame: cursor,
+      center: { x: 0, y: ALTURA_QUADRIL - 60 },
+      zoom: 0.95,
+      ease: Math.max(s(0.1), Math.round(recover * 0.7)),
+      fit: true,
+    });
+
     estado[atacante].pose = "guard";
     chave(atacante, cursor);
     if (!opcoes.bloqueado) {
@@ -292,6 +369,8 @@ export const compilar = (spec: FightSpec): Timeline => {
           center: { x: estado[beat.who].x, y: ALTURA_QUADRIL - 60 },
           zoom: 1.2,
           ease: Math.round(beat.duration * 0.6),
+          // segue de verdade: a aura acontece enquanto ele ainda escorrega
+          follow: beat.who,
         });
         cursor += beat.duration;
         break;

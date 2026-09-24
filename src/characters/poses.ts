@@ -346,19 +346,63 @@ export const POSES: Record<PoseName, Pose> = {
     kneeBack: { x: -38, y: 56 },
     footBack: { x: -72, y: 88 },
   }),
+  /**
+   * Caido, derrotado.
+   *
+   * A primeira versao punha tudo colado no chao e o resultado era um vulto:
+   * nao se lia cabeca, nem tronco, nem perna. Esta versao se le porque tem
+   * TRES alturas diferentes:
+   *   - a cabeca fica ERGUIDA do chao, apoiada no ombro
+   *   - o tronco sai na diagonal, nao deitado
+   *   - uma perna dobrada e a outra estendida, para a silhueta nao virar barra
+   * A leitura vale mais que o realismo, que e o que o briefing pede.
+   */
   downed: p({
-    // no chao: o quadril desce quase ate o solo e o corpo fica deitado
-    hip: { x: 0, y: 92 },
-    neck: { x: -52, y: 76 },
-    head: { x: -96, y: 66 },
-    elbowFront: { x: -30, y: 90 },
-    handFront: { x: -62, y: 92 },
-    elbowBack: { x: -40, y: 84 },
-    handBack: { x: -74, y: 88 },
-    kneeFront: { x: 44, y: 78 },
-    footFront: { x: 84, y: 92 },
-    kneeBack: { x: 30, y: 88 },
-    footBack: { x: 70, y: 92 },
+    // Deitado de costas, cabeca a esquerda e pes a direita.
+    //
+    // A versao anterior ainda saia como vulto porque os membros SE CRUZAVAM.
+    // Aqui cada membro aponta para uma direcao distinta, e nenhum passa por
+    // cima do tronco:
+    //   cabeca   -> acima e a esquerda (identifica o personagem na hora)
+    //   braco 1  -> levantado, para cima
+    //   braco 2  -> caido no chao, para a esquerda
+    //   perna 1  -> dobrada, joelho para cima
+    //   perna 2  -> estendida no chao, para a direita
+    hip: { x: 0, y: 72 },
+    neck: { x: -56, y: 44 },
+    head: { x: -106, y: 26 },
+    // braco levantado: e o que diz "acabou de cair", nao "esta deitado"
+    elbowFront: { x: -34, y: 4 },
+    handFront: { x: -6, y: -34 },
+    // braco caido no chao
+    elbowBack: { x: -76, y: 72 },
+    handBack: { x: -120, y: 90 },
+    // perna dobrada, joelho para cima
+    kneeFront: { x: 50, y: 30 },
+    footFront: { x: 36, y: 90 },
+    // perna estendida no chao
+    kneeBack: { x: 74, y: 80 },
+    footBack: { x: 142, y: 91 },
+  }),
+
+  /**
+   * Compressao do pouso: joelho e tronco cedem no contato com o chao.
+   *
+   * Entra entre "land" e "downed" para o corpo nao trocar de pose de um quadro
+   * para o outro. E a diferenca entre "caiu" e "virou outra pose".
+   */
+  squash: p({
+    hip: { x: 0, y: 56 },
+    neck: { x: -6, y: -14 },
+    head: { x: -14, y: -44 },
+    elbowFront: { x: 30, y: 34 },
+    handFront: { x: 48, y: 72 },
+    elbowBack: { x: -28, y: 32 },
+    handBack: { x: -46, y: 70 },
+    kneeFront: { x: 48, y: 58 },
+    footFront: { x: 40, y: 92 },
+    kneeBack: { x: -44, y: 60 },
+    footBack: { x: -38, y: 92 },
   }),
   getUp: p({
     hip: { x: 0, y: 44 },

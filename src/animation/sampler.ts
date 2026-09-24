@@ -33,6 +33,8 @@ type Amostra = {
   airborne: boolean;
   /** velocidade em unidades de mundo por quadro (com sinal) */
   velocidade: number;
+  /** aceleracao em unidades por quadro ao quadrado (com sinal) */
+  aceleracao: number;
   /**
    * Inclinacao do corpo em graus, DERIVADA da velocidade.
    *
@@ -44,10 +46,24 @@ type Amostra = {
   inclinacao: number;
 };
 
-/** Quanto o corpo tomba por unidade de velocidade, com teto. */
-const inclinacaoPorVelocidade = (v: number): number => {
-  const bruta = v * 0.55;
-  return Math.max(-26, Math.min(26, bruta));
+/**
+ * Inclinacao do corpo a partir de velocidade E aceleracao.
+ *
+ * So a velocidade nao distingue "correndo" de "arrancando" nem de "freando":
+ * nos tres casos a velocidade pode ser a mesma. A ACELERACAO e que diz para
+ * onde o corpo tomba:
+ *
+ *   arranca  (a > 0, v > 0)  tomba para FRENTE, forte
+ *   correndo (a = 0, v > 0)  tomba para frente, so um pouco
+ *   freia    (a < 0, v > 0)  tomba para TRAS, mesmo ainda indo para frente
+ *
+ * E isso que faz o personagem parecer ter massa em vez de deslizar.
+ */
+const inclinacaoDoCorpo = (v: number, a: number): number => {
+  const porVelocidade = v * 0.34;
+  // a aceleracao pesa mais que a velocidade: e ela que da a leitura de esforco
+  const porAceleracao = a * 3.4;
+  return Math.max(-30, Math.min(30, porVelocidade + porAceleracao));
 };
 
 /**
@@ -124,19 +140,24 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
   // velocidade por diferenca central: mais estavel que olhar so para tras,
   // e e dela que sai a inclinacao do corpo
   const velocidade = (posicaoEm(track, frame + 1) - posicaoEm(track, frame - 1)) / 2;
-  const inclinacao = inclinacaoPorVelocidade(velocidade);
+  // segunda derivada pela mesma diferenca central: p(f+1) - 2p(f) + p(f-1)
+  const aceleracao =
+    posicaoEm(track, frame + 1) -
+    2 * posicaoEm(track, frame) +
+    posicaoEm(track, frame - 1);
+  const inclinacao = inclinacaoDoCorpo(velocidade, aceleracao);
   const keys = track.keys;
   if (keys.length === 0) {
     return {
       x: 0, pose: POSES.idle, poseNome: "idle", airborne: false,
-      velocidade: 0, inclinacao: 0,
+      velocidade: 0, aceleracao: 0, inclinacao: 0,
     };
   }
   if (frame <= keys[0].frame) {
     const k = keys[0];
     return {
       x: k.x, pose: POSES[k.pose], poseNome: k.pose, airborne: k.airborne,
-      velocidade, inclinacao,
+      velocidade, aceleracao, inclinacao,
     };
   }
 
@@ -149,7 +170,7 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
     if (b.frame <= a.frame) {
       return {
         x: b.x, pose: POSES[b.pose], poseNome: b.pose, airborne: b.airborne,
-        velocidade, inclinacao,
+        velocidade, aceleracao, inclinacao,
       };
     }
 
@@ -166,7 +187,7 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
         pose: POSES[fase],
         poseNome: fase,
         airborne: a.airborne,
-        velocidade, inclinacao,
+        velocidade, aceleracao, inclinacao,
       };
     }
 
@@ -175,7 +196,7 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
       pose: misturar(POSES[a.pose], POSES[b.pose], t),
       poseNome: t > 0.5 ? b.pose : a.pose,
       airborne: t > 0.5 ? b.airborne : a.airborne,
-      velocidade, inclinacao,
+      velocidade, aceleracao, inclinacao,
     };
   }
 
@@ -185,7 +206,7 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
     pose: POSES[ultima.pose],
     poseNome: ultima.pose,
     airborne: ultima.airborne,
-    velocidade, inclinacao,
+    velocidade, aceleracao, inclinacao,
   };
 };
 

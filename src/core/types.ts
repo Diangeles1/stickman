@@ -61,6 +61,7 @@ export type PoseName =
   | "airAttack"
   | "diveAttack"
   | "knockback"
+  | "squash"
   | "downed"
   | "getUp"
   | "charge";
@@ -235,4 +236,14 @@ export type CameraKey = {
    * intencional.
    */
   fit?: boolean;
+  /**
+   * Segue este lutador: o centro vem da posicao REAL dele no quadro, nao de um
+   * valor congelado na compilacao.
+   *
+   * Existe por um bug encontrado renderizando: a chave gravava onde o lutador
+   * estava quando o beat foi compilado, mas ele continuava se deslocando depois
+   * (o escorregao do pouso). A camera mirava o lugar vazio e o personagem
+   * ficava fora do quadro.
+   */
+  follow?: FighterId;
 };

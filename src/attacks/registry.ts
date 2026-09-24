@@ -22,7 +22,8 @@
  * A "reacao" nao mora aqui: e do alvo, e vem de knockback/hitStop.
  */
 
-import type { AttackDef, AttackName } from "../core/types";
+import { corpos } from "../core/time";
+import type { AttackDef, AttackName, ImpactTier } from "../core/types";
 
 const def = (d: AttackDef): AttackDef => d;
 
@@ -236,11 +237,31 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
 };
 
 /**
- * Nota sobre knockback: os valores sao em unidades de MUNDO, e o corpo tem 597
- * de altura. O finalizador estava em 1800, que com o bonus de forca dava 2826
- * (4,7x o corpo): o alvo voava para fora do cenario e a camera tinha que abrir
- * tanto que os dois viravam pontos na tela. Teto pratico: ~1,7x a altura.
+ * TETO DE KNOCKBACK POR INTENSIDADE, em corpos de distancia.
+ *
+ * O deslocamento e calibrado no CORPO do personagem, nao em numero solto: e a
+ * unica medida que continua valendo se a escala do boneco mudar.
+ *
+ * O limite existe porque o finalizador chegou a 2826 unidades (4,7 corpos): o
+ * alvo saia do cenario, a camera tinha que abrir e os dois viravam pontos na
+ * tela. A sensacao virou "foi teletransportado", nao "foi chutado".
+ *
+ * O teto e aplicado DEPOIS do bonus de forca do atacante, entao lutador forte
+ * chega mais perto do teto, mas nunca passa dele.
  */
+export const TETO_KNOCKBACK: Record<ImpactTier, number> = {
+  light: corpos(0.45),    // um passo para tras
+  medium: corpos(1.1),    // um corpo de distancia
+  extreme: corpos(2.2),   // voa, mas continua legivel na tela
+};
+
+/** Aplica o bonus de forca e corta no teto da intensidade. */
+export const knockbackEfetivo = (
+  base: number,
+  tier: ImpactTier,
+  forcaDoAtacante: number,
+): number =>
+  Math.min(TETO_KNOCKBACK[tier], base * (1 + forcaDoAtacante * 0.6));
 
 /** Duracao total de um golpe em quadros, sem escala. */
 export const duracaoBase = (a: AttackDef): number =>

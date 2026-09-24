@@ -23,6 +23,7 @@
  * primeiro contato acontece antes dos 2s.
  */
 
+import { s } from "../../core/time";
 import type { FightSpec } from "../../core/types";
 
 export const PROTOTIPO: FightSpec = {
@@ -35,33 +36,37 @@ export const PROTOTIPO: FightSpec = {
   intensity: 9,
   scenario: "arena",
   beats: [
-    // 0.0-0.7 os dois se preparando, ja em movimento (nada de parados)
-    { type: "approach", who: "black", toX: -560, duration: 42 },
-
-    // 0.7-2.0 o preto dispara e soca; o vermelho bloqueia
+    // --- ATO 1: o preto ataca, o vermelho aguenta -----------------------
+    // ja em movimento; nao existe beat de apresentacao
+    { type: "approach", who: "black", toX: -560, duration: s(0.7) },
     { type: "blocked", attacker: "black", target: "red", move: "punch" },
 
-    // 2.0-2.8 contra-ataque pesado, esquiva por pouco
+    // --- ATO 2: o vermelho revira, o preto escapa por pouco -------------
     { type: "attack", attacker: "red", target: "black", move: "punchHeavy" },
-    { type: "dodge", who: "black", duration: 16 },
+    { type: "dodge", who: "black", duration: s(0.28) },
 
-    // 2.8-3.6 chute rapido conecta: knockback de verdade
-    { type: "attack", attacker: "black", target: "red", move: "kickHigh" },
+    // --- ATO 3: o preto responde com COMBO e vira o jogo ----------------
+    // e o combo que cria a "desvantagem do vermelho" que o briefing pede:
+    // dois golpes bloqueados e o terceiro conectando
+    {
+      type: "combo",
+      attacker: "black",
+      target: "red",
+      moves: ["punchFast", "punchFast", "kickHigh"],
+    },
 
-    // 3.6-4.5 o vermelho se levanta e liga a aura
-    { type: "recover", who: "red", duration: 18 },
-    { type: "powerUp", who: "red", duration: 40 },
+    // --- ATO 4: o vermelho se levanta e liga a aura ---------------------
+    { type: "recover", who: "red", duration: s(0.34) },
+    { type: "powerUp", who: "red", duration: s(0.7) },
 
-    // 4.5-5.5 investida em velocidade
+    // --- ATO 5: com a aura, o vermelho recupera a vantagem --------------
     { type: "attack", attacker: "red", target: "black", move: "charge" },
 
-    // 5.5-6.5 desvio no ultimo instante
-    { type: "dodge", who: "black", duration: 18 },
-
-    // 6.5-8.5 chute giratorio e o corpo voando
+    // --- ATO 6: esquiva extrema e o golpe final -------------------------
+    { type: "dodge", who: "black", duration: s(0.3) },
     { type: "finisher", attacker: "black", target: "red", move: "spinKick" },
 
-    // 8.5-10.0 plano final: a camera abre e mostra os dois
-    { type: "hold", duration: 70, label: "plano final com os dois" },
+    // plano final: a camera abre e mostra os dois
+    { type: "hold", duration: s(1.1), label: "plano final com os dois" },
   ],
 };

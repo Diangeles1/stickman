@@ -70,10 +70,15 @@ export const cameraNoQuadro = (
   let atual: CameraKey | null = null;
   let anterior: { center: Vec2; zoom: number } = padrao;
 
-  /** resolve uma chave, trocando por plano de dois quando ela pedir fit */
+  /** resolve uma chave: plano de dois, seguir alguem, ou centro fixo */
   const resolver = (k: CameraKey): { center: Vec2; zoom: number } => {
     if (k.fit && tela) {
       return enquadrarDois(timeline, frame, tela.largura, tela.alturaQuadril);
+    }
+    if (k.follow && timeline.tracks[k.follow]) {
+      // posicao REAL no quadro, nao a congelada na compilacao
+      const alvo = amostrar(timeline.tracks[k.follow], frame);
+      return { center: { x: alvo.x, y: k.center.y }, zoom: k.zoom };
     }
     return { center: k.center, zoom: k.zoom };
   };
