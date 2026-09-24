@@ -263,8 +263,10 @@ export type FightSpec = {
    * "arena" e o cenario escuro com rachaduras e poeira.
    * "limpo" e fundo branco com uma linha de chao, no estilo da referencia:
    * nada compete com a silhueta dos lutadores.
+   * "vilarejo" e "cidade" sao o limpo com um cenario de rabisco no fundo
+   * (ver backgrounds/Rabisco.tsx): traco cinza claro que ferve e se mexe.
    */
-  scenario: "arena" | "limpo";
+  scenario: "arena" | "limpo" | "vilarejo" | "cidade";
   beats: Beat[];
 };
 
