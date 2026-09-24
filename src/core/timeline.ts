@@ -158,6 +158,7 @@ export const compilar = (spec: FightSpec): Timeline => {
   const aims: AimEvent[] = [];
   const cameraKeys: CameraKey[] = [];
   const slowMo: Timeline["slowMo"] = [];
+  const camaraLenta: Timeline["camaraLenta"] = [];
 
   let cursor = 0;
 
@@ -569,6 +570,12 @@ export const compilar = (spec: FightSpec): Timeline => {
         to: frameContato + s(0.1),
         factor: 0.55,
       });
+      // e cai de verdade: o golpe passa rente em camera lenta
+      camaraLenta.push({
+        from: frameContato - s(0.12),
+        to: frameContato + s(0.1),
+        factor: 0.5,
+      });
 
       // a camera fecha um pouco, sem tremor: nao houve impacto
       cameraKeys.push({
@@ -605,6 +612,8 @@ export const compilar = (spec: FightSpec): Timeline => {
         cracksGround: false,
         sound: "block",
         victim: alvo,
+        attacker: atacante,
+        bloqueado: true,
       });
       // A GUARDA ABSORVE, MAS O CORPO SENTE: o bloqueio empurra quem defende
       // para tras, mais quanto mais forte for quem bateu. Sem isto o soco
@@ -629,7 +638,17 @@ export const compilar = (spec: FightSpec): Timeline => {
         cracksGround: Boolean(def.cracksGround),
         sound: def.sound,
         victim: alvo,
+        attacker: atacante,
+        ...(opcoes.finalizador ? { finalizador: true } : {}),
       });
+      if (opcoes.finalizador) {
+        // NOCAUTE EM CAMERA LENTA: o voo comeca quatro vezes mais devagar e
+        // acelera de volta. E o quadro que o espectador vai querer rever.
+        camaraLenta.push(
+          { from: frameContato, to: frameContato + s(0.25), factor: 0.25 },
+          { from: frameContato + s(0.25), to: frameContato + s(0.5), factor: 0.5 },
+        );
+      }
 
       const voa = Boolean(def.launches) || def.tier === "extreme";
 
@@ -1090,5 +1109,6 @@ export const compilar = (spec: FightSpec): Timeline => {
     cameraKeys,
     tracks,
     slowMo,
+    camaraLenta,
   };
 };

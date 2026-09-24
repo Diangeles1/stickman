@@ -14,10 +14,18 @@
 
 import React from "react";
 import { Audio, Sequence, staticFile, useVideoConfig } from "remotion";
+import { logicoParaReal } from "../core/tempo";
 import type { Timeline } from "../core/types";
+import { espetaculoDe } from "../effects/espetaculo";
 import {
   AMBIENTE,
   REFORCO_HITSTOP,
+  SOM_ABERTURA_LUTE,
+  SOM_ABERTURA_VS,
+  SOM_ESQUIVA,
+  SOM_KO,
+  SOM_QUEDA,
+  SOM_VENCEDOR,
   SOM_AURA,
   SONS,
   type CamadaDeSom,
@@ -28,19 +36,13 @@ export type FightAudioProps = {
 };
 
 /**
- * Converte um quadro logico da timeline no quadro real do video.
+ * Quadro logico da timeline -> quadro real do video.
  *
- * O hit stop congela a imagem repetindo o quadro do impacto, o que empurra
- * tudo que vem depois para frente. A funcao quadroEfetivo em sampler.ts faz o
- * caminho inverso (real -> logico); aqui precisamos de logico -> real.
+ * O hit stop e a camera lenta esticam o video; o mapa em core/tempo.ts sabe
+ * onde cada quadro logico foi parar.
  */
-const paraQuadroReal = (timeline: Timeline, quadroLogico: number): number => {
-  let somado = 0;
-  for (const i of timeline.impacts) {
-    if (i.hitStop > 0 && i.frame < quadroLogico) somado += i.hitStop;
-  }
-  return quadroLogico + somado;
-};
+const paraQuadroReal = (timeline: Timeline, quadroLogico: number): number =>
+  logicoParaReal(timeline, quadroLogico);
 
 /** Uma camada, posicionada no tempo. */
 const Camada: React.FC<{
@@ -65,8 +67,23 @@ const Camada: React.FC<{
   );
 };
 
+/** Um som composto inteiro disparado num quadro real. */
+const Disparo: React.FC<{ som: CamadaDeSom[]; quadro: number; fps: number }> = ({
+  som,
+  quadro,
+  fps,
+}) => (
+  <>
+    {som.map((c, k) => (
+      <Camada key={k} camada={c} quadroDoContato={quadro} fps={fps} />
+    ))}
+  </>
+);
+
 export const FightAudio: React.FC<FightAudioProps> = ({ timeline }) => {
   const { fps, durationInFrames } = useVideoConfig();
+  const e = espetaculoDe(timeline);
+  const vence = e.rotulos.find((r) => r.vaga === "vence");
 
   return (
     <>
@@ -102,6 +119,19 @@ export const FightAudio: React.FC<FightAudioProps> = ({ timeline }) => {
           </React.Fragment>
         );
       })}
+
+      {/* ESPETACULO: cada letreiro e cada queda tem o seu som, no mesmo
+          quadro real em que aparece na tela */}
+      <Disparo som={SOM_ABERTURA_VS} quadro={e.abertura.vs} fps={fps} />
+      <Disparo som={SOM_ABERTURA_LUTE} quadro={e.abertura.lute} fps={fps} />
+      {e.esquivas.map((q, i) => (
+        <Disparo key={`esq-${i}`} som={SOM_ESQUIVA} quadro={q} fps={fps} />
+      ))}
+      {e.quedas.map((q, i) => (
+        <Disparo key={`queda-${i}`} som={SOM_QUEDA} quadro={q.real} fps={fps} />
+      ))}
+      {e.ko && <Disparo som={SOM_KO} quadro={e.ko.real} fps={fps} />}
+      {vence && <Disparo som={SOM_VENCEDOR} quadro={vence.inicio} fps={fps} />}
 
       {/* aura: disparada no inicio do beat de powerUp */}
       {timeline.scheduled

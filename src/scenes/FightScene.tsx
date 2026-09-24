@@ -35,6 +35,8 @@ import {
   Particulas,
 } from "../effects/Impact";
 import { ArcoDoGolpe } from "../effects/Arco";
+import { espetaculoDe } from "../effects/espetaculo";
+import { EstrelaDeImpacto, PoeiraDaQueda } from "../effects/Queda";
 import { DebugOverlay } from "../debug/DebugOverlay";
 import { poeiraAmbiente } from "../particles/particles";
 import type { Timeline } from "../core/types";
@@ -97,6 +99,19 @@ export const FightScene: React.FC<FightSceneProps> = ({
   const fx = !semEfeitos;
   const { fighterA, fighterB, seed, scenario } = timeline.spec;
   const limpo = scenario === "limpo";
+  const espetaculo = fx ? espetaculoDe(timeline) : null;
+
+  // QUADRO DE IMPACTO (anime): nos golpes mais fortes, um ou dois quadros
+  // em alto contraste puro, fundo e corpos chapados, com linhas de foco no
+  // ponto do golpe. Alterna escuro/claro; o finalizador pisca cinco vezes.
+  const anime = espetaculo?.impactosAnime.find(
+    (a) => frameReal >= a.real && frameReal < a.real + a.quadros,
+  );
+  const modoAnime = anime
+    ? (frameReal - anime.real) % 2 === 0
+      ? { fundo: "#000000", figura: "#ffffff" }
+      : { fundo: "#ffffff", figura: "#000000" }
+    : null;
 
   // rachaduras abertas pelos impactos que JA aconteceram neste quadro: elas
   // sao consequencia da acao, nao desenho permanente do cenario
@@ -159,6 +174,40 @@ export const FightScene: React.FC<FightSceneProps> = ({
     };
   });
 
+  if (anime && modoAnime) {
+    return (
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        style={{ background: modoAnime.fundo }}
+      >
+        <rect width={width} height={height} fill={modoAnime.fundo} />
+        <g transform={transformDaCamera(cam, width, height)}>
+          <EstrelaDeImpacto
+            at={anime.at}
+            cor={modoAnime.figura}
+            semente={anime.real}
+          />
+          {lutadores.map(({ id, corpo, preset, tremor }) => (
+            <Stickman
+              key={id}
+              preset={{ ...preset, stroke: modoAnime.figura }}
+              pose={corpo.pose}
+              baseX={corpo.x + tremor}
+              baseY={corpo.baseY}
+              facing={corpo.facing}
+              scaleExtra={corpo.scale / preset.scale}
+              spin={corpo.spin}
+              giro={corpo.giro}
+              contorno={false}
+            />
+          ))}
+        </g>
+      </svg>
+    );
+  }
+
   return (
     <svg
       width={width}
@@ -208,6 +257,13 @@ export const FightScene: React.FC<FightSceneProps> = ({
           So as PARTICULAS ficam na frente: estilhaco voando na frente do
           corpo e correto, e sao poucos e pequenos.
         */}
+        {espetaculo && (
+          <PoeiraDaQueda
+            quedas={espetaculo.quedas}
+            frame={frame}
+            cor={limpo ? "#b8b1a4" : "#8d96ab"}
+          />
+        )}
         {fx && <Ondas impactos={timeline.impacts} frame={frame} />}
         {fx && <Clarao impactos={timeline.impacts} frame={frame} />}
 

@@ -12,6 +12,7 @@
  * que sai rapido e desacelera, que e como corpo empurrado se comporta.
  */
 
+import { logicoParaReal, realParaLogico } from "../core/tempo";
 import { interpolate } from "remotion";
 import { POSES } from "../characters/poses";
 import {
@@ -781,18 +782,8 @@ export const congelado = (timeline: Timeline, frame: number): boolean =>
  * o tempo PARA: durante o hit stop devolvemos sempre o quadro do impacto.
  * O resultado na tela e o mesmo e a timeline continua intacta.
  */
-export const quadroEfetivo = (timeline: Timeline, frame: number): number => {
-  let ajuste = 0;
-  for (const i of timeline.impacts) {
-    if (i.hitStop <= 0) continue;
-    if (frame >= i.frame + i.hitStop) {
-      ajuste += i.hitStop;
-    } else if (frame >= i.frame) {
-      return i.frame - ajuste;
-    }
-  }
-  return frame - ajuste;
-};
+export const quadroEfetivo = (timeline: Timeline, frame: number): number =>
+  realParaLogico(timeline, frame);
 
 /**
  * TREMOR DO HIT STOP, em unidades de mundo no eixo x.
@@ -811,7 +802,9 @@ export const tremorDoHitStop = (
 ): number => {
   for (const imp of timeline.impacts) {
     if (imp.hitStop <= 0) continue;
-    const k = frameReal - imp.frame;
+    // o congelamento comeca no quadro REAL do impacto: os hit stops e as
+    // cameras lentas anteriores empurram esse quadro para frente
+    const k = frameReal - Math.ceil(logicoParaReal(timeline, imp.frame) - 1e-6);
     if (k < 0 || k >= imp.hitStop) continue;
     const base =
       imp.tier === "extreme" ? 18 : imp.tier === "medium" ? 11 : 6;

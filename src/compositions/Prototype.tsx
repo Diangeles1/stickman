@@ -10,8 +10,10 @@
 
 import React from "react";
 import { FightAudio } from "../audio/FightAudio";
+import { Espetaculo } from "../effects/Espetaculo";
 import { FightScene } from "../scenes/FightScene";
 import { compilar } from "../core/timeline";
+import { duracaoReal } from "../core/tempo";
 import { gerarLuta } from "../data/gerador";
 import type { FightSpec } from "../core/types";
 
@@ -50,6 +52,7 @@ export const Prototype: React.FC<PrototypeProps> = ({
   return (
     <>
       <FightScene timeline={timeline} debug={debug} semEfeitos={semEfeitos} />
+      {semEfeitos ? null : <Espetaculo timeline={timeline} />}
       {semEfeitos ? null : <FightAudio timeline={timeline} />}
     </>
   );
@@ -60,10 +63,8 @@ export const Prototype: React.FC<PrototypeProps> = ({
  *
  * Precisa ser calculada FORA do componente, porque o Remotion pede
  * durationInFrames na hora de registrar a composicao, nao na hora de desenhar.
- * O hit stop soma quadros congelados, entao entra na conta.
+ * O hit stop e a camera lenta somam quadros reais, entao entram na conta.
  */
 export const duracaoDoPrototipo = (spec: FightSpec): number => {
-  const t = compilar(spec);
-  const congelados = t.impacts.reduce((soma, i) => soma + i.hitStop, 0);
-  return t.durationInFrames + congelados;
+  return duracaoReal(compilar(spec));
 };

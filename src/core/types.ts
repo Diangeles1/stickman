@@ -278,6 +278,12 @@ export type ImpactEvent = {
    * compressao do impacto, e a absorcao do golpe nao existiria.
    */
   victim?: FighterId;
+  /** quem bateu: o placar (vida, combo) precisa saber de quem foi o golpe */
+  attacker?: FighterId;
+  /** o golpe encostou na guarda, nao no corpo */
+  bloqueado?: boolean;
+  /** o golpe que encerra a luta */
+  finalizador?: boolean;
 };
 
 /**
@@ -358,6 +364,15 @@ export type Timeline = {
   cameraKeys: CameraKey[];
   /** trechos em camera lenta */
   slowMo: { from: number; to: number; factor: number }[];
+  /**
+   * CAMERA LENTA DE VERDADE: trechos em que o video gasta mais quadros reais
+   * por quadro logico (factor 0.25 = quatro vezes mais devagar).
+   *
+   * Diferente de slowMo, que so avisa a camera, este muda a DURACAO do video
+   * (ver core/tempo.ts). Fica reservado para os poucos momentos que o
+   * espectador tem que ver devagar: a esquiva por um fio e o nocaute.
+   */
+  camaraLenta: { from: number; to: number; factor: number }[];
 };
 
 export type CameraKey = {
