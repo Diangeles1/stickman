@@ -17,8 +17,11 @@ import { Audio, Sequence, staticFile, useVideoConfig } from "remotion";
 import { logicoParaReal } from "../core/tempo";
 import type { Timeline } from "../core/types";
 import { espetaculoDe } from "../effects/espetaculo";
+import { TEMPO_DA_DANCA } from "../animation/danca";
 import {
   AMBIENTE,
+  BATIDA_ESTALO,
+  BATIDA_GRAVE,
   REFORCO_HITSTOP,
   SOM_ABERTURA_LUTE,
   SOM_ABERTURA_VS,
@@ -132,6 +135,34 @@ export const FightAudio: React.FC<FightAudioProps> = ({ timeline }) => {
       ))}
       {e.ko && <Disparo som={SOM_KO} quadro={e.ko.real} fps={fps} />}
       {vence && <Disparo som={SOM_VENCEDOR} quadro={vence.inicio} fps={fps} />}
+
+      {/* batida do passinho: grave no tempo (quando o joelho afunda),
+          estalo no contratempo */}
+      {timeline.scheduled
+        .filter((b) => b.beat.type === "danca")
+        .flatMap((b) => {
+          const tempos = Math.floor((b.to - b.from) / TEMPO_DA_DANCA);
+          return Array.from({ length: tempos }, (_, k) => {
+            const tempo = b.from + k * TEMPO_DA_DANCA;
+            return (
+              <React.Fragment key={`batida-${b.from}-${k}`}>
+                <Camada
+                  camada={BATIDA_GRAVE}
+                  quadroDoContato={paraQuadroReal(timeline, tempo)}
+                  fps={fps}
+                />
+                <Camada
+                  camada={BATIDA_ESTALO}
+                  quadroDoContato={paraQuadroReal(
+                    timeline,
+                    tempo + TEMPO_DA_DANCA / 2,
+                  )}
+                  fps={fps}
+                />
+              </React.Fragment>
+            );
+          });
+        })}
 
       {/* aura: disparada no inicio do beat de powerUp */}
       {timeline.scheduled

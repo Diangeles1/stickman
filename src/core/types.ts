@@ -75,7 +75,8 @@ export type PoseName =
   | "downed"
   | "sitUp"
   | "getUp"
-  | "charge";
+  | "charge"
+  | "danca";
 
 /** Identidade visual de um lutador. Adicionar cor nova nao mexe em codigo. */
 export type FighterId = "black" | "red" | "blue" | "gold" | "green" | "white" | "purple";
@@ -233,6 +234,11 @@ export type Beat =
       move: AttackName;
       targetPoint?: PontoAlvo;
     }
+  /**
+   * Danca da vitoria (passinho do Jamal): o vencedor comemora. O movimento
+   * e procedural (ver animation/danca.ts); o beat so marca quem e quando.
+   */
+  | { type: "danca"; who: FighterId; duration: number }
   | { type: "cta"; duration: number }
   | { type: "hook"; duration: number };
 

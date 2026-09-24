@@ -1086,6 +1086,30 @@ export const compilar = (spec: FightSpec): Timeline => {
         });
         break;
 
+      case "danca": {
+        // o vencedor sai da guarda e entra no passinho; o resto do corpo
+        // (pernas, bracos, rebolado) e calculado em animation/danca.ts
+        chave(beat.who, cursor);
+        estado[beat.who].pose = "danca";
+        chave(beat.who, cursor + 10);
+        chave(beat.who, cursor + beat.duration);
+        // a camera enquadra o vencedor dancando E o derrotado no chao: um
+        // sem o outro nao conta a piada. Corpo inteiro, com os pes, porque
+        // e nas pernas que o passinho acontece.
+        cameraKeys.push({
+          frame: cursor,
+          center: {
+            x: (estado[beat.who].x + estado[oposto(beat.who)].x) / 2,
+            y: ALTURA_QUADRIL - 60,
+          },
+          zoom: 1.0,
+          ease: s(0.5),
+          fit: true,
+        });
+        cursor += beat.duration;
+        break;
+      }
+
       case "hold":
       case "cta":
       case "hook":

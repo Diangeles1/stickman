@@ -50,6 +50,24 @@ const ESCRITAS: Record<PoseName, Pose> = {
     footFront: { x: 46, y: 92 },
   }),
 
+  /**
+   * DANCA: ponto de partida da danca da vitoria. A danca em si e calculada
+   * quadro a quadro em animation/danca.ts; esta pose e so a base (a guarda
+   * relaxada) de onde ela sai.
+   */
+  danca: p({
+    neck: { x: 6, y: -73 },
+    head: { x: 10, y: -112 },
+    elbowBack: { x: -6, y: -40 },
+    handBack: { x: 12, y: -56 },
+    elbowFront: { x: 24, y: -42 },
+    handFront: { x: 40, y: -60 },
+    kneeBack: { x: -16, y: 48 },
+    footBack: { x: -44, y: 92 },
+    kneeFront: { x: 28, y: 46 },
+    footFront: { x: 40, y: 92 },
+  }),
+
   // --- locomocao -----------------------------------------------------------
   // duas poses por ciclo, alternadas. Tres ou mais nao melhoraram a leitura no
   // prototipo e so aumentaram o trabalho de ajuste.

@@ -178,3 +178,19 @@ export const SOM_VENCEDOR: SomComposto = [
   { arquivo: `${A}/transitions/whoosh_transition_01.wav`, volume: 0.55, offset: -0.1 },
   { arquivo: `${A}/heavy/heavy_hit_01.wav`, volume: 0.45, offset: 0 },
 ];
+
+/**
+ * BATIDA DO PASSINHO: um tamborzao simples montado com os sons que ja
+ * existem (nao e a musica original, que tem direitos). Grave em todo tempo,
+ * estalo no contratempo. Tocado no ritmo exato da danca (TEMPO_DA_DANCA).
+ */
+export const BATIDA_GRAVE: CamadaDeSom = {
+  arquivo: `${A}/heavy/low_boom_01.wav`,
+  volume: 0.55,
+  offset: 0,
+};
+export const BATIDA_ESTALO: CamadaDeSom = {
+  arquivo: `${A}/punches/punch_light_01.wav`,
+  volume: 0.4,
+  offset: 0,
+};
