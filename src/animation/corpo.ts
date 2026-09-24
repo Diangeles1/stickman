@@ -45,6 +45,7 @@ import {
   paraLocal,
   peMaisBaixo,
   completar,
+  giroVisivel,
   misturar,
   poseBase,
   type Transformacao,
@@ -133,9 +134,9 @@ const POSES_QUE_GIRAM = new Set<PoseName>(["spinKick"]);
  * unidades. Quem gira de verdade FECHA a base antes e pivota sob o proprio
  * corpo, e e isso que esta funcao faz, na medida em que o giro acontece.
  */
-const estreitarNoGiro = (pose: Pose, giro: number): Pose => {
-  if (giro >= 0.999) return pose;
-  const w = Math.min(1, (1 - giro) * 1.5);
+const estreitarNoGiro = (pose: Pose, fechamento: number): Pose => {
+  if (fechamento <= 0.001) return pose;
+  const w = fechamento;
   const c = completar(pose);
   const fechar = (v: { x: number; y: number }, k: number) => ({
     x: v.x * (1 - k * w),
@@ -150,10 +151,21 @@ const estreitarNoGiro = (pose: Pose, giro: number): Pose => {
   };
 };
 
+/**
+ * O GIRO EM DOIS TEMPOS: primeiro FECHA A BASE, depois gira.
+ *
+ * Fechando a base durante a propria volta, os pes eram arrastados pelo chao
+ * (a auditoria de pes mediu estalos de 100 unidades num quadro): com o corpo
+ * de perfil nao ha como pregar pe nenhum. Fechando ANTES, com o corpo ainda
+ * de frente, os pes plantados transformam o fechamento em passos de verdade,
+ * e a volta acontece sobre pes que ja estao embaixo do quadril.
+ *
+ * `giro`: 1 de frente, -1 de costas. `fechamento`: 0 base aberta, 1 fechada.
+ */
 const giroNoQuadro = (
   track: Timeline["tracks"][string],
   frame: number,
-): number => {
+): { giro: number; fechamento: number; inicio?: number } => {
   const keys = track.keys;
   for (let i = 1; i < keys.length; i++) {
     const k = keys[i];
@@ -165,13 +177,24 @@ const giroNoQuadro = (
     // ainda na carga e termina na metade do disparo; o resto do tempo e so a
     // perna estendendo. Girando ate o ultimo quadro, corpo e perna chegavam
     // juntos e o chute perdia o estalo.
-    const inicio = anterior.frame - 10;
-    const fim = anterior.frame + (k.frame - anterior.frame) * 0.5;
-    if (frame < inicio || frame > k.frame) continue;
+    // A volta e RAPIDA (~10 quadros): de perfil o corpo nao se le, entao
+    // quanto menos tempo ele passa assim, melhor. Mais lenta, lia como um
+    // poste parado no meio do golpe.
+    const inicio = anterior.frame - 6;
+    const fim = anterior.frame + (k.frame - anterior.frame) * 0.35;
+    const inicioDoFechamento = inicio - 12;
+    if (frame < inicioDoFechamento || frame > k.frame) continue;
+    const fechamento =
+      frame < inicio
+        ? suave((frame - inicioDoFechamento) / (inicio - inicioDoFechamento))
+        : frame <= fim
+          ? 1
+          : 1 - suave((frame - fim) / Math.max(1, k.frame - fim));
+    if (frame < inicio) return { giro: 1, fechamento };
     const p = Math.min(1, (frame - inicio) / Math.max(1, fim - inicio));
-    return Math.cos(suave(p) * Math.PI * 2);
+    return { giro: Math.cos(suave(p) * Math.PI * 2), fechamento, inicio };
   }
-  return 1;
+  return { giro: 1, fechamento: 0 };
 };
 
 /**
@@ -357,10 +380,13 @@ const corpoBase = (
   const respirando = POSES_QUE_RESPIRAM.has(a.poseNome)
     ? respirar(a.pose, frame, defasagem)
     : a.pose;
-  const giro = giroNoQuadro(timeline.tracks[id], frame);
+  const { giro, fechamento, inicio: inicioDoGiro } = giroNoQuadro(
+    timeline.tracks[id],
+    frame,
+  );
   const pose = estreitarNoGiro(
     a.poseNome === "guard" ? gingar(respirando, frame, defasagem) : respirando,
-    giro,
+    fechamento,
   );
 
   // Em pose de ataque ou de reacao a inclinacao e zerada: a pose ja tem a
@@ -378,7 +404,27 @@ const corpoBase = (
   const compressao = compressaoDe(timeline, id, frame);
   const escala = escalaDoMundo(preset.scale);
 
-  const pivo = 0;
+  // PIVO NO PE DE APOIO. Com a base ja fechada (ver giroNoQuadro), girar em
+  // volta do quadril ainda arrastava o pe de apoio num arco pelo chao. Aqui o
+  // corpo e deslocado para o pe de tras ficar parado enquanto o quadril da a
+  // volta em torno dele; como a base esta fechada, o quadril anda pouco.
+  //
+  // O pe fica onde estava NO INICIO da volta, e nao onde a pose atual o poe:
+  // a carga continua se aprofundando durante o giro, e ancorar no pe da pose
+  // atual fazia o pivo andar junto (15 unidades por quadro).
+  let pivo = 0;
+  if (giro !== 1 && inicioDoGiro !== undefined) {
+    const noInicio = amostrar(timeline.tracks[id], inicioDoGiro);
+    const peNoInicio =
+      noInicio.x +
+      completar(estreitarNoGiro(noInicio.pose, 1)).footBack.x * escala * facing;
+    const peAgora =
+      completar(pose).footBack.x * escala * facing * giroVisivel(giro);
+    // Entra e sai junto com o giro: aplicado inteiro, o deslocamento sumia
+    // de uma vez quando o giro voltava a 1, e o corpo saltava 71 unidades
+    // no quadro seguinte ao fim da volta.
+    pivo = (peNoInicio - peAgora - a.x) * Math.min(1, (1 - giro) * 1.5);
+  }
 
   // APOIO: o pe mais baixo encosta no chao. Medido no corpo JA INCLINADO E
   // ESPELHADO, e nao na pose crua: o spin gira o esqueleto em volta do
@@ -480,6 +526,8 @@ const ALCANCE_UTIL = 0.97;
 const ALTURA_DO_ESTALO = 20;
 /** O mais longe que um pe anda num quadro rente ao chao. */
 const PASSO_MAXIMO_POR_QUADRO = 28;
+/** Altura minima do pe quando o limite acima o obriga a dar um passo. */
+const ALTURA_DO_PASSINHO = 10;
 
 /** Quadros para o pe sair do chao sem estalo quando deixa de apoiar. */
 const QUADROS_DE_SOLTURA = 5;
@@ -535,6 +583,12 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
   for (let f = 0; f < n; f++) {
     const c = corpoBase(timeline, id, f);
     const j = juntasDoCorpo(c);
+    // Girando no eixo vertical o esqueleto esta achatado: a conversao do alvo
+    // do pe para o espaco da perna explode perto do perfil (giro ~ 0) e a IK
+    // da perna se debatia. Durante a volta os pes seguem a pose.
+    // (com o corpo pelo menos 75% de frente a conversao ja e estavel, e e
+    // melhor os pes voltarem a pisar: o fim da volta vira um passo)
+    const girando = c.giro < 0.75;
     const podeApoiar =
       !c.noAr &&
       POSES_DE_APOIO.has(c.poseNome) &&
@@ -543,7 +597,7 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
       (POSES_DE_LOCOMOCAO.has(c.poseNome) ||
         Math.abs(c.velocidade) <= VELOCIDADE_DE_ARRASTO) &&
       // girando no eixo vertical o pe de apoio pivota: nao ha onde pregar
-      Math.abs(c.giro - 1) < 0.02;
+      !girando;
 
     for (const pe of PES) {
       const st = estado[pe];
@@ -575,7 +629,7 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
         // pe livre nunca atravessa o chao: a pose misturada pode passar o
         // pe por baixo da linha no meio de uma transicao (medido: 16 unidades
         // abaixo no recolher do chute giratorio)
-        if (peso === 0 && cru.y > 0) {
+        if (peso === 0 && cru.y > 0 && !girando) {
           saida = { x: cru.x, y: 0 };
           peso = 1;
         }
@@ -627,6 +681,7 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
       if (
         f > 0 &&
         !c.noAr &&
+        !girando &&
         saida.y > -ALTURA_DO_ESTALO &&
         Math.abs(c.velocidade) <= VELOCIDADE_DE_ARRASTO
       ) {
@@ -635,7 +690,12 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
         const d = Math.hypot(dx, dy);
         if (d > PASSO_MAXIMO_POR_QUADRO) {
           const k = PASSO_MAXIMO_POR_QUADRO / d;
-          saida = { x: st.ultimo.x + dx * k, y: st.ultimo.y + dy * k };
+          // pe que precisa andar tanto esta DANDO UM PASSO: sai do chao. Preso
+          // na altura em que estava, ele deslizava rente ao chao.
+          saida = {
+            x: st.ultimo.x + dx * k,
+            y: Math.min(st.ultimo.y + dy * k, -ALTURA_DO_PASSINHO),
+          };
           peso = 1;
           if (st.modo === "plantado") st.px = saida.x;
         }
@@ -679,6 +739,8 @@ const corpoPlantado = (
   frame: number,
 ): Corpo => {
   const eu = corpoBase(timeline, id, frame);
+  // na volta do giro nao ha IK de perna (ver `girando` no planejamento)
+  if (eu.giro < 0.75) return eu;
   const plano = planejarPes(timeline, id);
   const ultimo = timeline.durationInFrames + 1;
   const f0 = Math.max(0, Math.min(ultimo, Math.floor(frame)));

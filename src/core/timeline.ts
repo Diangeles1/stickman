@@ -153,6 +153,10 @@ export const compilar = (spec: FightSpec): Timeline => {
 
   const chave = (quem: FighterId, frame: number, exagero?: number) => {
     const e = estado[quem];
+    // Chave fora de ordem e invisivel no TypeScript e apaga um trecho inteiro
+    // na amostragem (ja sumiu com um knockback assim). Nunca antes da ultima.
+    const keys = tracks[quem].keys;
+    if (keys.length > 0) frame = Math.max(frame, keys[keys.length - 1].frame);
     tracks[quem].keys.push({
       frame,
       x: e.x,
@@ -282,9 +286,33 @@ export const compilar = (spec: FightSpec): Timeline => {
       esquivado?: boolean;
       finalizador?: boolean;
       ponto?: PontoAlvo;
+      /**
+       * Golpe que VEM de outro no mesmo combo: a recuperacao do anterior e a
+       * preparacao deste. Sem peso para tras e com metade da carga.
+       */
+      encadeado?: boolean;
+      /**
+       * Outro golpe do combo vem depois deste: ninguem se afasta, quem
+       * defende segura a guarda, e a volta e curta, porque ela ja e a
+       * preparacao do proximo.
+       */
+      continua?: boolean;
+      /**
+       * O mesmo atacante golpeia de novo em seguida (o beat seguinte e dele):
+       * ele NAO volta para a distancia neutra. Um golpe que passou vira o
+       * embalo do proximo; recuar entre os dois jogava fora essa logica.
+       */
+      mantemPressao?: boolean;
     } = {},
   ) => {
-    const { windup, strike, recover, contactAt, def } = duracaoDe(atacante, move);
+    const duracoes = duracaoDe(atacante, move);
+    const { strike, recover, contactAt, def } = duracoes;
+    // COMBO QUE FLUI: o golpe encadeado nao volta a guarda para carregar do
+    // zero. Soco, guarda, soco, guarda e o que a diretiva chama de combo
+    // robotico; aqui o braco que volta de um golpe ja e a carga do outro.
+    const windup = opcoes.encadeado
+      ? Math.max(3, Math.round(duracoes.windup * 0.45))
+      : duracoes.windup;
 
     // O ponto atingido define a distancia E a reacao. Sem isso o golpe era
     // animado contra uma distancia fixa que o membro nao alcancava.
@@ -295,7 +323,20 @@ export const compilar = (spec: FightSpec): Timeline => {
     // aplicado como atribuicao no MESMO quadro: 46 unidades de teleporte, que
     // a derivada da amostragem lia como velocidade enorme e acendia linhas de
     // velocidade em cima do personagem parado.
-    aproximar(atacante, alvo, distancia + RECUO_DA_CARGA);
+    if (opcoes.encadeado) {
+      // No combo o ajuste de distancia acontece DENTRO da carga (a chave da
+      // carga leva o corpo ate la), e nao num passo separado: com um passo
+      // entre cada golpe, o lutador ia e voltava e tres socos levavam 1,2 s.
+      const ladoDoAtaque = estado[atacante].x <= estado[alvo].x ? -1 : 1;
+      // sem o passo inteiro de carga: o golpe encadeado sai de onde o
+      // anterior deixou o corpo, e so o ajuste de distancia entre um golpe e
+      // outro acontece aqui. Com o recuo inteiro, o lutador ia e voltava a
+      // cada soco do combo.
+      estado[atacante].x =
+        estado[alvo].x + ladoDoAtaque * (distancia + RECUO_DA_CARGA * 0.25);
+    } else {
+      aproximar(atacante, alvo, distancia + RECUO_DA_CARGA);
+    }
 
     // ---- 1. ANTECIPACAO ---------------------------------------------------
     // Tres tempos, e e a ordem que um lutador segue:
@@ -314,9 +355,12 @@ export const compilar = (spec: FightSpec): Timeline => {
     //      empurrado para frente (medido com scripts/cadeia.mts).
     const lado: 1 | -1 = estado[atacante].x <= estado[alvo].x ? 1 : -1;
     const perfil = perfilDeMovimento(atacante);
-    const xNoContato = estado[atacante].x + lado * RECUO_DA_CARGA;
+    const xNoContato =
+      estado[atacante].x + lado * RECUO_DA_CARGA * (opcoes.encadeado ? 0.25 : 1);
     estado[atacante].pose = "coil";
-    estado[atacante].x -= lado * RECUO_DA_CARGA * perfil.recuoDoPeso;
+    if (!opcoes.encadeado) {
+      estado[atacante].x -= lado * RECUO_DA_CARGA * perfil.recuoDoPeso;
+    }
     // A chave sai alguns quadros DEPOIS do cursor: no mesmo quadro ela
     // colidia com a chave de chegada da aproximacao e virava corte seco.
     const cargaPronta =
@@ -330,7 +374,9 @@ export const compilar = (spec: FightSpec): Timeline => {
     // ele saia da aproximacao), o peito dele estaria noutro lugar e a conta da
     // distancia seria sobre um corpo que nao existe na tela. Medido: 76
     // unidades de erro so por causa disso.
-    if (estado[alvo].pose !== "guard" && !estado[alvo].airborne) {
+    // (no meio de um combo bloqueado ele JA esta defendendo: segura a defesa)
+    const segueDefendendo = opcoes.bloqueado && estado[alvo].pose === "block";
+    if (estado[alvo].pose !== "guard" && !estado[alvo].airborne && !segueDefendendo) {
       estado[alvo].pose = "guard";
       chave(alvo, cursor + Math.round(windup * 0.6));
     }
@@ -338,7 +384,9 @@ export const compilar = (spec: FightSpec): Timeline => {
       cameraKeys.push({
         frame: cursor,
         center: { x: (estado[atacante].x + estado[alvo].x) / 2, y: ALTURA_QUADRIL - 40 },
-        zoom: opcoes.finalizador ? 1.7 : 1.35,
+        // golpe que vai ser esquivado nao fecha tanto: o quadro precisa caber
+        // o corpo que SAI do caminho, senao a esquiva acontece fora da tela
+        zoom: opcoes.finalizador ? 1.7 : opcoes.esquivado ? 1.08 : 1.35,
         ease: windup,
       });
       if (opcoes.finalizador) {
@@ -511,9 +559,12 @@ export const compilar = (spec: FightSpec): Timeline => {
       estado[alvo].x +=
         direcao * (30 + 60 * PRESETS[atacante].profile.power);
       chave(alvo, frameContato + s(0.12));
-      estado[alvo].pose = "guard";
-      chave(alvo, frameContato + s(0.4));
-      fimDaReacao = frameContato + s(0.4);
+      fimDaReacao = frameContato + s(0.12);
+      if (!opcoes.continua) {
+        estado[alvo].pose = "guard";
+        chave(alvo, frameContato + s(0.4));
+        fimDaReacao = frameContato + s(0.4);
+      }
     } else {
       impacts.push({
         frame: frameContato,
@@ -672,7 +723,8 @@ export const compilar = (spec: FightSpec): Timeline => {
     // braco de manequim. Agora o corpo recua junto com o braco: e a
     // continuacao do passo que ele deu para golpear.
     estado[atacante].pose = "guard";
-    estado[atacante].x -= lado * RECUO_DA_CARGA * 0.55;
+    // no meio do combo o corpo NAO recua: o proximo golpe sai daqui
+    if (!opcoes.continua) estado[atacante].x -= lado * RECUO_DA_CARGA * 0.55;
 
     // ---- QUEM LANCA ANDA ATRAS ---------------------------------------------
     // Sem isto os dois terminam o golpe a 900 unidades de distancia, o plano
@@ -694,9 +746,10 @@ export const compilar = (spec: FightSpec): Timeline => {
     // uma fracao da recuperacao que depende do lutador: o rapido recolhe em
     // poucos quadros, o pesado demora. Antes o membro que levou 10 quadros
     // para ir voltava em 3, e recolher de estalo le como elastico.
-    const retorno =
-      cursor +
-      Math.max(3, Math.round(recover * perfil.recolher * (opcoes.esquivado ? 1.5 : 1)));
+    const retorno = opcoes.continua
+      ? cursor + Math.max(2, Math.round(recover * 0.12))
+      : cursor +
+        Math.max(3, Math.round(recover * perfil.recolher * (opcoes.esquivado ? 1.5 : 1)));
     chave(atacante, retorno);
     let ultimaDoAtacante = retorno;
 
@@ -705,7 +758,11 @@ export const compilar = (spec: FightSpec): Timeline => {
     // dentro do outro, e as trocas seguintes aconteciam nesse emaranhado.
     // Quem atacou sai para a distancia neutra: e o que devolve a leitura das
     // duas silhuetas e da ao proximo golpe espaco para ter aproximacao.
-    if (opcoes.bloqueado || opcoes.esquivado) {
+    if (
+      (opcoes.bloqueado || opcoes.esquivado) &&
+      !opcoes.continua &&
+      !opcoes.mantemPressao
+    ) {
       const neutro = estado[alvo].x - lado * DISTANCIA_NEUTRA * 0.9;
       if ((estado[atacante].x - neutro) * lado > 0) {
         estado[atacante].pose = "retreat";
@@ -751,11 +808,21 @@ export const compilar = (spec: FightSpec): Timeline => {
 
     // o cursor nao pode terminar antes da ultima chave escrita, senao o
     // proximo beat escreve no passado
-    cursor = Math.max(cursor + recover, voltaDoAlvo, ultimaDoAtacante + 1);
+    cursor = opcoes.continua
+      ? Math.max(retorno, fimDaReacao) + 1
+      : Math.max(cursor + recover, voltaDoAlvo, ultimaDoAtacante + 1);
   };
 
-  for (const beat of spec.beats) {
+  for (let indice = 0; indice < spec.beats.length; indice++) {
+    const beat = spec.beats[indice];
     const inicio = cursor;
+    // o proximo beat e um golpe do MESMO atacante: ele mantem a pressao
+    const proxima = spec.beats[indice + 1];
+    const mantemPressao =
+      proxima !== undefined &&
+      "attacker" in proxima &&
+      "attacker" in beat &&
+      proxima.attacker === beat.attacker;
 
     switch (beat.type) {
       case "approach": {
@@ -804,6 +871,7 @@ export const compilar = (spec: FightSpec): Timeline => {
         golpear(beat.attacker, beat.target, beat.move, {
           bloqueado: true,
           ponto: beat.targetPoint,
+          mantemPressao,
         });
         break;
 
@@ -811,6 +879,7 @@ export const compilar = (spec: FightSpec): Timeline => {
         golpear(beat.attacker, beat.target, beat.move, {
           esquivado: true,
           ponto: beat.targetPoint,
+          mantemPressao,
         });
         break;
 
@@ -819,7 +888,14 @@ export const compilar = (spec: FightSpec): Timeline => {
         // cada golpe), que e o que o briefing pede
         beat.moves.forEach((move, i) => {
           const ultimo = i === beat.moves.length - 1;
-          golpear(beat.attacker, beat.target, move, { bloqueado: !ultimo });
+          golpear(beat.attacker, beat.target, move, {
+            // por padrao so o ultimo passa pela guarda; com final "blocked"
+            // o defensor segura o combo inteiro
+            bloqueado: !ultimo || beat.final === "blocked",
+            encadeado: i > 0,
+            continua: !ultimo,
+            ponto: beat.targetPoint,
+          });
         });
         break;
       }

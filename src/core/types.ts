@@ -205,7 +205,15 @@ export type Beat =
       move: AttackName;
       targetPoint?: PontoAlvo;
     }
-  | { type: "combo"; attacker: FighterId; target: FighterId; moves: AttackName[] }
+  | {
+      type: "combo";
+      attacker: FighterId;
+      target: FighterId;
+      moves: AttackName[];
+      /** o ultimo golpe acerta (padrao) ou tambem e bloqueado */
+      final?: "hit" | "blocked";
+      targetPoint?: PontoAlvo;
+    }
   | { type: "knockback"; who: FighterId; distance: number; duration: number }
   | { type: "powerUp"; who: FighterId; duration: number }
   | { type: "airborne"; who: FighterId; duration: number }

@@ -225,15 +225,24 @@ const ESCRITAS: Record<PoseName, Pose> = {
     kneeFront: { x: 28, y: 46 },
     footFront: { x: 40, y: 92 },
   }),
+  /**
+   * DEFESA ALTA: antebracos na vertical na frente do rosto, cotovelos
+   * fechando o tronco, queixo recolhido.
+   *
+   * A versao anterior esticava os dois bracos para cima da cabeca: no video
+   * o lutador parecia estar se rendendo, nao defendendo.
+   */
   block: p({
-    neck: { x: -6, y: -74 },
-    head: { x: -8, y: -114 },
-    elbowFront: { x: 26, y: -78 },
-    handFront: { x: 34, y: -114 },
-    elbowBack: { x: 6, y: -64 },
-    handBack: { x: 18, y: -98 },
-    kneeFront: { x: 22, y: 48 },
-    footFront: { x: 38, y: 92 },
+    neck: { x: -4, y: -72 },
+    head: { x: -4, y: -110 },
+    elbowFront: { x: 34, y: -48 },
+    handFront: { x: 38, y: -88 },
+    elbowBack: { x: 22, y: -44 },
+    handBack: { x: 26, y: -84 },
+    kneeFront: { x: 28, y: 46 },
+    footFront: { x: 40, y: 92 },
+    kneeBack: { x: -18, y: 48 },
+    footBack: { x: -56, y: 92 },
   }),
 
   /**

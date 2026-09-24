@@ -466,10 +466,7 @@ export const paraLocal = (mundo: Vec2, t: Transformacao): Vec2 => {
   const ex = dx * cos + dy * sen;
   const ey = -dx * sen + dy * cos;
   const escala = t.scale * ESCALA_POSE;
-  // giro perto de zero nao tem inversa util: o corpo esta de perfil e
-  // qualquer x local cai na mesma linha. O piso so evita divisao por zero.
-  const giro = t.giro ?? 1;
-  const g = Math.abs(giro) < 0.05 ? Math.sign(giro || 1) * 0.05 : giro;
+  const g = giroVisivel(t.giro ?? 1);
   return { x: ex / (t.facing * g * escala), y: ey / escala };
 };
 
@@ -966,6 +963,21 @@ export const exagerar = (
   fator: number,
 ): Required<Pose> => misturar(base, alvo, fator);
 
+/**
+ * O GIRO QUE SE DESENHA: nunca passa pela largura zero.
+ *
+ * Com o giro continuo, no meio da volta o corpo inteiro virava uma linha
+ * vertical por dois quadros, e no video isso lia como defeito (um poste), nao
+ * como corpo girando. Animacao 2D resolve a volta com uma TROCA: o corpo
+ * estreita ate um perfil que ainda tem largura e salta para o outro lado.
+ * Tambem da a conversao de volta (paraLocal) um divisor que nunca e zero.
+ */
+export const LARGURA_MINIMA_DO_GIRO = 0.32;
+export const giroVisivel = (giro: number): number =>
+  Math.abs(giro) >= LARGURA_MINIMA_DO_GIRO
+    ? giro
+    : Math.sign(giro || 1) * LARGURA_MINIMA_DO_GIRO;
+
 export type Transformacao = {
   /** posicao do quadril no mundo */
   baseX: number;
@@ -997,7 +1009,7 @@ export const juntasNoMundo = (
   const cos = Math.cos(rad);
   const sen = Math.sin(rad);
   const saida = {} as Record<JointName, Vec2>;
-  const giro = t.giro ?? 1;
+  const giro = giroVisivel(t.giro ?? 1);
 
   for (const junta of TODAS_AS_JUNTAS) {
     // espelha, escala (ESCALA_POSE leva a pose para unidades de mundo), gira

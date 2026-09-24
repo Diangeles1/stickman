@@ -19,6 +19,7 @@ import { corpoNoQuadro, juntasDoCorpo } from "../src/animation/corpo";
 import { amostrar } from "../src/animation/sampler";
 import { compilar } from "../src/core/timeline";
 import { BENCHMARK } from "../src/data/fights/benchmark";
+import { BENCHMARK2 } from "../src/data/fights/benchmark2";
 import { gerarLuta } from "../src/data/gerador";
 import { UM_SOCO } from "../src/data/fights/um-soco";
 import type { FighterId, PoseName } from "../src/core/types";
@@ -42,7 +43,9 @@ const qual = process.argv[2] ?? "benchmark";
  */
 const spec = qual.startsWith("gerada:")
   ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
-  : qual === "um-soco"
+  : qual === "benchmark2"
+    ? BENCHMARK2
+    : qual === "um-soco"
     ? UM_SOCO
     : BENCHMARK;
 const t = compilar(spec);
