@@ -15,10 +15,11 @@
  */
 
 import type { Pose, PoseName } from "../core/types";
+import { anatomizar } from "./skeleton";
 
 const p = (pose: Pose): Pose => pose;
 
-export const POSES: Record<PoseName, Pose> = {
+const ESCRITAS: Record<PoseName, Pose> = {
   idle: p({}),
 
   /**
@@ -39,10 +40,13 @@ export const POSES: Record<PoseName, Pose> = {
     // punho da frente adiantado, na altura do queixo
     elbowFront: { x: 30, y: -44 },
     handFront: { x: 46, y: -70 },
-    // base larga e joelhos dobrados: o peso fica pronto para sair
-    kneeBack: { x: -30, y: 46 },
-    footBack: { x: -54, y: 92 },
-    kneeFront: { x: 30, y: 44 },
+    // base larga e joelhos dobrados: o peso fica pronto para sair. Os DOIS
+    // joelhos apontam para frente, como num corpo de verdade; o de tras
+    // apontava para tras e, com a ginga, a base virava um arco de pernas
+    // abertas para fora
+    kneeBack: { x: -16, y: 48 },
+    footBack: { x: -52, y: 92 },
+    kneeFront: { x: 32, y: 44 },
     footFront: { x: 46, y: 92 },
   }),
 
@@ -168,30 +172,58 @@ export const POSES: Record<PoseName, Pose> = {
     elbowFront: { x: -4, y: -34 },
     handFront: { x: -22, y: -48 },
   }),
+  /**
+   * ABAIXAR: agachamento de lutador, pes plantados, tronco para frente e
+   * guarda alta.
+   *
+   * A versao anterior tinha as pernas abertas para fora (joelho de tras
+   * invertido em 69 graus); corrigido para a dobra anatomica, o joelho ia ao
+   * chao e o lutador parecia AJOELHAR em vez de passar por baixo do golpe.
+   */
   duck: p({
-    hip: { x: 0, y: 46 },
-    neck: { x: 6, y: -40 },
-    head: { x: 14, y: -74 },
-    kneeFront: { x: 34, y: 30 },
-    footFront: { x: 44, y: 48 },
-    kneeBack: { x: -32, y: 32 },
-    footBack: { x: -48, y: 48 },
+    hip: { x: -10, y: 30 },
+    neck: { x: 20, y: -30 },
+    head: { x: 44, y: -58 },
+    elbowFront: { x: 36, y: -4 },
+    handFront: { x: 52, y: -34 },
+    elbowBack: { x: 14, y: -2 },
+    handBack: { x: 34, y: -32 },
+    kneeFront: { x: 38, y: 40 },
+    footFront: { x: 48, y: 92 },
+    kneeBack: { x: 14, y: 58 },
+    footBack: { x: -30, y: 92 },
   }),
+  /**
+   * PASSO DE LUTA para frente e para tras: a guarda andando.
+   *
+   * As versoes anteriores eram um corpo em pe com as pernas quase retas, e
+   * cada passo de ajuste "levantava" o lutador 38 unidades acima da guarda
+   * (medido no quadril). Quem da passo em luta continua na base: joelhos
+   * dobrados, guarda alta, e so o peso vai para o lado do passo.
+   */
   advance: p({
-    neck: { x: 12, y: -72 },
-    head: { x: 18, y: -112 },
-    kneeFront: { x: 30, y: 44 },
-    footFront: { x: 48, y: 90 },
-    elbowFront: { x: 18, y: -40 },
-    handFront: { x: 34, y: -58 },
+    neck: { x: 14, y: -71 },
+    head: { x: 20, y: -110 },
+    elbowBack: { x: 4, y: -40 },
+    handBack: { x: 20, y: -64 },
+    elbowFront: { x: 32, y: -44 },
+    handFront: { x: 50, y: -68 },
+    kneeBack: { x: -12, y: 48 },
+    footBack: { x: -44, y: 92 },
+    kneeFront: { x: 36, y: 44 },
+    footFront: { x: 52, y: 92 },
   }),
   retreat: p({
-    neck: { x: -12, y: -72 },
-    head: { x: -18, y: -112 },
-    kneeBack: { x: -32, y: 44 },
-    footBack: { x: -54, y: 90 },
-    elbowFront: { x: -4, y: -40 },
-    handFront: { x: 2, y: -54 },
+    neck: { x: 2, y: -72 },
+    head: { x: 4, y: -111 },
+    elbowBack: { x: -2, y: -40 },
+    handBack: { x: 14, y: -64 },
+    elbowFront: { x: 24, y: -44 },
+    handFront: { x: 40, y: -68 },
+    kneeBack: { x: -20, y: 46 },
+    footBack: { x: -58, y: 92 },
+    kneeFront: { x: 28, y: 46 },
+    footFront: { x: 40, y: 92 },
   }),
   block: p({
     neck: { x: -6, y: -74 },
@@ -217,20 +249,24 @@ export const POSES: Record<PoseName, Pose> = {
    * qualquer ataque, entao melhorar aqui melhora a luta inteira.
    */
   coil: p({
-    hip: { x: -14, y: 8 },
+    // O CORPO DESCE para carregar: joelhos dobram, peso na perna de tras.
+    // A versao anterior deixava o quadril 20 unidades MAIS ALTO que na
+    // guarda (pernas quase retas), ou seja o lutador se esticava para
+    // carregar, o contrario de juntar energia.
+    hip: { x: -14, y: 16 },
     // o TRONCO gira para tras: e o tronco que carrega o golpe, nao o braco
-    neck: { x: -30, y: -66 },
-    head: { x: -40, y: -102 },
+    neck: { x: -30, y: -58 },
+    head: { x: -40, y: -94 },
     // o punho volta para junto do ombro
-    elbowFront: { x: -18, y: -50 },
-    handFront: { x: -42, y: -58 },
-    elbowBack: { x: -34, y: -42 },
-    handBack: { x: -14, y: -56 },
+    elbowFront: { x: -18, y: -42 },
+    handFront: { x: -42, y: -50 },
+    elbowBack: { x: -34, y: -34 },
+    handBack: { x: -14, y: -48 },
     // peso e joelho na perna de tras: energia guardada
-    kneeBack: { x: -34, y: 48 },
-    footBack: { x: -58, y: 92 },
-    kneeFront: { x: 22, y: 50 },
-    footFront: { x: 36, y: 92 },
+    kneeBack: { x: -26, y: 54 },
+    footBack: { x: -60, y: 92 },
+    kneeFront: { x: 24, y: 48 },
+    footFront: { x: 38, y: 92 },
   }),
 
   // --- socos ---------------------------------------------------------------
@@ -279,15 +315,29 @@ export const POSES: Record<PoseName, Pose> = {
     kneeBack: { x: -34, y: 52 },
     footBack: { x: -66, y: 92 },
   }),
+  /**
+   * UPPERCUT: o punho sobe na frente do rosto com o cotovelo a 90 graus.
+   *
+   * A pose anterior pedia o punho 64 unidades acima do ombro, com um braco
+   * que mede 57. Travado no comprimento real, o braco saia HORIZONTAL com o
+   * antebraco curto para cima, e no video o uppercut era um jab alto. Aqui
+   * as medidas cabem no braco: braco para frente, antebraco na vertical, e
+   * as pernas se esticando, porque a forca do uppercut vem de baixo.
+   */
   uppercut: p({
-    neck: { x: 6, y: -78 },
-    head: { x: 10, y: -118 },
-    elbowFront: { x: 34, y: -60 },
-    handFront: { x: 54, y: -136 },
-    elbowBack: { x: -14, y: -44 },
-    handBack: { x: -20, y: -58 },
-    kneeFront: { x: 26, y: 40 },
+    // o tronco SOBE e abre um pouco para tras: e o corpo inteiro que sobe
+    neck: { x: 4, y: -77 },
+    head: { x: 4, y: -117 },
+    // braco a 45 graus para cima, antebraco na vertical: punho na altura da
+    // cabeca, na frente dela (medidas dentro do comprimento do braco)
+    elbowFront: { x: 38, y: -92 },
+    handFront: { x: 40, y: -118 },
+    elbowBack: { x: 0, y: -42 },
+    handBack: { x: 16, y: -64 },
+    kneeFront: { x: 26, y: 42 },
     footFront: { x: 40, y: 92 },
+    kneeBack: { x: -20, y: 46 },
+    footBack: { x: -46, y: 92 },
   }),
 
   // --- chutes --------------------------------------------------------------
@@ -501,6 +551,48 @@ export const POSES: Record<PoseName, Pose> = {
     footBack: { x: -72, y: 88 },
   }),
   /**
+   * LANCADO: o corpo voa para tras dobrado em "C".
+   *
+   * A forca entrou pelo tronco, entao e o tronco que vai primeiro; cabeca,
+   * bracos e pernas ficam para tras (para o lado de quem bateu), atrasados
+   * pela inercia. A pose anterior do voo era um corpo em pe com um braco e
+   * uma perna esticados, e no video lia como um "T" flutuando, nao como um
+   * corpo arremessado.
+   */
+  launched: p({
+    neck: { x: 16, y: -70 },
+    head: { x: 42, y: -100 },
+    elbowFront: { x: 44, y: -46 },
+    handFront: { x: 74, y: -62 },
+    elbowBack: { x: 34, y: -36 },
+    handBack: { x: 62, y: -24 },
+    kneeFront: { x: 40, y: 36 },
+    footFront: { x: 64, y: 82 },
+    kneeBack: { x: 26, y: 44 },
+    footBack: { x: 40, y: 90 },
+  }),
+
+  /**
+   * AS COSTAS BATEM NO CHAO: quadril e costas encostam, pernas ainda no ar.
+   *
+   * E o quadro que vende a queda. Sem ele o corpo trocava de "voando" para
+   * "deitado", e o peso do corpo chegando ao chao nunca aparecia.
+   */
+  groundHit: p({
+    hip: { x: 0, y: 72 },
+    neck: { x: -58, y: 50 },
+    head: { x: -100, y: 34 },
+    elbowFront: { x: -30, y: 18 },
+    handFront: { x: -8, y: -16 },
+    elbowBack: { x: -74, y: 72 },
+    handBack: { x: -110, y: 84 },
+    kneeFront: { x: 30, y: 20 },
+    footFront: { x: 62, y: -22 },
+    kneeBack: { x: 42, y: 40 },
+    footBack: { x: 88, y: 8 },
+  }),
+
+  /**
    * Caido, derrotado.
    *
    * A primeira versao punha tudo colado no chao e o resultado era um vulto:
@@ -582,15 +674,55 @@ export const POSES: Record<PoseName, Pose> = {
     footBack: { x: -96, y: 92 },
   }),
 
+  /**
+   * SENTANDO: primeiro tempo do levantar. O tronco sobe apoiado na mao de
+   * tras, a perna da frente dobra para buscar o chao.
+   *
+   * Sem este tempo, a mistura ia direto de "deitado" para "ajoelhado", e no
+   * meio o corpo girava inteiro com as pernas para cima: medido no video, um
+   * quadro de pernas esticadas no ar e o corpo de cabeca para baixo.
+   */
+  sitUp: p({
+    hip: { x: 0, y: 72 },
+    neck: { x: -24, y: 4 },
+    head: { x: -28, y: -34 },
+    elbowBack: { x: -50, y: 40 },
+    handBack: { x: -66, y: 86 },
+    elbowFront: { x: 8, y: 38 },
+    handFront: { x: 34, y: 30 },
+    kneeFront: { x: 40, y: 34 },
+    footFront: { x: 70, y: 88 },
+    kneeBack: { x: 48, y: 80 },
+    footBack: { x: 98, y: 90 },
+  }),
+
+  /**
+   * AJOELHADO: segundo tempo do levantar. Joelho de tras no chao, pe da
+   * frente plantado, mao no joelho para empurrar o corpo para cima.
+   */
   getUp: p({
-    hip: { x: 0, y: 44 },
-    neck: { x: -12, y: -18 },
-    head: { x: -20, y: -54 },
-    elbowFront: { x: 10, y: 20 },
-    handFront: { x: 24, y: 58 },
-    kneeFront: { x: 38, y: 50 },
-    footFront: { x: 56, y: 48 },
-    kneeBack: { x: -20, y: 54 },
-    footBack: { x: -40, y: 48 },
+    hip: { x: 0, y: 30 },
+    neck: { x: 6, y: -42 },
+    head: { x: 10, y: -80 },
+    elbowFront: { x: 24, y: -6 },
+    handFront: { x: 36, y: 18 },
+    elbowBack: { x: -10, y: -8 },
+    handBack: { x: 2, y: -32 },
+    kneeFront: { x: 32, y: 40 },
+    footFront: { x: 40, y: 92 },
+    kneeBack: { x: -6, y: 86 },
+    footBack: { x: -54, y: 92 },
   }),
 };
+
+/**
+ * A biblioteca que o motor usa: as poses escritas acima, completas e com
+ * joelho e cotovelo dobrando para o lado anatomico (ver anatomizar). Escrever
+ * a pose continua sendo so o que muda; a garantia de corpo possivel vem daqui.
+ */
+export const POSES = Object.fromEntries(
+  (Object.entries(ESCRITAS) as [PoseName, Pose][]).map(([nome, pose]) => [
+    nome,
+    anatomizar(pose),
+  ]),
+) as Record<PoseName, Required<Pose>>;

@@ -277,6 +277,79 @@ export const completar = (pose: Pose): Required<Pose> => {
 };
 
 /**
+ * Pose completa e com as articulacoes dobrando para o lado certo.
+ *
+ * Aplicada UMA vez, na biblioteca de poses, e nao dentro de completar(): o IK
+ * de golpe de cotovelo e de joelho move exatamente a junta do meio, e
+ * corrigir depois dele desfazia a mira (o cotovelo saia 92 unidades do alvo).
+ * Poses anatomicas na origem bastam: a mistura por angulo nunca troca o sinal
+ * de uma dobra, e o IK de dois ossos preserva o sentido da pose.
+ */
+export const anatomizar = (pose: Pose): Required<Pose> => {
+  const saida = completar(pose);
+  for (const [raiz, meio, ponta, sinal, tolerancia] of DOBRAS) {
+    anatomico(saida, raiz, meio, ponta, sinal, tolerancia);
+  }
+  return saida;
+};
+
+/**
+ * DOBRA ANATOMICA: joelho e cotovelo so dobram para um lado.
+ *
+ * Com o lutador olhando para +x, a canela so gira PARA TRAS em relacao a
+ * coxa (o joelho aponta para frente) e o antebraco so fecha PARA FRENTE em
+ * relacao ao braco (o cotovelo aponta para tras). Medido na biblioteca de
+ * poses com o rig por angulos: 18 das 39 poses tinham joelho ou cotovelo
+ * invertido, varios em mais de 90 graus (o braco de tras do soco a 154). Em
+ * pose parada isso passa despercebido; em movimento e o "membro quebrado" que
+ * denuncia boneco.
+ *
+ * A correcao ESPELHA a junta do meio sobre a reta raiz-ponta. E a outra
+ * solucao do mesmo triangulo: a ponta (mao, pe) fica EXATAMENTE onde a pose
+ * pediu, entao alcance, distancia de combate e contato nao mudam. So a
+ * articulacao passa a dobrar para o lado que um corpo dobra.
+ */
+const DOBRAS: [JointName, JointName, JointName, 1 | -1, number][] = [
+  // [raiz, meio, ponta, sinal anatomico da dobra, tolerancia em radianos]
+  ["hip", "kneeFront", "footFront", 1, 0.09],
+  ["hip", "kneeBack", "footBack", 1, 0.09],
+  ["shoulderFront", "elbowFront", "handFront", -1, 0.14],
+  ["shoulderBack", "elbowBack", "handBack", -1, 0.14],
+];
+
+const anatomico = (
+  p: Required<Pose>,
+  raiz: JointName,
+  meio: JointName,
+  ponta: JointName,
+  sinal: 1 | -1,
+  tolerancia: number,
+): void => {
+  const r = p[raiz];
+  const m = p[meio];
+  const t = p[ponta];
+  const a1 = Math.atan2(m.y - r.y, m.x - r.x);
+  const a2 = Math.atan2(t.y - m.y, t.x - m.x);
+  let dobra = a2 - a1;
+  while (dobra <= -Math.PI) dobra += Math.PI * 2;
+  while (dobra > Math.PI) dobra -= Math.PI * 2;
+  if (dobra * sinal >= -tolerancia) return;
+  const dx = t.x - r.x;
+  const dy = t.y - r.y;
+  const n = Math.hypot(dx, dy);
+  if (n < 0.001) return;
+  const ux = dx / n;
+  const uy = dy / n;
+  const vx = m.x - r.x;
+  const vy = m.y - r.y;
+  const proj = vx * ux + vy * uy;
+  p[meio] = {
+    x: r.x + 2 * proj * ux - vx,
+    y: r.y + 2 * proj * uy - vy,
+  };
+};
+
+/**
  * CADEIA DE CADA MEMBRO, da raiz para a ponta.
  *
  * A raiz do braco e o OMBRO, que por sua vez e derivado do tronco: quando o
@@ -530,14 +603,33 @@ export type PerfilDeAtraso = Partial<Record<JointName, number | [number, number]
  * pe -> perna -> quadril -> tronco -> ombro -> braco -> punho
  */
 export const ATRASO_DO_ATAQUE: PerfilDeAtraso = {
-  hip: [0, 0.3],
-  kneeBack: [0.02, 0.36], kneeFront: [0.02, 0.36],
-  footBack: [0.04, 0.4], footFront: [0.04, 0.4],
-  neck: [0.04, 0.42],
+  hip: [0, 0.25],
+  kneeBack: [0.02, 0.32], kneeFront: [0.02, 0.32],
+  footBack: [0.04, 0.36], footFront: [0.04, 0.36],
+  neck: [0.08, 0.5],
   shoulderBack: [0.1, 0.56], shoulderFront: [0.1, 0.56],
   head: [0.14, 0.62],
-  elbowBack: [0.26, 0.86], elbowFront: [0.26, 0.86],
+  elbowBack: [0.24, 0.74], elbowFront: [0.24, 0.74],
   handBack: [0.34, 1], handFront: [0.34, 1],
+};
+
+/**
+ * UPPERCUT: a forca vem das PERNAS se esticando, de baixo para cima.
+ *
+ * Com o perfil do soco reto, cotovelo e punho chegavam juntos (o braco do
+ * uppercut quase nao estende, so sobe), e tronco e quadril tambem: a corrente
+ * inteira cabia em dois quadros. Aqui as pernas empurram primeiro, o tronco
+ * sobe em seguida, e o punho e o ultimo a chegar, subindo.
+ */
+export const ATRASO_DO_UPPERCUT: PerfilDeAtraso = {
+  hip: [0, 0.28],
+  kneeBack: [0, 0.28], kneeFront: [0, 0.28],
+  footBack: [0, 0.3], footFront: [0, 0.3],
+  neck: [0.12, 0.55],
+  shoulderBack: [0.16, 0.6], shoulderFront: [0.16, 0.6],
+  head: [0.22, 0.72],
+  elbowBack: [0.3, 0.7], elbowFront: [0.3, 0.7],
+  handBack: [0.45, 1], handFront: [0.45, 1],
 };
 
 /**
@@ -579,38 +671,300 @@ export const ATRASO_DA_REACAO: PerfilDeAtraso = {
   footBack: 0.3, footFront: 0.3,
 };
 
+// ===========================================================================
+// RIG POR ANGULOS (cinematica direta)
+// ===========================================================================
+//
+// As poses continuam ESCRITAS como deslocamento de junta (e o formato que se
+// le e se ajusta na mao), mas a mistura entre duas poses acontece em ANGULOS
+// DE OSSO, cada osso relativo ao pai:
+//
+//   quadril (raiz, posicao)
+//     tronco (angulo absoluto; comprimento pode comprimir: squash)
+//       cabeca           relativa ao tronco
+//       braco            relativo ao tronco   -> antebraco relativo ao braco
+//     coxa (absoluta)                         -> canela relativa a coxa
+//
+// Por que isto e o nucleo da animacao, e nao um detalhe:
+//
+// 1. O BRACO E CARREGADO PELO TRONCO. Misturando posicoes, a mao ia do ponto A
+//    ao ponto B por conta propria, e o tronco girar nao mudava nada no
+//    caminho dela. Em angulo relativo, quando o tronco gira o braco inteiro
+//    vai junto, e o braco ainda gira por cima disso. Com tempos diferentes
+//    por osso (tronco primeiro, braco depois) aparece a corrente cinetica: o
+//    tronco puxa, o braco chega atrasado e chicoteia.
+// 2. ARCO DE GRACA. Osso que gira em volta da articulacao descreve arco; nao
+//    existe caminho reto entre duas poses.
+// 3. EXAGERO E EXTRAPOLACAO VALIDOS. "Passar 15% alem da pose" em angulo e
+//    girar um pouco mais; em posicao seria esticar o membro para fora do
+//    esqueleto.
+//
+// Cada angulo e medido a partir de uma referencia NEUTRA (tronco para cima,
+// braco e coxa para baixo, antebraco e canela retos), e a mistura e linear
+// nesse espaco. Assim o braco que vai de "pendurado atras" para "pendurado na
+// frente" passa por baixo, e nao por cima da cabeca, que e o que uma mistura
+// pelo caminho mais curto do circulo faria em alguns casos.
+
+/** Angulos de uma pose. Todos em radianos, relativos a referencia neutra. */
+export type Angulos = {
+  raiz: Vec2;
+  tronco: number;
+  /** comprimento do tronco (squash e stretch) */
+  troncoLen: number;
+  cabeca: number;
+  bracoF: number;
+  anteF: number;
+  bracoT: number;
+  anteT: number;
+  coxaF: number;
+  canelaF: number;
+  coxaT: number;
+  canelaT: number;
+};
+
+const CIMA = -Math.PI / 2;
+const BAIXO = Math.PI / 2;
+
+/** Normaliza para (-PI, PI]. */
+const embrulhar = (a: number): number => {
+  let r = a % (Math.PI * 2);
+  if (r <= -Math.PI) r += Math.PI * 2;
+  if (r > Math.PI) r -= Math.PI * 2;
+  return r;
+};
+
+const anguloDe = (de: Vec2, para: Vec2): number =>
+  Math.atan2(para.y - de.y, para.x - de.x);
+
+const L_CABECA = COMPRIMENTO[0];
+const L_BRACO_F = COMPRIMENTO[1];
+const L_ANTE_F = COMPRIMENTO[2];
+const L_BRACO_T = COMPRIMENTO[3];
+const L_ANTE_T = COMPRIMENTO[4];
+const L_COXA_F = COMPRIMENTO[5];
+const L_CANELA_F = COMPRIMENTO[6];
+const L_COXA_T = COMPRIMENTO[7];
+const L_CANELA_T = COMPRIMENTO[8];
+
+/** Decompoe uma pose em angulos de osso. */
+export const paraAngulos = (pose: Pose): Angulos => {
+  const c = completar(pose);
+  const tronco = anguloDe(c.hip, c.neck);
+  const braco = (ombro: Vec2, cotovelo: Vec2) =>
+    embrulhar(anguloDe(ombro, cotovelo) - tronco - Math.PI);
+  const bracoF = anguloDe(c.shoulderFront, c.elbowFront);
+  const bracoT = anguloDe(c.shoulderBack, c.elbowBack);
+  const coxaF = anguloDe(c.hip, c.kneeFront);
+  const coxaT = anguloDe(c.hip, c.kneeBack);
+  return {
+    raiz: { ...c.hip },
+    tronco: embrulhar(tronco - CIMA),
+    troncoLen: distancia(c.hip, c.neck),
+    cabeca: embrulhar(anguloDe(c.neck, c.head) - tronco),
+    bracoF: braco(c.shoulderFront, c.elbowFront),
+    anteF: embrulhar(anguloDe(c.elbowFront, c.handFront) - bracoF),
+    bracoT: braco(c.shoulderBack, c.elbowBack),
+    anteT: embrulhar(anguloDe(c.elbowBack, c.handBack) - bracoT),
+    coxaF: embrulhar(coxaF - BAIXO),
+    canelaF: embrulhar(anguloDe(c.kneeFront, c.footFront) - coxaF),
+    coxaT: embrulhar(coxaT - BAIXO),
+    canelaT: embrulhar(anguloDe(c.kneeBack, c.footBack) - coxaT),
+  };
+};
+
+const ponta = (de: Vec2, angulo: number, comprimento: number): Vec2 => ({
+  x: de.x + Math.cos(angulo) * comprimento,
+  y: de.y + Math.sin(angulo) * comprimento,
+});
+
+/** Reconstroi a pose a partir dos angulos. Ossos sempre no comprimento exato. */
+export const dosAngulos = (a: Angulos): Required<Pose> => {
+  const hip = { ...a.raiz };
+  const tronco = a.tronco + CIMA;
+  const len = Math.max(
+    TRONCO * (1 - SQUASH_DO_TRONCO),
+    Math.min(TRONCO * (1 + SQUASH_DO_TRONCO), a.troncoLen),
+  );
+  const neck = ponta(hip, tronco, len);
+  const ux = Math.cos(tronco);
+  const uy = Math.sin(tronco);
+  const px = -uy;
+  const py = ux;
+  const ombro = (o: { aoLongo: number; perpendicular: number }): Vec2 => ({
+    x: neck.x + ux * o.aoLongo + px * o.perpendicular,
+    y: neck.y + uy * o.aoLongo + py * o.perpendicular,
+  });
+  const shoulderFront = ombro(OMBRO_FRENTE);
+  const shoulderBack = ombro(OMBRO_TRAS);
+  const bracoF = a.bracoF + tronco + Math.PI;
+  const bracoT = a.bracoT + tronco + Math.PI;
+  const elbowFront = ponta(shoulderFront, bracoF, L_BRACO_F);
+  const elbowBack = ponta(shoulderBack, bracoT, L_BRACO_T);
+  const coxaF = a.coxaF + BAIXO;
+  const coxaT = a.coxaT + BAIXO;
+  const kneeFront = ponta(hip, coxaF, L_COXA_F);
+  const kneeBack = ponta(hip, coxaT, L_COXA_T);
+  return {
+    hip,
+    neck,
+    head: ponta(neck, tronco + a.cabeca, L_CABECA),
+    shoulderFront,
+    shoulderBack,
+    elbowFront,
+    handFront: ponta(elbowFront, bracoF + a.anteF, L_ANTE_F),
+    elbowBack,
+    handBack: ponta(elbowBack, bracoT + a.anteT, L_ANTE_T),
+    kneeFront,
+    footFront: ponta(kneeFront, coxaF + a.canelaF, L_CANELA_F),
+    kneeBack,
+    footBack: ponta(kneeBack, coxaT + a.canelaT, L_CANELA_T),
+  };
+};
+
 /**
+ * Qual junta da o TEMPO de cada canal de angulo.
+ *
+ * Os perfis de atraso continuam escritos por junta (e como se pensa: "o punho
+ * chega por ultimo"), e aqui cada osso herda o tempo da junta da PONTA dele.
+ * O ombro nao tem canal proprio: ele e derivado do tronco.
+ */
+const TEMPO_DO_CANAL: Record<Exclude<keyof Angulos, "raiz">, JointName> = {
+  tronco: "neck",
+  troncoLen: "neck",
+  cabeca: "head",
+  bracoF: "elbowFront",
+  anteF: "handFront",
+  bracoT: "elbowBack",
+  anteT: "handBack",
+  coxaF: "kneeFront",
+  canelaF: "footFront",
+  coxaT: "kneeBack",
+  canelaT: "footBack",
+};
+
+const tempoDaJunta = (
+  junta: JointName,
+  t: number,
+  atrasos: PerfilDeAtraso | undefined,
+  curva: (t: number) => number,
+): number => {
+  const janela = atrasos?.[junta] ?? 0;
+  const [comeca, termina] = typeof janela === "number" ? [janela, 1] : janela;
+  // reescala o tempo da junta para a janela dela e so entao aplica a curva.
+  // A curva pode passar de 1 (acomodacao, exagero): isso e intencional.
+  return curva(Math.max(0, Math.min(1, (t - comeca) / (termina - comeca))));
+};
+
+/** Mistura de angulos, canal por canal, cada um no seu tempo. */
+export const misturarAngulos = (
+  a: Angulos,
+  b: Angulos,
+  t: number,
+  atrasos?: PerfilDeAtraso,
+  curva: (t: number) => number = (x) => x,
+): Angulos => {
+  const th = tempoDaJunta("hip", t, atrasos, curva);
+  const saida = {
+    raiz: {
+      x: a.raiz.x + (b.raiz.x - a.raiz.x) * th,
+      y: a.raiz.y + (b.raiz.y - a.raiz.y) * th,
+    },
+  } as Angulos;
+  for (const canal of Object.keys(TEMPO_DO_CANAL) as (keyof typeof TEMPO_DO_CANAL)[]) {
+    const tc = tempoDaJunta(TEMPO_DO_CANAL[canal], t, atrasos, curva);
+    saida[canal] = a[canal] + (b[canal] - a[canal]) * tc;
+  }
+  return saida;
+};
+
+/**
+ * Interpola duas poses POR OSSO, em angulo. t=0 devolve a, t=1 devolve b.
+ *
  * `t` e o tempo CRU (0 a 1) e `curva` e aplicada depois da janela de cada
  * junta. A ordem importa: aplicando a curva antes, uma curva que acelera ate
  * o fim empurrava a chegada de TODAS as juntas para os ultimos quadros, e num
  * golpe de 6 quadros a cadeia inteira cabia num so.
  */
+/**
+ * REACOES POR REGIAO: a forca entra pelo ponto atingido e se espalha.
+ *
+ * Um perfil so de reacao (tronco primeiro) fazia o soco no rosto e o chute na
+ * perna produzirem a mesma onda pelo corpo. Aqui cada regiao comeca onde o
+ * golpe encostou, e a janela de cada junta diz quando ela CHEGA, nao so
+ * quando parte: a cabeca que leva um soco termina de chicotear antes de o
+ * quadril terminar de ceder, e os pes sao sempre os ultimos a acomodar.
+ */
+export const ATRASO_REACAO_CABECA: PerfilDeAtraso = {
+  head: [0, 0.35],
+  neck: [0.05, 0.5],
+  shoulderBack: [0.08, 0.55], shoulderFront: [0.08, 0.55],
+  elbowBack: [0.14, 0.75], elbowFront: [0.14, 0.75],
+  handBack: [0.2, 0.9], handFront: [0.2, 0.9],
+  hip: [0.18, 0.7],
+  kneeBack: [0.28, 0.9], kneeFront: [0.28, 0.9],
+  footBack: [0.34, 1], footFront: [0.34, 1],
+};
+
+/** Peito: o tronco afunda primeiro e a cabeca chega DEPOIS, por cima do golpe. */
+export const ATRASO_REACAO_PEITO: PerfilDeAtraso = {
+  neck: [0, 0.4],
+  shoulderBack: [0, 0.42], shoulderFront: [0, 0.42],
+  hip: [0.06, 0.5],
+  head: [0.14, 0.72],
+  elbowBack: [0.14, 0.78], elbowFront: [0.14, 0.78],
+  handBack: [0.22, 0.92], handFront: [0.22, 0.92],
+  kneeBack: [0.22, 0.88], kneeFront: [0.22, 0.88],
+  footBack: [0.3, 1], footFront: [0.3, 1],
+};
+
+/** Tronco (chute): o quadril e empurrado, o resto e arrastado por ele. */
+export const ATRASO_REACAO_TRONCO: PerfilDeAtraso = {
+  hip: [0, 0.4],
+  neck: [0.04, 0.5],
+  shoulderBack: [0.06, 0.55], shoulderFront: [0.06, 0.55],
+  head: [0.16, 0.8],
+  elbowBack: [0.16, 0.82], elbowFront: [0.16, 0.82],
+  handBack: [0.24, 0.95], handFront: [0.24, 0.95],
+  kneeBack: [0.18, 0.85], kneeFront: [0.18, 0.85],
+  footBack: [0.26, 1], footFront: [0.26, 1],
+};
+
+/** Perna: o joelho cede primeiro, o quadril cai, e o tronco tomba por ultimo. */
+export const ATRASO_REACAO_PERNA: PerfilDeAtraso = {
+  kneeFront: [0, 0.35], footFront: [0, 0.4],
+  hip: [0.08, 0.5],
+  kneeBack: [0.12, 0.6], footBack: [0.16, 0.65],
+  neck: [0.2, 0.75],
+  shoulderBack: [0.22, 0.78], shoulderFront: [0.22, 0.78],
+  elbowBack: [0.26, 0.9], elbowFront: [0.26, 0.9],
+  head: [0.3, 1],
+  handBack: [0.32, 1], handFront: [0.32, 1],
+};
+
 export const misturar = (
   a: Pose,
   b: Pose,
   t: number,
   atrasos?: PerfilDeAtraso,
   curva: (t: number) => number = (x) => x,
-): Required<Pose> => {
-  const ca = completar(a);
-  const cb = completar(b);
-  const saida = poseBase();
-  for (const junta of TODAS_AS_JUNTAS) {
-    const janela = atrasos?.[junta] ?? 0;
-    const [comeca, termina] =
-      typeof janela === "number" ? [janela, 1] : janela;
-    // reescala o tempo da junta para a janela dela e so entao aplica a
-    // curva. A curva pode passar de 1 (acomodacao): isso e intencional.
-    const tj = curva(
-      Math.max(0, Math.min(1, (t - comeca) / (termina - comeca))),
-    );
-    saida[junta] = {
-      x: ca[junta].x + (cb[junta].x - ca[junta].x) * tj,
-      y: ca[junta].y + (cb[junta].y - ca[junta].y) * tj,
-    };
-  }
-  return saida;
-};
+): Required<Pose> =>
+  dosAngulos(misturarAngulos(paraAngulos(a), paraAngulos(b), t, atrasos, curva));
+
+/**
+ * EXAGERO: leva a pose `alvo` mais longe (ou mais perto) na direcao em que
+ * ela se afasta de `base`. `fator` 1 devolve o alvo; 1.15 passa 15% alem;
+ * 0.85 fica 15% aquem.
+ *
+ * E como a personalidade entra na forma do movimento sem escrever poses
+ * novas: o pesado carrega mais fundo e termina mais longe, o agil faz o
+ * mesmo golpe mais compacto. Tambem e o follow-through do corpo: depois do
+ * contato o corpo continua girando alem da pose do golpe.
+ */
+export const exagerar = (
+  base: Pose,
+  alvo: Pose,
+  fator: number,
+): Required<Pose> => misturar(base, alvo, fator);
 
 export type Transformacao = {
   /** posicao do quadril no mundo */

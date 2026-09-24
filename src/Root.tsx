@@ -65,7 +65,10 @@ const POSES_REACAO: PoseName[] = [
   "advance",
   "retreat",
   "knockback",
+  "launched",
+  "groundHit",
   "downed",
+  "sitUp",
   "getUp",
 ];
 
@@ -123,6 +126,20 @@ export const RemotionRoot: React.FC = () => {
         width={BENCHMARK.width}
         height={BENCHMARK.height}
         defaultProps={{ spec: BENCHMARK, debug: false }}
+      />
+      {/*
+        O MESMO benchmark sem nada alem dos corpos: sem particulas, flash,
+        rastros, tremor, audio nem movimento de camera. E aqui que a animacao e
+        julgada; efeito so entra depois que esta versao convence.
+      */}
+      <Composition
+        id="Benchmark-SemEfeitos"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(BENCHMARK)}
+        fps={BENCHMARK.fps}
+        width={BENCHMARK.width}
+        height={BENCHMARK.height}
+        defaultProps={{ spec: BENCHMARK, semEfeitos: true }}
       />
       <Composition
         id="Benchmark-Debug"

@@ -30,7 +30,14 @@ import type {
 } from "./types";
 
 /** Pontos de contato do ALVO: onde um golpe pode acertar. */
-export type PontoAlvo = "head" | "chest" | "torso" | "legs" | "center";
+export type PontoAlvo =
+  | "head"
+  | "queixo"
+  | "chest"
+  | "torso"
+  | "legs"
+  | "center"
+  | "guarda";
 
 const entre = (a: Vec2, b: Vec2, t: number): Vec2 => ({
   x: a.x + (b.x - a.x) * t,
@@ -57,6 +64,11 @@ export const pontoDoAlvo = (
   switch (ponto) {
     case "head":
       return juntas.head;
+    case "queixo":
+      // embaixo da cabeca, entre ela e o pescoco: e onde o uppercut entra.
+      // Mirando no centro da cabeca, o IK esticava o braco para frente e o
+      // uppercut virava um jab alto
+      return entre(juntas.head, juntas.neck, 0.45);
     case "chest":
       // um pouco abaixo do pescoco: e a altura do esterno
       return entre(juntas.neck, juntas.hip, 0.28);
@@ -67,6 +79,11 @@ export const pontoDoAlvo = (
       return juntas.hip;
     case "legs":
       return juntas.kneeFront;
+    case "guarda":
+      // o antebraco da frente, perto do punho: e onde um golpe BLOQUEADO
+      // encosta. Mirar na cabeca atras da guarda fazia o punho parar 137
+      // unidades longe de qualquer coisa, no ar entre os bracos e o rosto
+      return entre(juntas.elbowFront, juntas.handFront, 0.65);
   }
 };
 
@@ -78,10 +95,12 @@ export type TipoDeReacao = "headHit" | "chestHit" | "bodyHit" | "legHit";
 
 export const REACAO_DO_PONTO: Record<PontoAlvo, TipoDeReacao> = {
   head: "headHit",
+  queixo: "headHit",
   chest: "chestHit",
   torso: "bodyHit",
   center: "bodyHit",
   legs: "legHit",
+  guarda: "chestHit",
 };
 
 /** Pose de reacao correspondente a cada tipo. */
@@ -212,7 +231,7 @@ export const distanciaDeCombate = (
     scale: PRESETS[atacante].scale,
   });
   const raiz = juntasAtacante[cadeia[0]];
-  const R = alcanceDaCadeia(cadeia) * escalaA;
+  const R = alcanceDaCadeia(cadeia) * escalaA * (golpe.extensao ?? 1);
 
   const escalaB = escalaDoMundo(PRESETS[alvo].scale);
   const juntasAlvo = juntasNoMundo(POSES.guard, {
@@ -248,6 +267,8 @@ export const pontoDeContato = (
   xAlvo: number,
   /** para onde o ALVO olha, que e o contrario da direcao do golpe */
   facingDoAlvo: 1 | -1,
+  /** a pose do alvo no contato: guarda, ou a defesa quando ele bloqueia */
+  pose: PoseName = "guard",
 ): Vec2 => {
   // E o PONTO DO ALVO, nao a ponta do membro.
   //
@@ -256,9 +277,9 @@ export const pontoDeContato = (
   // NESTE ponto, entao usar o ponto do alvo e mais simples e nunca fica
   // alguns pixels ao lado, que e o que a diretiva proibe.
   const escala = escalaDoMundo(PRESETS[alvo].scale);
-  const juntas = juntasNoMundo(POSES.guard, {
+  const juntas = juntasNoMundo(POSES[pose], {
     baseX: xAlvo,
-    baseY: -peMaisBaixo(POSES.guard) * escala,
+    baseY: -peMaisBaixo(POSES[pose]) * escala,
     facing: facingDoAlvo,
     scale: PRESETS[alvo].scale,
   });
@@ -275,7 +296,7 @@ export const ALVO_PADRAO: Record<string, PontoAlvo> = {
   punch: "chest",
   punchFast: "chest",
   punchHeavy: "chest",
-  uppercut: "head",
+  uppercut: "queixo",
   kick: "torso",
   kickLow: "legs",
   kickHigh: "head",

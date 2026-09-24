@@ -66,10 +66,14 @@ const medir = (
   const p = juntasDoCorpo(a)[junta];
   const q = pontoDoAlvo(ponto, juntasDoCorpo(b));
   const folga = folgaDesejada(quem, alvoId);
+  // de que lado o golpe vem: a folga fica ENTRE os dois, entao o sinal dela
+  // depende de quem esta a esquerda. Com o sinal fixo, todo golpe da direita
+  // para a esquerda era reprovado com o dobro da folga de erro.
+  const direcao = Math.sign(b.x - a.x) || 1;
   return {
     dist: Math.hypot(q.x - p.x, q.y - p.y),
     // erro contra a superficie: dx deveria valer a folga, dy deveria ser zero
-    erro: Math.hypot(q.x - p.x - folga, q.y - p.y),
+    erro: Math.hypot(q.x - p.x - folga * direcao, q.y - p.y),
     dx: q.x - p.x,
     dy: q.y - p.y,
     separacao: Math.abs(a.x - b.x),

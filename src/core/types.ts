@@ -69,8 +69,11 @@ export type PoseName =
   | "hitBody"
   | "hitLeg"
   | "knockback"
+  | "launched"
+  | "groundHit"
   | "squash"
   | "downed"
+  | "sitUp"
   | "getUp"
   | "charge";
 
@@ -150,6 +153,22 @@ export type AttackDef = {
   cracksGround?: boolean;
   /** o golpe joga o alvo para cima */
   launches?: boolean;
+  /**
+   * Quanto do alcance do membro o golpe usa no contato (1 = membro esticado).
+   *
+   * Golpe de curta distancia (uppercut, gancho) chega com o braco DOBRADO:
+   * calculado com o alcance inteiro, a distancia de combate afastava os dois
+   * e a cinematica inversa esticava o braco na horizontal, e o uppercut virava
+   * um jab alto.
+   */
+  extensao?: number;
+  /**
+   * Para onde o membro CONTINUA depois do contato (follow-through), no
+   * referencial de quem bate: x para frente, y para baixo. Padrao: reto para
+   * frente. O uppercut continua SUBINDO; empurrado para frente, o braco
+   * esticava na horizontal e o golpe lia como jab.
+   */
+  seguimento?: Vec2;
 };
 
 /** Um beat do roteiro. E isto que vira JSON e o que a geracao aleatoria monta. */
@@ -277,13 +296,34 @@ export type AimEvent = {
    * pouco e voltar e o que da a sensacao de peso e velocidade.
    */
   avanco: number;
+  /** direcao do follow-through (ver AttackDef.seguimento), ja normalizada */
+  direcaoDoAvanco?: Vec2;
+  /**
+   * Mira CONGELADA: o ponto do alvo e lido neste quadro, e nao no quadro
+   * atual. E o golpe esquivado: quem ataca mira onde a cabeca ESTAVA quando
+   * ele decidiu golpear; mirar no corpo vivo fazia o punho perseguir a
+   * cabeca que se abaixava, como um missil teleguiado.
+   */
+  congelarEm?: number;
 };
 
 /** Onde cada lutador esta e o que faz, num beat. */
 export type FighterTrack = {
   id: FighterId;
   /** posicao base no eixo x, por quadro-chave */
-  keys: { frame: number; x: number; pose: PoseName; airborne: boolean }[];
+  keys: {
+    frame: number;
+    x: number;
+    pose: PoseName;
+    airborne: boolean;
+    /**
+     * EXAGERO da pose em relacao a guarda: 1 (ou ausente) e a pose escrita;
+     * 1.2 vai 20% alem; 0.9 fica aquem. E como a personalidade e o
+     * follow-through entram no movimento sem escrever poses novas (ver
+     * skeleton.exagerar).
+     */
+    exagero?: number;
+  }[];
 };
 
 /**

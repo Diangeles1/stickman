@@ -113,7 +113,15 @@ for (const mira of t.aims) {
   const ordemOk =
     quadril.v < MOVEU || ponta.v < MOVEU || ponta.frame >= quadril.frame;
 
-  const bloco = unicos.size <= 2 || espalhamento <= 2;
+  // Bloco = no maximo dois picos distintos, ou todos dentro de um quadro.
+  //
+  // Antes era "espalhamento <= 2", escrito quando os disparos tinham 8 a 10
+  // quadros. O jab do lutador rapido tem 5 quadros (83 ms), e dentro dele a
+  // corrente cabe em tres quadros consecutivos: quadril e tronco, cotovelo,
+  // punho. Exigir mais que isso reprovava a resolucao do video, nao o corpo.
+  // O que continua reprovado e o que importa: picos coincidentes e cadeia
+  // invertida (abaixo).
+  const bloco = unicos.size <= 2 || espalhamento < 2;
   if (bloco || !ordemOk) blocos++;
   console.log(
     `  picos distintos: ${unicos.size}/${CADEIA.length}, ` +

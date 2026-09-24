@@ -82,15 +82,21 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     name: "uppercut",
     pose: "uppercut",
     windup: 16,
-    strike: 12,
+    strike: 14,
     recover: 24,
-    contactAt: 6,
+    // 8 e nao 6: golpe que lanca precisa de tempo para as pernas empurrarem
+    // antes do braco subir; em 5 quadros a corrente inteira cabia em dois
+    contactAt: 8,
     tier: "extreme",
     knockback: 520,
     hitStop: 6,
     contactJoint: "handFront",
     sound: "heavyHit",
     launches: true,
+    // curta distancia: o punho SOBE com o braco dobrado ate o queixo
+    extensao: 0.72,
+    // e continua subindo depois do contato
+    seguimento: { x: 0.35, y: -1 },
   }),
   kick: def({
     name: "kick",
