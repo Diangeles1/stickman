@@ -114,6 +114,9 @@ const POSES_ARMADAS: Partial<Record<PoseName, PoseName>> = {
   idle: "guardaKatana",
   block: "bloqueioKatana",
   absorver: "absorverKatana",
+  jump: "puloKatana",
+  airborne: "arKatana",
+  land: "pousoKatana",
   coil: "cargaKatana",
 };
 /**
@@ -723,6 +726,29 @@ export const compilar = (spec: FightSpec): Timeline => {
           { from: frameContato, to: frameContato + s(0.25), factor: 0.25 },
           { from: frameContato + s(0.25), to: frameContato + s(0.5), factor: 0.5 },
         );
+      }
+
+      // TODO CORTE QUE ENTRA SANGRA, e o sangue sai na direcao em que a
+      // lamina viajava (seguimento do golpe): e isso que liga o respingo ao
+      // gesto em vez de deixar ele parecer colado por cima.
+      if (def.lamina) {
+        const seg = def.seguimento ?? { x: 1, y: 0 };
+        const comp = Math.hypot(seg.x, seg.y) || 1;
+        poderes.push({
+          tipo: "sangue",
+          from: frameContato + 1,
+          to: frameContato + 70,
+          a: contato,
+          vetor: { x: (seg.x / comp) * direcao, y: seg.y / comp },
+          forca: def.tier === "extreme" ? 1.4 : 0.9,
+          dir: direcao,
+        });
+        poderes.push({
+          tipo: "marcaDeCorte",
+          quem: alvo,
+          from: frameContato + 1,
+          to: 1e9,
+        });
       }
 
       const voa = Boolean(def.launches) || def.tier === "extreme";

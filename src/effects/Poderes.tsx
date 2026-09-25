@@ -348,31 +348,72 @@ const Choque: React.FC<{ e: PoderEvent; f: number }> = ({ e, f }) => {
 
 // ---- sangue ------------------------------------------------------------------
 
+/**
+ * SANGUE DE UM CORTE.
+ *
+ * O spray sai na DIRECAO EM QUE A LAMINA VIAJAVA (e.vetor), aberto num leque
+ * estreito em volta dela. Saindo para um lado qualquer, o sangue vira enfeite
+ * colado por cima do golpe; saindo na direcao do corte, ele conta de onde o
+ * corte veio.
+ *
+ * Tres tamanhos de gota, porque sangue nao e uma nuvem uniforme: umas poucas
+ * grandes perto do corte, muitas pequenas longe. A gota estica na direcao em
+ * que esta indo e, quando encosta no chao, vira mancha e fica.
+ */
 const Sangue: React.FC<{ e: PoderEvent; f: number }> = ({ e, f }) => {
   const a = e.a ?? { x: 0, y: -400 };
   const idade = f - e.from;
   if (idade < 0) return null;
-  const dir = e.dir ?? 1;
-  const n = Math.round(10 + 10 * (e.forca ?? 1));
+  const v = e.vetor ?? { x: e.dir ?? 1, y: -0.3 };
+  const n = Math.hypot(v.x, v.y) || 1;
+  const ux = v.x / n;
+  const uy = v.y / n;
+  const quantas = Math.round(14 + 12 * (e.forca ?? 1));
   return (
     <g data-poder="sangue">
-      {Array.from({ length: n }, (_, i) => {
-        const vx = dir * (4 + 10 * ruido(e.from + i)) + (ruido(e.from * 3 + i) - 0.5) * 6;
-        const vy = -(6 + 10 * ruido(e.from * 5 + i));
+      {Array.from({ length: quantas }, (_, i) => {
+        // leque estreito em volta da direcao do corte
+        const desvio = (ruido(e.from * 3 + i) - 0.5) * 0.9;
+        const cos = Math.cos(desvio);
+        const sin = Math.sin(desvio);
+        const dx = ux * cos - uy * sin;
+        const dy = ux * sin + uy * cos;
+        const vel = 5 + 13 * ruido(e.from + i);
+        const vx = dx * vel;
+        const vy = dy * vel;
         const t = idade;
         const x = a.x + vx * t;
-        const y = a.y + vy * t + 0.55 * t * t;
-        const r = 4 + 6 * ruido(e.from * 7 + i);
-        if (y >= 0) {
-          // caiu: vira mancha no chao (fica)
-          const tc = (-vy + Math.sqrt(vy * vy + 4 * 0.55 * -a.y)) / (2 * 0.55);
-          const xc = a.x + vx * tc;
-          return <ellipse key={i} cx={xc} cy={3} rx={r * 1.8} ry={r * 0.45} fill="#9e0d16" opacity={0.85} />;
+        const y = a.y + vy * t + 0.5 * 0.55 * t * t;
+        const r = 2.5 + 7 * ruido(e.from * 7 + i) ** 2;
+        if (y >= -2) {
+          // caiu: vira mancha no chao e fica
+          const tc = (-vy + Math.sqrt(Math.max(0, vy * vy + 4 * 0.275 * -a.y))) / (2 * 0.275);
+          return (
+            <ellipse
+              key={i}
+              cx={a.x + vx * tc}
+              cy={3}
+              rx={r * 2}
+              ry={r * 0.5}
+              fill="#8e0b13"
+              opacity={0.8}
+            />
+          );
         }
-        // gota esticada na direcao do movimento
-        const vyAgora = vy + 1.1 * t;
+        const vyAgora = vy + 0.55 * t;
         const ang = (Math.atan2(vyAgora, vx) * 180) / Math.PI;
-        return <ellipse key={i} cx={x} cy={y} rx={r * 1.6} ry={r * 0.7} transform={`rotate(${ang} ${x} ${y})`} fill={SANGUE} />;
+        const estica = 1 + Math.min(2.2, Math.hypot(vx, vyAgora) / 9);
+        return (
+          <ellipse
+            key={i}
+            cx={x}
+            cy={y}
+            rx={r * estica}
+            ry={r * 0.85}
+            transform={`rotate(${ang} ${x} ${y})`}
+            fill={i % 4 === 0 ? "#ff2a34" : SANGUE}
+          />
+        );
       })}
     </g>
   );

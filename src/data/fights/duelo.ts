@@ -43,22 +43,41 @@ export const DUELO: FightSpec = {
   nomes: { black: "BLACK", red: "RED" },
   cinematico: true,
   beats: [
-    // 0-2 CONFRONTO: distancia longa, ninguem ataca. E aqui que o espectador
-    // aprende quem e cada um pelo jeito de ficar de pe.
-    { type: "hold", duration: s(1.6), label: "confronto" },
+    // ---- 0-1,4 CONFRONTO -------------------------------------------------
+    // Os dois se medem. Aqui o espectador aprende quem e cada um so pelo
+    // jeito de ficar de pe (ver aplicarPostura em animation/corpo.ts).
+    { type: "hold", duration: s(1.2), label: "confronto" },
 
-    // 2-3 AVANCO e corte que o vermelho apara
-    { type: "approach", who: "black", toX: -150, duration: s(0.45) },
-    { type: "blocked", attacker: "black", target: "red", move: "corteSobe" },
-
-    // 4-5 o vermelho devolve e o preto sai do caminho
+    // ---- TROCA RAPIDA ----------------------------------------------------
+    // Tres cortes rapidos seguidos, os dois primeiros aparados. E o trecho
+    // que estabelece o RITMO: golpe curto, resposta curta, sem pausa.
+    { type: "approach", who: "black", toX: -170, duration: s(0.4) },
+    { type: "blocked", attacker: "black", target: "red", move: "corteRapido" },
+    { type: "blocked", attacker: "red", target: "black", move: "corteRapido" },
+    // e o terceiro passa: o preto desvia jogando o corpo para tras
     { type: "dodged", attacker: "red", target: "black", move: "corteLateral" },
 
-    // 5-7 contra-ataque que ENTRA
-    { type: "attack", attacker: "red", target: "black", move: "corteDesce", targetPoint: "legs" },
+    // ---- PAUSA E GOLPE PESADO -------------------------------------------
+    // Depois da troca rapida, o contraste: uma carga longa que se ve chegar.
+    // O vermelho apara, mas o corpo dele SENTE (pose absorver).
+    { type: "blocked", attacker: "black", target: "red", move: "corteSobe" },
 
-    // 7-8 reacao e volta a guarda
-    { type: "recover", who: "black", duration: s(0.9) },
-    { type: "hold", duration: s(0.4), label: "respiro" },
+    // ---- VARREDURA E PULO ------------------------------------------------
+    // Corte baixo: o unico jeito de escapar e sair do chao.
+    { type: "dodged", attacker: "black", target: "red", move: "corteDesce", targetPoint: "legs", pulo: true },
+
+    // ---- CONTRA-ATAQUE QUE ENTRA ----------------------------------------
+    // O vermelho cai do pulo ja cortando, e este entra: sangue na direcao da
+    // lamina e marca no corpo do preto.
+    { type: "attack", attacker: "red", target: "black", move: "corteLateral" },
+
+    // ---- RESPOSTA DO PRETO ----------------------------------------------
+    // Ele nao fica so apanhando: dois rapidos, o segundo entra.
+    { type: "recover", who: "black", duration: s(0.5) },
+    { type: "blocked", attacker: "black", target: "red", move: "corteRapido" },
+    { type: "attack", attacker: "black", target: "red", move: "corteRapido" },
+
+    { type: "recover", who: "red", duration: s(0.5) },
+    { type: "hold", duration: s(0.5), label: "respiro" },
   ],
 };

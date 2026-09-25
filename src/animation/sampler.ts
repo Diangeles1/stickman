@@ -223,6 +223,7 @@ const atrasoPara = (destino: PoseName): PerfilDeAtraso | undefined => {
     case "corteSobe":
     case "corteDesce":
     case "corteLateral":
+    case "corteRapido":
       return ATRASO_DO_CORTE;
     // Locomocao NAO usa a corrente do golpe. Com ela, o pe chegava no destino
     // nos primeiros 36% da transicao: ao frear de uma corrida, o pe da frente

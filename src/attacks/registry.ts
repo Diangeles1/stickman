@@ -66,6 +66,28 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     lamina: 100,
     seguimento: { x: 0.5, y: 1 },
   }),
+  /**
+   * CORTE RAPIDO: a carga dele E a guarda. Sem preparacao propria, ele sai em
+   * 5 quadros e volta em 7: e o golpe que faz a troca de katana ter ritmo, e
+   * o contraste dele com o corte pesado e o que cria a variacao de tempo que
+   * uma luta precisa (rapido, rapido, PAUSA, pesado).
+   */
+  corteRapido: def({
+    name: "corteRapido",
+    pose: "corteRapido",
+    carga: "guardaKatana",
+    windup: 5,
+    strike: 7,
+    recover: 7,
+    contactAt: 3,
+    tier: "light",
+    knockback: 90,
+    hitStop: 2,
+    contactJoint: "handFront",
+    sound: "corte",
+    somBloqueio: "clang",
+    lamina: 100,
+  }),
   corteLateral: def({
     name: "corteLateral",
     pose: "corteLateral",

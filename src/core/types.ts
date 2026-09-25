@@ -83,11 +83,15 @@ export type PoseName =
   | "bloqueioKatana"
   | "absorver"
   | "absorverKatana"
+  | "puloKatana"
+  | "arKatana"
+  | "pousoKatana"
   | "cargaKatana"
   | "cargaBaixa"
   | "corteSobe"
   | "corteDesce"
   | "corteLateral"
+  | "corteRapido"
   // poderes
   | "maoNoChao"
   | "lancar"
@@ -144,7 +148,8 @@ export type AttackName =
   | "finisher"
   | "corteSobe"
   | "corteDesce"
-  | "corteLateral";
+  | "corteLateral"
+  | "corteRapido";
 
 /**
  * Definicao de um golpe: as cinco fases que o briefing pede, mais o que o
@@ -502,6 +507,12 @@ export type PoderEvent = {
   forca?: number;
   /** direcao horizontal (1 direita, -1 esquerda), quando importa */
   dir?: number;
+  /**
+   * Direcao do movimento que causou o efeito, normalizada. O sangue de um
+   * corte sai na direcao em que a lamina viajava: espirrar para um lado
+   * aleatorio denuncia o efeito como enfeite colado por cima.
+   */
+  vetor?: Vec2;
   /** texto (nome da tecnica) */
   texto?: string;
 };

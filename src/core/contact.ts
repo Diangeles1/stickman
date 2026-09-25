@@ -347,4 +347,5 @@ export const ALVO_PADRAO: Record<string, PontoAlvo> = {
   corteSobe: "queixo",
   corteDesce: "legs",
   corteLateral: "chest",
+  corteRapido: "chest",
 };

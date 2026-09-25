@@ -613,8 +613,8 @@ export const POSES_DE_APOIO = new Set<PoseName>([
   "kick", "kickLow", "kickHigh", "spinKick", "knee", "elbow", "charge",
   "hitHead", "hitChest", "hitBody", "hitLeg",
   "guardaKatana", "bloqueioKatana", "cargaKatana", "cargaBaixa",
-  "absorver", "absorverKatana",
-  "corteSobe", "corteDesce", "corteLateral", "lancar", "bracosFrente",
+  "absorver", "absorverKatana", "pousoKatana",
+  "corteSobe", "corteDesce", "corteLateral", "corteRapido", "lancar", "bracosFrente",
   "katanaErguida",
 ]);
 

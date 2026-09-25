@@ -10,6 +10,11 @@
  *   gelo  lamina clara e translucida, borda ciano, brilho frio e firme
  *   fogo  lamina incandescente, borda laranja, chamas que tremulam
  *
+ * SEM CABO: a lamina nasce na propria mao. O cabo escuro atravessado no
+ * punho quebrava a silhueta (um risco preto no meio do braco) e roubava a
+ * leitura do gesto; sem ele, mao e lamina viram uma linha so, que e o que se
+ * quer ver num corte.
+ *
  * O RASTRO DO CORTE (ArcoDaKatana) e o que vende a velocidade: a 60fps o
  * corte dura poucos quadros, e o olho so le o golpe se ve o caminho que a
  * lamina varreu. Ele e a area entre as posicoes recentes da lamina.
@@ -24,7 +29,6 @@ export type Elemento = "gelo" | "fogo";
 
 /** comprimento da lamina em unidades de pose (o corpo tem ~200 de altura) */
 const LAMINA = 100;
-const CABO = 22;
 
 export const CORES: Record<Elemento, { lamina: string; borda: string; brilho: string; rastro: string }> = {
   gelo: { lamina: "#eefbff", borda: "#46c6ff", brilho: "#7fe0ff", rastro: "#9be8ff" },
@@ -78,11 +82,6 @@ export const Katana: React.FC<{
   for (let i = 0; i <= N; i++) lamina.push(ponto(i / N, esp * (1 - (i / N) * 0.55)));
   for (let i = N; i >= 0; i--) lamina.push(ponto(i / N, -esp * (1 - (i / N) * 0.55) * 0.4));
   const d = lamina.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") + " Z";
-  const cabo = {
-    x1: mao.x - dir.x * CABO * ESCALA_POSE * corpo.scale * 0.7,
-    y1: mao.y - dir.y * CABO * ESCALA_POSE * corpo.scale * 0.7,
-  };
-  const tsuba = 14 * corpo.scale;
   const pulso = 0.85 + 0.15 * Math.sin(frame * 0.4);
 
   return (
@@ -91,17 +90,6 @@ export const Katana: React.FC<{
       <path d={d} fill="none" stroke={cor.brilho} strokeWidth={26 * corpo.scale} strokeLinejoin="round" opacity={0.22 * pulso} />
       <path d={d} fill="none" stroke={cor.brilho} strokeWidth={12 * corpo.scale} strokeLinejoin="round" opacity={0.35 * pulso} />
       <path d={d} fill={cor.lamina} stroke={cor.borda} strokeWidth={4 * corpo.scale} strokeLinejoin="round" />
-      {/* cabo e guarda */}
-      <line x1={cabo.x1} y1={cabo.y1} x2={mao.x} y2={mao.y} stroke="#1b1b22" strokeWidth={13 * corpo.scale} strokeLinecap="round" />
-      <line
-        x1={mao.x - normal.x * tsuba}
-        y1={mao.y - normal.y * tsuba}
-        x2={mao.x + normal.x * tsuba}
-        y2={mao.y + normal.y * tsuba}
-        stroke={cor.borda}
-        strokeWidth={7 * corpo.scale}
-        strokeLinecap="round"
-      />
       {elemento === "fogo" &&
         // chamas saindo da lamina e SUBINDO (fogo sobe, nao importa o angulo
         // da espada), pequenas, dos dois lados, trocando de forma a cada 2

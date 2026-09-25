@@ -215,6 +215,26 @@ const ESCRITAS: Record<PoseName, Pose> = {
   }),
 
   /**
+   * CORTE RAPIDO: o golpe que sai da propria guarda.
+   *
+   * Nao tem carga: o corpo quase nao se prepara, so o braco dispara e volta.
+   * E o oposto do corte pesado, e e o contraste entre os dois que da ritmo a
+   * luta. Numa troca de katana e ele que aparece mais.
+   */
+  corteRapido: p({
+    neck: { x: 10, y: -72 },
+    head: { x: 16, y: -110 },
+    elbowFront: { x: 30, y: -56 },
+    handFront: { x: 56, y: -56 },
+    elbowBack: { x: 4, y: -44 },
+    handBack: { x: 28, y: -50 },
+    kneeBack: { x: -19, y: 46 },
+    footBack: { x: -50, y: 84 },
+    kneeFront: { x: 33, y: 37 },
+    footFront: { x: 48, y: 84 },
+  }),
+
+  /**
    * CORTE HORIZONTAL. O que manda aqui e o GIRO DO QUADRIL: o pe de tras
    * pivota, o quadril vira, o ombro de tras vem junto e o braco chega por
    * ultimo, esticado.
@@ -460,6 +480,51 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: 40, y: 4 },
     elbowBack: { x: -24, y: -24 },
     handBack: { x: -38, y: 6 },
+  }),
+
+  // --- salto ARMADO ----------------------------------------------------------
+  // Quem esta com a espada nao pula de bracos abertos: o braco da lamina fica
+  // controlado, pronto para cortar na descida, e o outro equilibra. Com as
+  // poses de salto desarmado a katana sumia atras do corpo no meio do pulo.
+
+  /** impulso: joelhos recolhidos, lamina recolhida junto ao corpo */
+  puloKatana: p({
+    neck: { x: 2, y: -78 },
+    head: { x: 4, y: -117 },
+    kneeFront: { x: 26, y: 18 },
+    footFront: { x: 40, y: 58 },
+    kneeBack: { x: -20, y: 22 },
+    footBack: { x: -36, y: 62 },
+    elbowFront: { x: 10, y: -50 },
+    handFront: { x: 34, y: -66 },
+    elbowBack: { x: -18, y: -58 },
+    handBack: { x: -30, y: -88 },
+  }),
+  /** no ar: a lamina sobe por cima do ombro, ja armada para descer */
+  arKatana: p({
+    neck: { x: -4, y: -76 },
+    head: { x: -8, y: -115 },
+    kneeFront: { x: 34, y: 24 },
+    footFront: { x: 58, y: 48 },
+    kneeBack: { x: -28, y: 34 },
+    footBack: { x: -58, y: 58 },
+    elbowFront: { x: 18, y: -88 },
+    handFront: { x: -6, y: -98 },
+    elbowBack: { x: -26, y: -56 },
+    handBack: { x: -46, y: -80 },
+  }),
+  /** pouso: agacha absorvendo, lamina baixa e a frente */
+  pousoKatana: p({
+    neck: { x: 6, y: -62 },
+    head: { x: 12, y: -100 },
+    kneeFront: { x: 34, y: 54 },
+    footFront: { x: 44, y: 92 },
+    kneeBack: { x: -32, y: 56 },
+    footBack: { x: -48, y: 92 },
+    elbowFront: { x: 28, y: -30 },
+    handFront: { x: 52, y: -22 },
+    elbowBack: { x: -20, y: -28 },
+    handBack: { x: -32, y: 0 },
   }),
 
   // --- defensivas ----------------------------------------------------------
