@@ -22,6 +22,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import { PRESETS } from "../characters/presets";
+import { MarcaDagua } from "./MarcaDagua";
 import type { FighterId, Timeline } from "../core/types";
 import {
   NOMES,
@@ -372,6 +373,9 @@ export const Espetaculo: React.FC<{ timeline: Timeline }> = ({ timeline }) => {
 
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
+      {/* marca d'agua: no placar enquanto ele esta na tela, no rodape fora dele */}
+      <MarcaDagua vaga="placar" opacidade={entrada} larguraTela={width} />
+      <MarcaDagua vaga="rodape" opacidade={1 - entrada} larguraTela={width} />
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
         {entrada > 0 && (
           <g>

@@ -29,6 +29,7 @@ import type { FighterId, Pose } from "../core/types";
 import { FALAS } from "../audio/falas";
 import { NARRADOR } from "../audio/registry";
 import { FONTE } from "./Espetaculo";
+import { MarcaDagua } from "./MarcaDagua";
 import { NOMES } from "./espetaculo";
 
 /** segundos de contagem */
@@ -252,6 +253,7 @@ export const TelaDeEscolha: React.FC<{ a: FighterId; b: FighterId }> = ({ a, b }
 
         <rect width={width} height={height} fill="#ffffff" opacity={clarao} />
       </svg>
+      <MarcaDagua vaga="rodape" larguraTela={width} />
       {/* tique a cada segundo, com um grave de batida de coracao */}
       {Array.from({ length: SEGUNDOS_DE_ESCOLHA }, (_, k) => (
         <Sequence key={k} from={k * fps} layout="none">
