@@ -11,17 +11,17 @@ export const FALAS = {
   },
   "tres": {
     "arquivo": "assets/audio/narrador/tres.wav",
-    "segundos": 0.63,
+    "segundos": 0.535,
     "texto": "Três!"
   },
   "dois": {
     "arquivo": "assets/audio/narrador/dois.wav",
-    "segundos": 0.618,
+    "segundos": 0.466,
     "texto": "Dois!"
   },
   "um": {
     "arquivo": "assets/audio/narrador/um.wav",
-    "segundos": 0.51,
+    "segundos": 0.45,
     "texto": "Um!"
   },
   "lutem": {

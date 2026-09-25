@@ -264,7 +264,7 @@ export const TelaDeEscolha: React.FC<{ a: FighterId; b: FighterId }> = ({ a, b }
         <Audio src={staticFile(FALAS.escolha.arquivo)} volume={NARRADOR.volume} />
       </Sequence>
       {(["tres", "dois", "um"] as const).map((fala, k) => (
-        <Sequence key={fala} from={(k + 2) * fps + 2} layout="none">
+        <Sequence key={fala} from={(k + 2) * fps + 6} layout="none">
           <Audio src={staticFile(FALAS[fala].arquivo)} volume={NARRADOR.volume} />
         </Sequence>
       ))}
