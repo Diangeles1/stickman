@@ -39,6 +39,7 @@ FALAS = {
     "venceu_black": "O Preto venceu!",
     "venceu_red": "O Vermelho venceu!",
     "like": "Dá like e se inscreve no canal!",
+    "quem": "Quem deve vencer?",
 }
 
 # PRONUNCIA BRASILEIRA, escrita a mao em IPA.
@@ -61,6 +62,7 @@ PRONUNCIA = {
     "venceu_black": f"u pɾˈetu ve{N}sˈew!",
     "venceu_red": f"u vehmˈeʎu ve{N}sˈew!",
     "like": f"dˈa lˈajki i si i{N}skɾˈɛvi nu kanˈaw!",
+    "quem": f"kˈe{N}j dˈevi ve{N}sˈeh?",
 }
 
 # CONTAGEM: "tres, dois, um" e gerado como UMA frase e cortado nos vales de

@@ -201,6 +201,15 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ spec: GELO_VS_FOGO }}
       />
       <Composition
+        id="GeloVsFogo-Escolha"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(GELO_VS_FOGO, { escolha: true })}
+        fps={GELO_VS_FOGO.fps}
+        width={GELO_VS_FOGO.width}
+        height={GELO_VS_FOGO.height}
+        defaultProps={{ spec: GELO_VS_FOGO, escolha: true }}
+      />
+      <Composition
         id="TesteKatana"
         component={Prototype}
         durationInFrames={duracaoDoPrototipo(TESTE_KATANA)}

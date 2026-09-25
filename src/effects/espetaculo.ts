@@ -488,10 +488,10 @@ const montarCinematico = (
   const esquivas = t.aims
     .filter((m) => m.congelarEm !== undefined)
     .map((m) => real(m.contact));
-  const falas: { real: number; fala: Fala }[] = [];
-  if (final !== undefined && "quem" in FALAS) {
-    falas.push({ real: final + ESPERA_DA_PERGUNTA + 4, fala: "quem" as Fala });
-  }
+  // o narrador so fala no fim: "Quem deve vencer?", junto com a pergunta na
+  // tela. Durante a luta quem conta a historia sao os efeitos.
+  const falas: { real: number; fala: Fala }[] =
+    final === undefined ? [] : [{ real: final + ESPERA_DA_PERGUNTA + 6, fala: "quem" }];
   return {
     rotulos,
     golpes: [],

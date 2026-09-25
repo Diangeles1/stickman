@@ -48,6 +48,11 @@ export const FALAS = {
     "arquivo": "assets/audio/narrador/like.wav",
     "segundos": 1.597,
     "texto": "Dá like e se inscreve no canal!"
+  },
+  "quem": {
+    "arquivo": "assets/audio/narrador/quem.wav",
+    "segundos": 1.238,
+    "texto": "Quem deve vencer?"
   }
 } as const;
 

@@ -324,6 +324,8 @@ export type FightSpec = {
   armas?: Partial<Record<FighterId, { tipo: "katana"; elemento: "gelo" | "fogo" }>>;
   /** nomes na tela; sem isto usa os nomes de cor (PRETO, VERMELHO...) */
   nomes?: Partial<Record<FighterId, string>>;
+  /** o poder de cada um, mostrado embaixo do nome na tela de escolha */
+  poderes?: Partial<Record<FighterId, string>>;
   /**
    * CINEMATICO: luta contada como cena de anime, sem placar de jogo. Some a
    * barra de vida e os letreiros de combo; ficam os nomes das tecnicas e o

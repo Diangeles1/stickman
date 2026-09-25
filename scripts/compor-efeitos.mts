@@ -165,3 +165,141 @@ for (let n = 2; n <= 8; n++) {
   }
   gravar("bloqueio", s);
 }
+
+// ===========================================================================
+// LUTA DE KATANA, GELO E FOGO
+// ===========================================================================
+
+// ---- clang: duas laminas se encontrando ------------------------------------
+{
+  const s = buf(1.4);
+  // parciais inarmonicas (metal) + raspagem curta no ataque
+  const parciais = [1, 2.31, 3.77, 5.9, 8.2, 11.4].map((r) => 980 * r);
+  for (let i = 0; i < s.length; i++) {
+    const t = i / TAXA;
+    let v = 0;
+    parciais.forEach((f, j) => {
+      const bate = 1 + 0.004 * Math.sin(2 * Math.PI * (3 + j) * t);
+      v += Math.sin(2 * Math.PI * f * t * bate) * Math.exp(-t * (1.6 + j * 1.5)) / (j * 0.7 + 1);
+    });
+    const raspa = t < 0.02 ? ruido() * (1 - t / 0.02) : 0;
+    s[i] = v * 0.7 + raspa * 0.9;
+  }
+  gravar("clang", s);
+}
+
+// ---- corte: a lamina cortando o ar -----------------------------------------
+{
+  const s = buf(0.45);
+  let lp = 0;
+  let bp = 0;
+  for (let i = 0; i < s.length; i++) {
+    const t = i / TAXA;
+    const k = t / 0.45;
+    // o assobio sobe e desce: e a lamina passando
+    const corte = 0.12 + 0.5 * Math.sin(Math.PI * k);
+    const n = ruido();
+    lp += (n - lp) * corte;
+    bp += (lp - bp) * corte;
+    const env = Math.sin(Math.PI * Math.min(1, k * 1.2)) ** 2;
+    s[i] = (lp - bp) * 3 * env;
+  }
+  gravar("corte", s);
+}
+
+// ---- gelo: cristal crescendo, estalando ------------------------------------
+{
+  const s = buf(1.1);
+  for (let i = 0; i < s.length; i++) {
+    const t = i / TAXA;
+    // muitos estalinhos agudos ao longo do tempo: o gelo se formando
+    let v = 0;
+    for (let k = 0; k < 26; k++) {
+      const quando = (k / 26) ** 1.6 * 0.9;
+      const d = t - quando;
+      if (d < 0 || d > 0.08) continue;
+      const f = 2600 + 3200 * ruido();
+      v += Math.sin(2 * Math.PI * f * d) * Math.exp(-d * 90) * (0.4 + 0.6 * ((26 - k) / 26));
+    }
+    // e um grave crescendo por baixo: a massa de gelo
+    const grave = Math.sin(2 * Math.PI * (60 + 40 * t) * t) * Math.min(1, t / 0.3) * Math.exp(-t * 2) * 0.5;
+    s[i] = v * 0.5 + grave;
+  }
+  gravar("gelo", s);
+}
+
+// ---- fogo: o chao pegando fogo ---------------------------------------------
+{
+  const s = buf(1.6);
+  let lp = 0;
+  let lp2 = 0;
+  for (let i = 0; i < s.length; i++) {
+    const t = i / TAXA;
+    const n = ruido();
+    lp += (n - lp) * 0.12;
+    lp2 += (lp - lp2) * 0.04;
+    // o fogo e ruido grave modulado devagar, com estalos
+    const mod = 0.6 + 0.4 * Math.sin(2 * Math.PI * 3.1 * t) * Math.sin(2 * Math.PI * 1.7 * t);
+    const estalo = ruido() > 0.9985 ? ruido() * 0.7 : 0;
+    const env = Math.min(1, t / 0.08) * Math.exp(-t * 1.2);
+    s[i] = ((lp - lp2) * 2.4 * mod + estalo) * env;
+  }
+  gravar("fogo", s);
+}
+
+// ---- vapor: o gelo evaporando ----------------------------------------------
+{
+  const s = buf(1.8);
+  let lp = 0;
+  for (let i = 0; i < s.length; i++) {
+    const t = i / TAXA;
+    const n = ruido();
+    // filtro que ABRE (agudo): o chiado do vapor escapando
+    lp += (n - lp) * (0.25 + 0.25 * Math.min(1, t));
+    const env = Math.min(1, t / 0.05) * Math.exp(-t * 1.5);
+    s[i] = (n - lp) * 1.6 * env;
+  }
+  gravar("vapor", s);
+}
+
+// ---- feixe: energia sustentada ---------------------------------------------
+{
+  const s = buf(2.2);
+  let lp = 0;
+  let fase = 0;
+  for (let i = 0; i < s.length; i++) {
+    const t = i / TAXA;
+    const n = ruido();
+    lp += (n - lp) * 0.3;
+    // dois tons batendo + ruido: o "zumbido" de feixe de anime
+    fase = (fase + (110 + 8 * Math.sin(t * 3)) / TAXA) % 1;
+    const tom = (2 * fase - 1) * 0.5 + Math.sin(2 * Math.PI * 223 * t) * 0.25;
+    const env = Math.min(1, t / 0.15) * Math.min(1, (2.2 - t) / 0.4);
+    s[i] = Math.tanh((lp * 1.2 + tom) * 1.4) * env;
+  }
+  gravar("feixe", s);
+}
+
+// ---- ting: a lamina quebrando ----------------------------------------------
+{
+  const s = buf(2.4);
+  const parciais = [1, 2.76, 5.4, 8.93].map((r) => 2250 * r);
+  for (let i = 0; i < s.length; i++) {
+    const t = i / TAXA;
+    let v = 0;
+    parciais.forEach((f, j) => {
+      v += Math.sin(2 * Math.PI * f * t) * Math.exp(-t * (0.9 + j * 1.6)) / (j + 1);
+    });
+    // os caquinhos caindo depois
+    let caco = 0;
+    for (let k = 0; k < 9; k++) {
+      const quando = 0.25 + k * 0.12 + ruido() * 0.05;
+      const d = t - quando;
+      if (d > 0 && d < 0.05) {
+        caco += Math.sin(2 * Math.PI * (3000 + 2500 * ruido()) * d) * Math.exp(-d * 120) * 0.25;
+      }
+    }
+    s[i] = v * 0.8 + caco;
+  }
+  gravar("ting", s);
+}

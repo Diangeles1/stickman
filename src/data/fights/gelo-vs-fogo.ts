@@ -32,6 +32,7 @@ export const GELO_VS_FOGO: FightSpec = {
     red: { tipo: "katana", elemento: "fogo" },
   },
   nomes: { black: "BLACK", red: "RED" },
+  poderes: { black: "GELO", red: "FOGO" },
   cinematico: true,
   beats: [
     { type: "tecnica", tecnica: "encontro", gelo: "black", fogo: "red" },

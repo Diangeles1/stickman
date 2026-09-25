@@ -366,16 +366,17 @@ export const compilar = (spec: FightSpec): Timeline => {
       : spec.armas?.[alvo]
         ? "guardaKatana"
         : "guard";
+    // A distancia so e medida contra a pose real do alvo no GOLPE DE ARMA,
+    // que nao tem cinematica inversa para corrigir a diferenca. No soco ela
+    // continua sendo medida contra a guarda, como sempre foi: medir contra a
+    // defesa mudava a aproximacao de lutas que ja estavam certas.
+    const poseParaDistancia: PoseName = def.lamina ? poseNoContato : "guard";
     const distancia = distanciaDeCombate(
       def,
       atacante,
       alvo,
-      // Golpe de arma BLOQUEADO continua mirando o mesmo ponto: a defesa de
-      // katana e a lamina atravessada na frente do corpo, entao o corte para
-      // ali mesmo. Trocar para "guarda" (a altura das maos) desalinhava o
-      // corte alto em 190 unidades, e sem IK nao havia como corrigir.
-      opcoes.bloqueado && !def.lamina ? "guarda" : ponto,
-      poseNoContato,
+      ponto,
+      poseParaDistancia,
     );
     // Aproxima ate a posicao CARREGADA, um passo atras da distancia de
     // contato. Antes ele chegava na distancia de contato e o recuo era
