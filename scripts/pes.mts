@@ -22,6 +22,7 @@ import { compilar } from "../src/core/timeline";
 import { BENCHMARK } from "../src/data/fights/benchmark";
 import { BENCHMARK2 } from "../src/data/fights/benchmark2";
 import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
+import { GELO_VS_FOGO } from "../src/data/fights/gelo-vs-fogo";
 import { trocarVencedor } from "../src/data/trocar";
 import { gerarLuta } from "../src/data/gerador";
 import { UM_SOCO } from "../src/data/fights/um-soco";
@@ -45,6 +46,8 @@ const ARRASTO = 16;
 const qual = process.argv[2] ?? "benchmark";
 const spec = qual.startsWith("gerada:")
   ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
+  : qual === "gelofogo"
+    ? GELO_VS_FOGO
   : qual === "completa-vermelho"
     ? trocarVencedor(LUTA_COMPLETA)
   : qual === "completa"

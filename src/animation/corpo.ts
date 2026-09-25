@@ -815,9 +815,11 @@ const miraAtiva = (
   id: FighterId,
   frame: number,
 ): AimEvent | undefined =>
-  // golpe de arma nao usa IK: a lamina e longa e a pose e que define o corte
-  // (mirar a MAO num ponto perto do proprio corpo torcia o antebraco, e a
-  // lamina, que segue o antebraco, apontava para tras)
+  // GOLPE DE ARMA nao usa cinematica inversa. O braco tem ~200 unidades de
+  // alcance e a lamina outras 290: o ponto de contato fica bem alem do que a
+  // mao alcanca, entao mirar a MAO nele so torcia o braco e piorava (medido:
+  // o erro da ponta subia de 30 para 300). Quem resolve o contato de arma e a
+  // distancia de combate, calculada a partir da ponta nesta pose.
   timeline.aims.find(
     (m) => m.who === id && !m.recuo && frame >= m.from && frame <= m.to,
   );
@@ -853,8 +855,6 @@ export const corpoNoQuadro = (
   // dentro do adversario.
   const folga = folgaDesejada(id, aim.alvo);
   noMundo.x -= folga * aim.direcao;
-  // golpe de arma: a mao para antes, a lamina e que chega ao ponto
-  if (aim.recuo) noMundo.x -= aim.recuo * aim.direcao;
 
   // FOLLOW-THROUGH: depois do contato o alvo da mira avanca, entao o membro
   // PASSA do ponto antes de voltar. Membro que para exatamente onde acertou

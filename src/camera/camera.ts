@@ -54,6 +54,15 @@ const FOLGA_LATERAL = 620;
  */
 const ZOOM_MINIMO_LEGIVEL = 0.88;
 
+/**
+ * LUTA ARMADA abre mais. A katana estica a silhueta em quase meio corpo para
+ * cada lado, entao a distancia de combate de um corte e ~250 unidades maior
+ * que a de um soco, e no zoom minimo do combate desarmado um dos dois ficava
+ * fora do quadro. Aqui o corpo fica menor, mas a lamina continua lendo: o que
+ * se perde em tamanho se ganha em silhueta.
+ */
+const ZOOM_MINIMO_ARMADO = 0.74;
+
 /** Teto: acima disso a camera fecha tanto que corta os proprios lutadores. */
 const ZOOM_MAXIMO = 1.2;
 
@@ -89,8 +98,9 @@ export const enquadrarDois = (
   const meio = (ax + bx) / 2;
   const separacao = Math.abs(ax - bx);
   const zoomQueCabe = larguraTela / (separacao + FOLGA_LATERAL);
+  const minimo = timeline.spec.armas ? ZOOM_MINIMO_ARMADO : ZOOM_MINIMO_LEGIVEL;
 
-  if (zoomQueCabe >= ZOOM_MINIMO_LEGIVEL) {
+  if (zoomQueCabe >= minimo) {
     return {
       center: { x: meio, y: alturaQuadril - 120 },
       zoom: Math.min(ZOOM_MAXIMO, zoomQueCabe),
@@ -108,7 +118,7 @@ export const enquadrarDois = (
   // entra pela borda, o que mantem a relacao entre os dois legivel.
   return {
     center: { x: foco * 0.72 + meio * 0.28, y: alturaQuadril - 120 },
-    zoom: ZOOM_MINIMO_LEGIVEL,
+    zoom: minimo,
   };
 };
 

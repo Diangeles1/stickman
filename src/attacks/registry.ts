@@ -46,7 +46,7 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     contactJoint: "handFront",
     sound: "corte",
     somBloqueio: "clang",
-    lamina: 170,
+    lamina: 100,
     seguimento: { x: 0.6, y: -1 },
   }),
   corteDesce: def({
@@ -63,7 +63,7 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     contactJoint: "handFront",
     sound: "corte",
     somBloqueio: "clang",
-    lamina: 170,
+    lamina: 100,
     seguimento: { x: 0.5, y: 1 },
   }),
   corteLateral: def({
@@ -80,7 +80,7 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     contactJoint: "handFront",
     sound: "corte",
     somBloqueio: "clang",
-    lamina: 190,
+    lamina: 100,
   }),
 
   punch: def({

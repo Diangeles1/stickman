@@ -618,6 +618,24 @@ export const ATRASO_DO_ATAQUE: PerfilDeAtraso = {
  * inteira cabia em dois quadros. Aqui as pernas empurram primeiro, o tronco
  * sobe em seguida, e o punho e o ultimo a chegar, subindo.
  */
+/**
+ * CORTE DE KATANA. A corrente e a mesma do soco, mas mais LONGA no fim: a
+ * espada e uma extensao do braco, entao a ponta chega depois da mao, e o
+ * corpo inteiro gira antes. Com o perfil do soco, o tronco e o ombro
+ * chegavam no mesmo quadro que o quadril e o corte saia so do braco
+ * (auditoria de cadeia: "corpo se movendo como bloco").
+ */
+export const ATRASO_DO_CORTE: PerfilDeAtraso = {
+  hip: [0, 0.2],
+  kneeBack: [0.02, 0.28], kneeFront: [0.02, 0.28],
+  footBack: [0.04, 0.3], footFront: [0.04, 0.3],
+  neck: [0.12, 0.54],
+  shoulderBack: [0.18, 0.62], shoulderFront: [0.18, 0.62],
+  head: [0.2, 0.66],
+  elbowBack: [0.3, 0.82], elbowFront: [0.3, 0.82],
+  handBack: [0.42, 1], handFront: [0.42, 1],
+};
+
 export const ATRASO_DO_UPPERCUT: PerfilDeAtraso = {
   hip: [0, 0.28],
   kneeBack: [0, 0.28], kneeFront: [0, 0.28],

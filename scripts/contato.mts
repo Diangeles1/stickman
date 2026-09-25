@@ -15,12 +15,14 @@
  */
 
 import { corpoNoQuadro, juntasDoCorpo } from "../src/animation/corpo";
+import { geometriaDaLamina } from "../src/characters/Katana";
 import { ATAQUES } from "../src/attacks/registry";
 import { folgaDesejada, pontoDoAlvo, type PontoAlvo } from "../src/core/contact";
 import { compilar } from "../src/core/timeline";
 import { BENCHMARK } from "../src/data/fights/benchmark";
 import { BENCHMARK2 } from "../src/data/fights/benchmark2";
 import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
+import { GELO_VS_FOGO } from "../src/data/fights/gelo-vs-fogo";
 import { trocarVencedor } from "../src/data/trocar";
 import { gerarLuta } from "../src/data/gerador";
 import { UM_SOCO } from "../src/data/fights/um-soco";
@@ -46,6 +48,8 @@ const qual = process.argv[2] ?? "benchmark";
  */
 const spec = qual.startsWith("gerada:")
   ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
+  : qual === "gelofogo"
+    ? GELO_VS_FOGO
   : qual === "completa-vermelho"
     ? trocarVencedor(LUTA_COMPLETA)
   : qual === "completa"
@@ -69,10 +73,20 @@ const medir = (
   junta: JointName,
   ponto: PontoAlvo,
   frame: number,
+  comLamina = false,
 ) => {
   const a = corpoNoQuadro(t, quem, frame);
   const b = corpoNoQuadro(t, alvoId, frame);
-  const p = juntasDoCorpo(a)[junta];
+  // GOLPE DE ARMA: quem encosta e a PONTA DA LAMINA, nao a mao. A mao para
+  // `lamina` antes de proposito (ver AttackDef.lamina); medindo a mao, todo
+  // corte de katana era reprovado com exatamente o comprimento da espada de
+  // erro.
+  const p = comLamina
+    ? (() => {
+        const g = geometriaDaLamina(a);
+        return { x: g.mao.x + g.dir.x * g.comprimento, y: g.mao.y + g.dir.y * g.comprimento };
+      })()
+    : juntasDoCorpo(a)[junta];
   const q = pontoDoAlvo(ponto, juntasDoCorpo(b));
   const folga = folgaDesejada(quem, alvoId);
   // de que lado o golpe vem: a folga fica ENTRE os dois, entao o sinal dela
@@ -111,7 +125,7 @@ for (const mira of t.aims) {
   );
   console.log("  quadro | dist |   dx |   dy | separacao | poses");
   for (let f = mira.contact - 4; f <= mira.contact + 3; f++) {
-    const m = medir(mira.who, mira.alvo, mira.joint, mira.ponto as PontoAlvo, f);
+    const m = medir(mira.who, mira.alvo, mira.joint, mira.ponto as PontoAlvo, f, Boolean(mira.recuo));
     const marca = f === mira.contact ? " <== CONTATO" : "";
     const toca = m.erro < ENCOSTOU ? "toca" : "    ";
     console.log(
@@ -126,6 +140,7 @@ for (const mira of t.aims) {
     mira.joint,
     mira.ponto as PontoAlvo,
     mira.contact,
+    Boolean(mira.recuo),
   );
   // Golpe ESQUIVADO nao precisa encostar: o alvo saiu do caminho de proposito
   // e a mira aponta para onde ele estava.

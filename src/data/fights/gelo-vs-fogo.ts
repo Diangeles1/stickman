@@ -38,8 +38,9 @@ export const GELO_VS_FOGO: FightSpec = {
     { type: "tecnica", tecnica: "investida", gelo: "black", fogo: "red" },
     { type: "blocked", attacker: "black", target: "red", move: "corteSobe" },
     { type: "blocked", attacker: "black", target: "red", move: "corteLateral" },
-    { type: "dodged", attacker: "black", target: "red", move: "corteLateral", targetPoint: "legs", pulo: true },
-    { type: "blocked", attacker: "red", target: "black", move: "corteDesce" },
+    // corte BAIXO: a lamina varre a altura das pernas e o fogo pula por cima
+    { type: "dodged", attacker: "black", target: "red", move: "corteDesce", targetPoint: "legs", pulo: true },
+    { type: "blocked", attacker: "red", target: "black", move: "corteSobe" },
     { type: "tecnica", tecnica: "campoDeGelo", gelo: "black", fogo: "red" },
     { type: "tecnica", tecnica: "bolasDeFogo", gelo: "black", fogo: "red" },
     { type: "tecnica", tecnica: "infernoVsZero", gelo: "black", fogo: "red" },

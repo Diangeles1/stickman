@@ -356,7 +356,27 @@ export const compilar = (spec: FightSpec): Timeline => {
     // O ponto atingido define a distancia E a reacao. Sem isso o golpe era
     // animado contra uma distancia fixa que o membro nao alcancava.
     const ponto: PontoAlvo = opcoes.ponto ?? ALVO_PADRAO[move] ?? "chest";
-    const distancia = distanciaDeCombate(def, atacante, alvo, ponto);
+    // O QUE O GOLPE VAI ENCOSTAR DE VERDADE. Bloqueado, ele encosta na guarda
+    // erguida, nao no ponto mirado; a pose do alvo tambem muda (e a de defesa,
+    // que no lutador armado e a katana atravessada). Para o soco isso era
+    // corrigido pela cinematica inversa; o corte de katana nao tem IK, entao a
+    // distancia precisa ser medida contra o que ele encosta.
+    const poseNoContato: PoseName = opcoes.bloqueado
+      ? (spec.armas?.[alvo] ? "bloqueioKatana" : "block")
+      : spec.armas?.[alvo]
+        ? "guardaKatana"
+        : "guard";
+    const distancia = distanciaDeCombate(
+      def,
+      atacante,
+      alvo,
+      // Golpe de arma BLOQUEADO continua mirando o mesmo ponto: a defesa de
+      // katana e a lamina atravessada na frente do corpo, entao o corte para
+      // ali mesmo. Trocar para "guarda" (a altura das maos) desalinhava o
+      // corte alto em 190 unidades, e sem IK nao havia como corrigir.
+      opcoes.bloqueado && !def.lamina ? "guarda" : ponto,
+      poseNoContato,
+    );
     // Aproxima ate a posicao CARREGADA, um passo atras da distancia de
     // contato. Antes ele chegava na distancia de contato e o recuo era
     // aplicado como atribuicao no MESMO quadro: 46 unidades de teleporte, que
@@ -506,14 +526,15 @@ export const compilar = (spec: FightSpec): Timeline => {
     // daqui, e nao de um deslocamento fixo em relacao ao alvo.
     // Golpe BLOQUEADO encosta na guarda, nao no ponto mirado: o punho que ia
     // na cabeca bate no antebraco que esta na frente dela.
-    const pontoTocado: PontoAlvo = opcoes.bloqueado ? "guarda" : ponto;
+    const pontoTocado: PontoAlvo =
+      opcoes.bloqueado && !def.lamina ? "guarda" : ponto;
     const contato = pontoDeContato(
       pontoTocado,
       alvo,
       estado[alvo].x,
       // o alvo olha para o lado contrario ao do golpe
       (-direcao) as 1 | -1,
-      opcoes.bloqueado ? "block" : "guard",
+      poseNoContato,
     );
 
     // ---- MIRA ------------------------------------------------------------
@@ -547,6 +568,7 @@ export const compilar = (spec: FightSpec): Timeline => {
       // na esquiva o alvo comeca a sair s(0.2) antes do contato (ver abaixo):
       // a mira fica no lugar onde ele estava nesse instante
       ...(opcoes.esquivado ? { congelarEm: frameContato - s(0.2) } : {}),
+      // marca a mira como "de arma" (a IK nao entra; ver miraAtiva)
       ...(def.lamina ? { recuo: def.lamina } : {}),
     });
 
@@ -966,14 +988,17 @@ export const compilar = (spec: FightSpec): Timeline => {
         poder({ tipo: "geloNoChao", a: { x: -380, y: 0 }, b: { x: -220, y: 0 }, from: c + 8, to: c + 70 });
         poder({ tipo: "chaoQueimado", a: { x: 380, y: 0 }, from: c + 30, to: PARA_SEMPRE, forca: 170 });
         const perto = (x: number, quadro: number, y = ALTURA_QUADRIL - 260) =>
-          cameraKeys.push({ frame: quadro, center: { x, y }, zoom: 2.1, ease: 4 });
-        cameraKeys.push({ frame: c, center: { x: -380, y: ALTURA_QUADRIL - 80 }, zoom: 1.05, ease: 1 });
-        cameraKeys.push({ frame: c + 2, center: { x: 380, y: ALTURA_QUADRIL - 80 }, zoom: 1.05, ease: s(0.9) });
+          cameraKeys.push({ frame: quadro, center: { x, y }, zoom: 2.1, ease: 4, cena: true });
+        cameraKeys.push({ frame: c, center: { x: -380, y: ALTURA_QUADRIL - 80 }, zoom: 1.05, ease: 1, cena: true });
+        cameraKeys.push({ frame: c + 2, center: { x: 380, y: ALTURA_QUADRIL - 80 }, zoom: 1.05, ease: s(0.9), cena: true });
         perto(-380 + 20, c + s(1.0)); // olho do gelo
         perto(380 - 20, c + s(1.3)); // olho do fogo
         perto(-380 + 90, c + s(1.6), MAO_Y); // katana de gelo
         perto(380 - 90, c + s(1.85), MAO_Y); // katana de fogo
-        cameraKeys.push({ frame: c + s(2.1), center: { x: 0, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 6, fit: true });
+        // do close para o plano de dois e CORTE SECO, como em anime. Abrindo
+        // o zoom aos poucos, meio segundo inteiro fica com um dos dois pela
+        // metade na borda; no corte, o quadro seguinte ja mostra os dois.
+        cameraKeys.push({ frame: c + s(2.0), center: { x: 0, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 1, fit: true });
         return c + dur;
       }
 
@@ -998,11 +1023,13 @@ export const compilar = (spec: FightSpec): Timeline => {
           sound: "clang",
         });
         poder({ tipo: "choque", a: { x: m, y: MAO_Y }, from: encontro, to: encontro + 40, dir: -lado, forca: 240 });
-        cameraKeys.push({ frame: encontro - 6, center: { x: m, y: ALTURA_QUADRIL - 120 }, zoom: 1.35, ease: 6, shake: 34 });
+        // close no ponto onde as laminas se encontram: os corpos entram
+        // voando pelas bordas, e e isso que se quer ver
+        cameraKeys.push({ frame: encontro - 6, center: { x: m, y: ALTURA_QUADRIL - 120 }, zoom: 1.35, ease: 6, shake: 34, cena: true });
         // o choque separa os dois
         pose(G, "guard", encontro + s(0.35), m - lado * 330);
         pose(F, "guard", encontro + s(0.35), m + lado * 330);
-        cameraKeys.push({ frame: encontro + s(0.3), center: { x: m, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 12, fit: true });
+        cameraKeys.push({ frame: encontro + s(0.3), center: { x: m, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 2, fit: true });
         return encontro + s(0.5);
       }
 
@@ -1015,7 +1042,7 @@ export const compilar = (spec: FightSpec): Timeline => {
         nome("ICE FIELD", G, toque);
         poder({ tipo: "estilhacosGelo", a: { x: xG + lado * 60, y: -20 }, from: toque, to: toque + 36, forca: 200, dir: lado });
         poder({ tipo: "geloNoChao", a: { x: xG, y: 0 }, b: { x: xG + lado * 1500, y: 0 }, from: toque, to: toque + s(0.5) });
-        cameraKeys.push({ frame: toque, center: { x: (xG + estado[F].x) / 2, y: ALTURA_QUADRIL - 60 }, zoom: 0.85, ease: 8, shake: 16 });
+        cameraKeys.push({ frame: toque, center: { x: (xG + estado[F].x) / 2, y: ALTURA_QUADRIL - 60 }, zoom: 0.85, ease: 8, shake: 16, cena: true });
         // o fogo tenta avancar e o pe escorrega
         const escorrega = toque + s(0.45);
         pose(F, "advance", escorrega - 8);
@@ -1040,14 +1067,18 @@ export const compilar = (spec: FightSpec): Timeline => {
         });
         poder({ tipo: "sangue", a: { x: xF, y: MAO_Y + 40 }, from: passa, to: passa + 60, dir: lado, forca: 1 });
         poder({ tipo: "marcaDeCorte", quem: F, from: passa, to: PARA_SEMPRE });
-        // passa direto e so para longe: as bolas de fogo precisam de espaco
-        pose(G, "deslizar", passa + 12, xF + lado * 420);
-        pose(G, "guard", passa + s(0.4), xF + lado * 600);
+        // passa direto e para longe, mas nao alem do que o plano de dois
+        // cabe: a 600 de distancia a camera ja nao segurava os dois e o
+        // gelo ficava fora do quadro durante as bolas de fogo
+        pose(G, "deslizar", passa + 12, xF + lado * 380);
+        pose(G, "guard", passa + s(0.4), xF + lado * 430);
         // o fogo cambaleia, vira e olha o corte
         pose(F, "hitChest", passa + 4, xF);
         pose(F, "guard", passa + s(0.5));
-        cameraKeys.push({ frame: passa - 10, center: { x: xF, y: ALTURA_QUADRIL - 120 }, zoom: 1.25, ease: 8 });
-        cameraKeys.push({ frame: passa + s(0.35), center: { x: 0, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 14, fit: true });
+        // close em quem leva o corte enquanto o gelo passa reto: o gelo sai
+        // de quadro de proposito, e e a velocidade dele que isso conta
+        cameraKeys.push({ frame: passa - 10, center: { x: xF, y: ALTURA_QUADRIL - 120 }, zoom: 1.25, ease: 8, cena: true });
+        cameraKeys.push({ frame: passa + s(0.35), center: { x: 0, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 2, fit: true });
         return passa + s(0.55);
       }
 
@@ -1103,7 +1134,14 @@ export const compilar = (spec: FightSpec): Timeline => {
         });
         // a ultima explode atras do gelo e EMPURRA ele na direcao do fogo
         const fim = q;
-        cameraKeys.push({ frame: fim - 6, center: { x: xAtual, y: ALTURA_QUADRIL - 80 }, zoom: 1.0, ease: 6, shake: 26 });
+        cameraKeys.push({
+          frame: fim - 6,
+          center: { x: xAtual, y: ALTURA_QUADRIL - 80 },
+          zoom: 1.0,
+          ease: 6,
+          shake: 26,
+          fit: true,
+        });
         pose(G, "deslizar", fim + 6, estado[F].x + ladoF * 330);
         pose(G, "guard", fim + 20);
         pose(F, "guard", fim);
@@ -1130,8 +1168,8 @@ export const compilar = (spec: FightSpec): Timeline => {
         poder({ tipo: "chuvaCongelada", from: c + s(0.75), to: c + s(2.4) });
         nome("ZERO ABSOLUTE", G, c + s(0.8));
         // aberto e alto: a esfera cresce em cima do fogo, o gelo no quadro
-        cameraKeys.push({ frame: c + 4, center: { x: (xG + xF) / 2, y: ALTURA_QUADRIL - 300 }, zoom: 0.72, ease: 14 });
-        cameraKeys.push({ frame: c + s(0.7), center: { x: xG, y: ALTURA_QUADRIL - 200 }, zoom: 1.4, ease: 8 });
+        cameraKeys.push({ frame: c + 4, center: { x: (xG + xF) / 2, y: ALTURA_QUADRIL - 300 }, zoom: 0.72, ease: 14, cena: true });
+        cameraKeys.push({ frame: c + s(0.7), center: { x: xG, y: ALTURA_QUADRIL - 200 }, zoom: 1.4, ease: 8, cena: true });
         // lancam: o fogo empurra as maos, o gelo desce a katana
         const lanca = c + s(1.3);
         pose(F, "bracosFrente", lanca);
@@ -1151,6 +1189,7 @@ export const compilar = (spec: FightSpec): Timeline => {
             zoom: 0.92 + k * 0.06,
             ease: 12,
             shake: 8 + k * 9,
+            cena: true,
           });
         }
         pose(F, "bracosFrente", fimFeixe);
@@ -1172,7 +1211,9 @@ export const compilar = (spec: FightSpec): Timeline => {
         // depois: o gelo ajoelhado, o fogo de pe (parece que o fogo venceu)
         pose(G, "ajoelhado", fimFeixe + 16, xG - lado * 120);
         pose(F, "guard", fimFeixe + 16, xF + lado * 80);
-        cameraKeys.push({ frame: fimFeixe + 16, center: { x: m, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 20, fit: true });
+        // a fumaca abrindo: o quadro e do estrago, com os dois onde a
+        // explosao os deixou
+        cameraKeys.push({ frame: fimFeixe + 16, center: { x: m, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 20, fit: true, cena: true });
         pose(G, "ajoelhado", fimFeixe + s(0.75));
         return fimFeixe + s(0.8);
       }
@@ -1187,7 +1228,9 @@ export const compilar = (spec: FightSpec): Timeline => {
         const cruza = c + s(0.55);
         pose(G, "corteDesce", cruza, m - lado * 235);
         pose(F, "corteDesce", cruza, m + lado * 235);
-        cameraKeys.push({ frame: c + 16, center: { x: m, y: ALTURA_QUADRIL - 100 }, zoom: 1.2, ease: s(0.4) });
+        // os dois correm um para o outro de pontas opostas da arena: o quadro
+        // tem que caber a corrida inteira, e nao o ponto onde eles vao cruzar
+        cameraKeys.push({ frame: c + 16, center: { x: m, y: ALTURA_QUADRIL - 100 }, zoom: 1.2, ease: s(0.4), fit: true });
         impacts.push({
           frame: cruza,
           at: { x: m, y: MAO_Y },
@@ -1211,7 +1254,7 @@ export const compilar = (spec: FightSpec): Timeline => {
         pose(G, "guard", c + 14, m - lado * 230);
         pose(F, "guard", c + 14, m + lado * 230);
         poder({ tipo: "rachadura", a: { x: m, y: 0 }, from: c + 20, to: c + 60, forca: 320 });
-        cameraKeys.push({ frame: c + 10, center: { x: m, y: ALTURA_QUADRIL - 140 }, zoom: 0.72, ease: s(1.2) });
+        cameraKeys.push({ frame: c + 10, center: { x: m, y: ALTURA_QUADRIL - 140 }, zoom: 0.72, ease: s(1.2), cena: true });
         // longo o bastante para o logo, os nomes e a pergunta serem lidos
         const dur = s(3.6);
         pose(G, "guard", c + dur);

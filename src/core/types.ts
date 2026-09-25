@@ -197,9 +197,10 @@ export type AttackDef = {
    */
   elevacao?: number;
   /**
-   * GOLPE DE ARMA: comprimento util da lamina, em unidades de mundo. O ponto
-   * que encosta no alvo e a lamina, nao a mao: quem ataca fica mais longe
-   * por essa distancia, e a mira poe a MAO recuada dela.
+   * GOLPE DE ARMA: comprimento util da lamina, em unidades de POSE (a mesma
+   * escala das poses; ver LAMINA em characters/Katana.tsx). Quem encosta e a
+   * ponta da lamina, e nao a mao: a distancia de combate e calculada a partir
+   * da posicao real da ponta nesta pose.
    */
   lamina?: number;
   /** pose da carga (preparacao); padrao "coil" */
@@ -509,6 +510,13 @@ export type CameraKey = {
   /** quadros para chegar la; 0 = corte seco */
   ease: number;
   shake?: number;
+  /**
+   * ENQUADRAMENTO DE CENA: close ou plano aberto escolhido de proposito
+   * (o olho do lutador, a katana, o feixe atravessando a arena). Nestes
+   * trechos e correto o outro lutador ficar fora do quadro ou os dois
+   * ficarem pequenos, e a auditoria de camera trata como intencional.
+   */
+  cena?: boolean;
   /**
    * Plano de dois: em vez de usar center/zoom fixos, a camera calcula o
    * enquadramento a partir da distancia entre os lutadores, para os dois

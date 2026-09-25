@@ -144,10 +144,18 @@ const ESCRITAS: Record<PoseName, Pose> = {
   }),
   /** corte que sobe (baixo-esquerda para alto-direita): lamina subindo */
   corteSobe: p({
-    neck: { x: 14, y: -70 },
-    head: { x: 22, y: -108 },
-    elbowFront: { x: 40, y: -76 },
-    handFront: { x: 60, y: -98 },
+    // o TRONCO desenrola junto: o corte que sobe nasce no quadril e abre o
+    // peito. Com o tronco parado (ele quase nao mudava da carga para ca), o
+    // corte saia so do braco e a auditoria de cadeia acusava "corpo se
+    // movendo como bloco".
+    neck: { x: -6, y: -74 },
+    head: { x: -2, y: -112 },
+    // o arco termina A FRENTE, nao acima. A ponta da lamina fica 290 unidades
+    // alem da mao, entao uma inclinacao pequena aqui vira muita altura la: com
+    // a mao 6 unidades mais alta, a ponta passava 60 acima do queixo e o corte
+    // "ascendente" nao encostava em ninguem.
+    elbowFront: { x: 40, y: -72 },
+    handFront: { x: 72, y: -72 },
     elbowBack: { x: 22, y: -50 },
     handBack: { x: 44, y: -70 },
     kneeBack: { x: -30, y: 56 },
