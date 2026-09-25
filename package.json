@@ -29,7 +29,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src && tsc --noEmit",
     "upgrade": "remotion upgrade",
-    "canal": "remotion still Banner out/canal/Banner.png && remotion still Avatar out/canal/Avatar.png && remotion still CapaDoVideo out/canal/Capa.png",
+    "canal": "python3 scripts/preparar-marca.py",
+    "canal:desenhado": "node scripts/remotion.mjs still Banner out/canal/Banner.png && node scripts/remotion.mjs still Avatar out/canal/Avatar.png && node scripts/remotion.mjs still CapaDoVideo out/canal/Capa.png",
     "canal:youtube": "node scripts/canal-youtube.mjs"
   },
   "sideEffects": [

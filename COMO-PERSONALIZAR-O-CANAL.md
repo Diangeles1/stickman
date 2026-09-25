@@ -10,9 +10,30 @@ automático, mas depende de o YouTube não ter mudado a tela.
 1. Gere as imagens:
    ```
    npm install
+   pip install pillow
    npm run canal
    ```
-   Elas saem em `out/canal/`: `Banner.png`, `Avatar.png` e `Capa.png`.
+   Elas saem em `out/canal/`: `Banner.png` (2560x1440), `Avatar.png` (800x800)
+   e `Capa.png` (1280x720), já nas medidas do YouTube.
+
+   O script parte das artes em `public/marca/` e recorta cada uma para o lugar
+   certo. O recorte do banner não é centralizado à toa: o YouTube usa **uma**
+   imagem para três telas e corta diferente em cada uma —
+
+   | tela        | o que aparece |
+   |-------------|---------------|
+   | televisão   | 2560x1440, a imagem inteira |
+   | computador  | 2560x423, só uma faixa no meio |
+   | celular     | 1235x338, só um retângulo no centro |
+
+   Quem apenas redimensiona a arte para 2560x1440 perde o logo no celular, que
+   é onde quase todo mundo olha. O script escolhe o recorte para o logo cair
+   dentro dos 1235x338 e avisa no terminal quanta folga sobrou.
+
+   Para usar outra arte, troque os arquivos em `public/marca/` e ajuste
+   `LOGO_BANNER` no topo de `scripts/preparar-marca.py` (onde está o logo na
+   imagem nova). A arte antiga, desenhada em código, continua disponível em
+   `npm run canal:desenhado`.
 
 2. Abra <https://studio.youtube.com> → **Personalização** → **Identidade visual**.
    - **Foto do perfil:** `Avatar.png`
