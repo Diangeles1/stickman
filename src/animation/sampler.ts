@@ -19,6 +19,7 @@ import {
   ATRASO_DA_REACAO,
   ATRASO_DO_ATAQUE,
   ATRASO_DO_CHUTE,
+  ATRASO_DO_CORTE,
   ATRASO_DO_UPPERCUT,
   ATRASO_REACAO_CABECA,
   ATRASO_REACAO_PEITO,
@@ -218,6 +219,13 @@ const atrasoPara = (destino: PoseName): PerfilDeAtraso | undefined => {
     case "charge":
     case "coil":
       return ATRASO_DO_ATAQUE;
+    // corte de katana: a mesma corrente, esticada ate a ponta da lamina
+    case "corteSobe":
+    case "corteDesce":
+    case "corteLateral":
+    case "corteRapido":
+    case "corteMergulho":
+      return ATRASO_DO_CORTE;
     // Locomocao NAO usa a corrente do golpe. Com ela, o pe chegava no destino
     // nos primeiros 36% da transicao: ao frear de uma corrida, o pe da frente
     // saltava 78 unidades num quadro. Passo e passo; corrente e para golpe.

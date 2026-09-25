@@ -19,6 +19,7 @@ import { compilar } from "../src/core/timeline";
 import { BENCHMARK } from "../src/data/fights/benchmark";
 import { BENCHMARK2 } from "../src/data/fights/benchmark2";
 import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
+import { GELO_VS_FOGO } from "../src/data/fights/gelo-vs-fogo";
 import { trocarVencedor } from "../src/data/trocar";
 import { gerarLuta } from "../src/data/gerador";
 import { UM_SOCO } from "../src/data/fights/um-soco";
@@ -29,6 +30,12 @@ const CORPO = 597;
 const MEIO_CORPO = 150;
 /** Abaixo disto o corpo fica pequeno demais para Shorts. */
 const MINIMO_LEGIVEL = 25;
+/**
+ * Luta ARMADA: a katana acrescenta quase meio corpo de silhueta, entao o
+ * corpo pode ficar menor na tela sem deixar de ser lido (ver
+ * ZOOM_MINIMO_ARMADO em camera.ts).
+ */
+const MINIMO_ARMADO = 20;
 
 const qual = process.argv[2] ?? "benchmark";
 /**
@@ -40,6 +47,8 @@ const qual = process.argv[2] ?? "benchmark";
  */
 const spec = qual.startsWith("gerada:")
   ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
+  : qual === "gelofogo"
+    ? GELO_VS_FOGO
   : qual === "completa-vermelho"
     ? trocarVencedor(LUTA_COMPLETA)
   : qual === "completa"
@@ -73,6 +82,27 @@ const noImpacto = (f: number) =>
  * Isto e criterio, nao concessao: o corte e aceitavel exatamente enquanto o
  * corpo esta no ar, e volta a ser erro no quadro seguinte ao pouso.
  */
+/**
+ * Enquadramento declarado como CENA pelo compilador (close no olho, na
+ * katana, plano aberto do feixe). Ali o corte e a escolha, nao o defeito.
+ */
+const emCena = (f: number) => {
+  let atual: (typeof t.cameraKeys)[number] | undefined;
+  let anterior: (typeof t.cameraKeys)[number] | undefined;
+  for (const k of t.cameraKeys) {
+    if (k.frame > f) break;
+    anterior = atual;
+    atual = k;
+  }
+  if (atual?.cena) return true;
+  // A TRANSICAO DE SAIDA ainda e da cena anterior: no quadro em que a chave
+  // nova entra, a camera ainda mostra o enquadramento antigo (a suavizacao
+  // comeca em zero). Sem isto, o quadro do corte era cobrado da chave nova.
+  return Boolean(
+    anterior?.cena && atual && f <= atual.frame + Math.max(1, atual.ease),
+  );
+};
+
 const emVoo = (f: number) =>
   amostrar(t.tracks[spec.fighterA], f).airborne ||
   amostrar(t.tracks[spec.fighterB], f).airborne;
@@ -90,7 +120,9 @@ for (let f = 0; f <= t.durationInFrames; f++) {
     alturaQuadril: -ALTURA_QUADRIL,
   });
   const pct = ((CORPO * cam.zoom) / spec.height) * 100;
-  minPct = Math.min(minPct, pct);
+  // plano aberto declarado como cena nao entra no minimo: la os dois PRECISAM
+  // caber com a arena inteira em volta
+  if (!emCena(f)) minPct = Math.min(minPct, pct);
   maxPct = Math.max(maxPct, pct);
 
   const meiaTela = spec.width / 2 / cam.zoom;
@@ -101,7 +133,7 @@ for (let f = 0; f <= t.durationInFrames; f++) {
 
   if (corte) {
     cortados++;
-    if (!noImpacto(f) && !emVoo(f)) { cortadosForaDoImpacto++; if (process.env.CAM_DEBUG) console.log("  corte", f); }
+    if (!noImpacto(f) && !emVoo(f) && !emCena(f)) { cortadosForaDoImpacto++; if (process.env.CAM_DEBUG) console.log("  corte", f); }
     if (inicioDoCorte < 0) inicioDoCorte = f;
   } else if (inicioDoCorte >= 0) {
     const dur = (f - inicioDoCorte) / spec.fps;
@@ -113,7 +145,9 @@ for (let f = 0; f <= t.durationInFrames; f++) {
             ? "  no impacto, intencional"
             : emVoo(inicioDoCorte)
               ? "  corpo no ar, a camera acompanha"
-              : "  <<< SEM MOTIVO"
+              : emCena(inicioDoCorte)
+                ? "  enquadramento de cena, intencional"
+                : "  <<< SEM MOTIVO"
         }`,
       );
     }
@@ -134,10 +168,11 @@ if (trechos.length > 0) {
   console.log("\ntrechos de corte acima de 0,1s:");
   for (const l of trechos) console.log(l);
 }
-const ok = minPct >= MINIMO_LEGIVEL && cortadosForaDoImpacto === 0;
+const minimoExigido = spec.armas ? MINIMO_ARMADO : MINIMO_LEGIVEL;
+const ok = minPct >= minimoExigido && cortadosForaDoImpacto === 0;
 console.log(
   ok
-    ? `\nAPROVADO: corpo nunca abaixo de ${MINIMO_LEGIVEL}% e ninguem cortado fora de impacto.`
-    : `\nREPROVADO: ${minPct < MINIMO_LEGIVEL ? `corpo chega a ${minPct.toFixed(0)}%. ` : ""}` +
+    ? `\nAPROVADO: corpo nunca abaixo de ${minimoExigido}% e ninguem cortado fora de impacto.`
+    : `\nREPROVADO: ${minPct < minimoExigido ? `corpo chega a ${minPct.toFixed(0)}%. ` : ""}` +
         `${cortadosForaDoImpacto > 0 ? `${cortadosForaDoImpacto} quadros cortados sem motivo.` : ""}`,
 );

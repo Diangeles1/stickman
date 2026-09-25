@@ -28,6 +28,106 @@ import type { AttackDef, AttackName, ImpactTier } from "../core/types";
 const def = (d: AttackDef): AttackDef => d;
 
 export const ATAQUES: Record<AttackName, AttackDef> = {
+  // ---- KATANA ---------------------------------------------------------------
+  // A mao para uma LAMINA antes do ponto (ver AttackDef.lamina): quem corta
+  // fica longe, a espada e que chega. Mais rapidos que o soco equivalente: a
+  // katana nao carrega o peso do corpo inteiro, carrega a ponta.
+  corteSobe: def({
+    name: "corteSobe",
+    pose: "corteSobe",
+    carga: "cargaBaixa",
+    windup: 12,
+    strike: 12,
+    recover: 14,
+    contactAt: 5,
+    tier: "medium",
+    knockback: 170,
+    hitStop: 4,
+    contactJoint: "handFront",
+    sound: "corte",
+    somBloqueio: "clang",
+    lamina: 100,
+    seguimento: { x: 0.6, y: -1 },
+  }),
+  corteDesce: def({
+    name: "corteDesce",
+    pose: "corteDesce",
+    carga: "cargaKatana",
+    windup: 14,
+    strike: 12,
+    recover: 16,
+    contactAt: 5,
+    tier: "medium",
+    knockback: 220,
+    hitStop: 5,
+    contactJoint: "handFront",
+    sound: "corte",
+    somBloqueio: "clang",
+    lamina: 100,
+    seguimento: { x: 0.5, y: 1 },
+  }),
+  /**
+   * CORTE RAPIDO: a carga dele E a guarda. Sem preparacao propria, ele sai em
+   * 5 quadros e volta em 7: e o golpe que faz a troca de katana ter ritmo, e
+   * o contraste dele com o corte pesado e o que cria a variacao de tempo que
+   * uma luta precisa (rapido, rapido, PAUSA, pesado).
+   */
+  corteRapido: def({
+    name: "corteRapido",
+    pose: "corteRapido",
+    carga: "guardaKatana",
+    windup: 5,
+    strike: 7,
+    recover: 7,
+    contactAt: 3,
+    tier: "light",
+    knockback: 90,
+    hitStop: 2,
+    contactJoint: "handFront",
+    sound: "corte",
+    somBloqueio: "clang",
+    lamina: 100,
+  }),
+  /**
+   * CORTE EM MERGULHO: o golpe que fecha um salto. O corpo cai junto com a
+   * lamina, entao ele nao precisa de carga: quem carrega e a altura.
+   */
+  corteMergulho: def({
+    name: "corteMergulho",
+    pose: "corteMergulho",
+    carga: "mergulho",
+    windup: 10,
+    strike: 12,
+    recover: 16,
+    contactAt: 5,
+    tier: "extreme",
+    knockback: 380,
+    hitStop: 6,
+    contactJoint: "handFront",
+    sound: "corte",
+    somBloqueio: "clang",
+    lamina: 100,
+    elevacao: 150,
+    seguimento: { x: 0.5, y: 1 },
+    cracksGround: true,
+  }),
+  corteLateral: def({
+    name: "corteLateral",
+    pose: "corteLateral",
+    carga: "cargaKatana",
+    windup: 12,
+    strike: 12,
+    recover: 14,
+    contactAt: 5,
+    tier: "medium",
+    knockback: 190,
+    hitStop: 4,
+    contactJoint: "handFront",
+    sound: "corte",
+    somBloqueio: "clang",
+    lamina: 100,
+  }),
+
   punch: def({
     name: "punch",
     pose: "punch",

@@ -21,6 +21,9 @@ import { BENCHMARK2 } from "./data/fights/benchmark2";
 import { LUTA_COMPLETA } from "./data/fights/luta-completa";
 import { gerarLuta } from "./data/gerador";
 import { trocarVencedor } from "./data/trocar";
+import { TESTE_KATANA } from "./data/fights/teste-katana";
+import { GELO_VS_FOGO } from "./data/fights/gelo-vs-fogo";
+import { DUELO } from "./data/fights/duelo";
 import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
 
@@ -187,6 +190,57 @@ export const RemotionRoot: React.FC = () => {
         width={LUTA_COMPLETA.width}
         height={LUTA_COMPLETA.height}
         defaultProps={{ spec: LUTA_VERMELHO_VENCE, escolha: true }}
+      />
+      {/*
+        BENCHMARK #3: oito segundos de duelo armado. A versao SemEfeitos e a
+        que julga a animacao; a outra existe so para comparar.
+      */}
+      <Composition
+        id="Duelo-SemEfeitos"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(DUELO)}
+        fps={DUELO.fps}
+        width={DUELO.width}
+        height={DUELO.height}
+        defaultProps={{ spec: DUELO, semEfeitos: true }}
+      />
+      <Composition
+        id="Duelo"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(DUELO)}
+        fps={DUELO.fps}
+        width={DUELO.width}
+        height={DUELO.height}
+        defaultProps={{ spec: DUELO }}
+      />
+
+      {/* PALITANOS: BLACK ICE vs RED FIRE */}
+      <Composition
+        id="GeloVsFogo"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(GELO_VS_FOGO)}
+        fps={GELO_VS_FOGO.fps}
+        width={GELO_VS_FOGO.width}
+        height={GELO_VS_FOGO.height}
+        defaultProps={{ spec: GELO_VS_FOGO }}
+      />
+      <Composition
+        id="GeloVsFogo-Escolha"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(GELO_VS_FOGO, { escolha: true })}
+        fps={GELO_VS_FOGO.fps}
+        width={GELO_VS_FOGO.width}
+        height={GELO_VS_FOGO.height}
+        defaultProps={{ spec: GELO_VS_FOGO, escolha: true }}
+      />
+      <Composition
+        id="TesteKatana"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(TESTE_KATANA)}
+        fps={TESTE_KATANA.fps}
+        width={TESTE_KATANA.width}
+        height={TESTE_KATANA.height}
+        defaultProps={{ spec: TESTE_KATANA }}
       />
       <Composition
         id="LutaCompleta-SemEfeitos"

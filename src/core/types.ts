@@ -77,7 +77,34 @@ export type PoseName =
   | "getUp"
   | "charge"
   | "danca"
-  | "placa";
+  | "placa"
+  // katana
+  | "guardaKatana"
+  | "bloqueioKatana"
+  | "absorver"
+  | "absorverKatana"
+  | "corridaKatana1"
+  | "corridaKatana2"
+  | "saltoParaTras"
+  | "giroNoAr"
+  | "mergulho"
+  | "puloKatana"
+  | "arKatana"
+  | "pousoKatana"
+  | "cargaKatana"
+  | "cargaBaixa"
+  | "corteSobe"
+  | "corteDesce"
+  | "corteLateral"
+  | "corteRapido"
+  | "corteMergulho"
+  // poderes
+  | "maoNoChao"
+  | "lancar"
+  | "bracosFrente"
+  | "katanaErguida"
+  | "deslizar"
+  | "ajoelhado";
 
 /** Identidade visual de um lutador. Adicionar cor nova nao mexe em codigo. */
 export type FighterId = "black" | "red" | "blue" | "gold" | "green" | "white" | "purple";
@@ -124,7 +151,12 @@ export type AttackName =
   | "airAttack"
   | "diveAttack"
   | "special"
-  | "finisher";
+  | "finisher"
+  | "corteSobe"
+  | "corteDesce"
+  | "corteLateral"
+  | "corteRapido"
+  | "corteMergulho";
 
 /**
  * Definicao de um golpe: as cinco fases que o briefing pede, mais o que o
@@ -178,6 +210,17 @@ export type AttackDef = {
    * pulo terminava com um corpo em cima do outro.
    */
   elevacao?: number;
+  /**
+   * GOLPE DE ARMA: comprimento util da lamina, em unidades de POSE (a mesma
+   * escala das poses; ver LAMINA em characters/Katana.tsx). Quem encosta e a
+   * ponta da lamina, e nao a mao: a distancia de combate e calculada a partir
+   * da posicao real da ponta nesta pose.
+   */
+  lamina?: number;
+  /** pose da carga (preparacao); padrao "coil" */
+  carga?: PoseName;
+  /** som quando o golpe e defendido; padrao "block" */
+  somBloqueio?: string;
 };
 
 /** Um beat do roteiro. E isto que vira JSON e o que a geracao aleatoria monta. */
@@ -200,6 +243,11 @@ export type Beat =
     }
   | { type: "dodge"; who: FighterId; duration: number }
   /**
+   * SALTO PARA TRAS: abre distancia num movimento so, no ar. E o recuo de
+   * quem sabe lutar, diferente do "retreat", que e um passo para tras.
+   */
+  | { type: "saltoParaTras"; who: FighterId; distancia?: number }
+  /**
    * Golpe que PASSA: o atacante desfere, o alvo sai do caminho, e nao ha
    * impacto nenhum.
    *
@@ -213,6 +261,8 @@ export type Beat =
       target: FighterId;
       move: AttackName;
       targetPoint?: PontoAlvo;
+      /** o alvo PULA por cima do golpe (corte baixo) em vez de sair para tras */
+      pulo?: boolean;
     }
   | {
       type: "combo";
@@ -245,6 +295,24 @@ export type Beat =
    * segura no alto. `linhas` e o que esta escrito, de cima para baixo.
    */
   | { type: "placa"; who: FighterId; duration: number; linhas: string[] }
+  /**
+   * TECNICA: uma cena coreografada de poder (luta de gelo contra fogo). Cada
+   * uma escreve poses, camera, impactos e efeitos de poder de uma vez; ver
+   * `tecnica` em core/timeline.ts.
+   */
+  | {
+      type: "tecnica";
+      tecnica:
+        | "encontro"
+        | "investida"
+        | "campoDeGelo"
+        | "bolasDeFogo"
+        | "infernoVsZero"
+        | "choqueFinal"
+        | "encarar";
+      gelo: FighterId;
+      fogo: FighterId;
+    }
   | { type: "cta"; duration: number }
   | { type: "hook"; duration: number };
 
@@ -266,7 +334,23 @@ export type FightSpec = {
    * "vilarejo" e "cidade" sao o limpo com um cenario de rabisco no fundo
    * (ver backgrounds/Rabisco.tsx): traco cinza claro que ferve e se mexe.
    */
-  scenario: "arena" | "limpo" | "vilarejo" | "cidade";
+  scenario: "arena" | "limpo" | "vilarejo" | "cidade" | "noite";
+  /**
+   * ARMAS: quem luta armado e com qual elemento. Lutador armado troca as
+   * poses de guarda, defesa e carga pelas de katana (ver POSES_ARMADAS em
+   * core/timeline.ts) e desenha a lamina na mao.
+   */
+  armas?: Partial<Record<FighterId, { tipo: "katana"; elemento: "gelo" | "fogo" }>>;
+  /** nomes na tela; sem isto usa os nomes de cor (PRETO, VERMELHO...) */
+  nomes?: Partial<Record<FighterId, string>>;
+  /** o poder de cada um, mostrado embaixo do nome na tela de escolha */
+  poderes?: Partial<Record<FighterId, string>>;
+  /**
+   * CINEMATICO: luta contada como cena de anime, sem placar de jogo. Some a
+   * barra de vida e os letreiros de combo; ficam os nomes das tecnicas e o
+   * final aberto (logo, "BLACK vs RED", "QUEM DEVE VENCER?").
+   */
+  cinematico?: boolean;
   beats: Beat[];
 };
 
@@ -340,6 +424,11 @@ export type AimEvent = {
    * cabeca que se abaixava, como um missil teleguiado.
    */
   congelarEm?: number;
+  /**
+   * Golpe de arma: a mao mira este tanto (unidades de mundo) ANTES do ponto,
+   * na direcao do golpe. E a lamina que chega ao ponto.
+   */
+  recuo?: number;
 };
 
 /** Onde cada lutador esta e o que faz, num beat. */
@@ -387,6 +476,57 @@ export type Timeline = {
    * espectador tem que ver devagar: a esquiva por um fio e o nocaute.
    */
   camaraLenta: { from: number; to: number; factor: number }[];
+  /** efeitos de poder (gelo, fogo, sangue, feixes...), ver effects/Poderes.tsx */
+  poderes: PoderEvent[];
+};
+
+export type TipoPoder =
+  | "auraGelo"
+  | "auraFogo"
+  | "geloNoChao"
+  | "chaoQueimado"
+  | "trilhaGelo"
+  | "explosaoFogo"
+  | "estilhacosGelo"
+  | "choque"
+  | "sangue"
+  | "marcaDeCorte"
+  | "bolaDeFogo"
+  | "vapor"
+  | "feixeFogo"
+  | "raioGelo"
+  | "esferaInferno"
+  | "zeroAbsoluto"
+  | "telaBranca"
+  | "quebraLaminas"
+  | "rachadura"
+  | "chuvaCongelada"
+  | "nomeDaTecnica";
+
+/**
+ * Um efeito de poder no tempo. O compilador decide QUANDO e ONDE (a partir
+ * da coreografia); effects/Poderes.tsx decide COMO fica. `a` e a origem,
+ * `b` o destino (projetil, feixe, alcance do gelo no chao).
+ */
+export type PoderEvent = {
+  tipo: TipoPoder;
+  from: number;
+  to: number;
+  quem?: FighterId;
+  a?: Vec2;
+  b?: Vec2;
+  /** 0 a 1, ou tamanho, conforme o tipo */
+  forca?: number;
+  /** direcao horizontal (1 direita, -1 esquerda), quando importa */
+  dir?: number;
+  /**
+   * Direcao do movimento que causou o efeito, normalizada. O sangue de um
+   * corte sai na direcao em que a lamina viajava: espirrar para um lado
+   * aleatorio denuncia o efeito como enfeite colado por cima.
+   */
+  vetor?: Vec2;
+  /** texto (nome da tecnica) */
+  texto?: string;
 };
 
 export type CameraKey = {
@@ -397,6 +537,13 @@ export type CameraKey = {
   /** quadros para chegar la; 0 = corte seco */
   ease: number;
   shake?: number;
+  /**
+   * ENQUADRAMENTO DE CENA: close ou plano aberto escolhido de proposito
+   * (o olho do lutador, a katana, o feixe atravessando a arena). Nestes
+   * trechos e correto o outro lutador ficar fora do quadro ou os dois
+   * ficarem pequenos, e a auditoria de camera trata como intencional.
+   */
+  cena?: boolean;
   /**
    * Plano de dois: em vez de usar center/zoom fixos, a camera calcula o
    * enquadramento a partir da distancia entre os lutadores, para os dois

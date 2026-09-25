@@ -13,6 +13,7 @@
 import React from "react";
 import {
   AbsoluteFill,
+  Img,
   continueRender,
   delayRender,
   interpolate,
@@ -22,8 +23,10 @@ import {
   useVideoConfig,
 } from "remotion";
 import { PRESETS } from "../characters/presets";
+import { MarcaDagua } from "./MarcaDagua";
 import type { FighterId, Timeline } from "../core/types";
 import {
+  ESPERA_DA_PERGUNTA,
   NOMES,
   espetaculoDe,
   vidaNoQuadro,
@@ -333,6 +336,85 @@ const Abertura: React.FC<{
 
 // ---------------------------------------------------------------------------
 
+const nomeDe = (t: Timeline, id: FighterId) => t.spec.nomes?.[id] ?? NOMES[id];
+const corDoElemento = (t: Timeline, id: FighterId) => {
+  const el = t.spec.armas?.[id]?.elemento;
+  return el === "gelo" ? "#8fe3ff" : el === "fogo" ? "#ff8a2a" : corDe(id);
+};
+
+/** o logo do canal entra batendo no centro, no final aberto */
+const LogoDoFinal: React.FC<{ idade: number; fps: number; largura: number; altura: number }> = ({ idade, fps, largura, altura }) => {
+  const mola = spring({ frame: idade, fps, config: { damping: 11, stiffness: 200, mass: 0.7 } });
+  const escala = batida(mola);
+  const w = 860;
+  const h = w * (333 / 900);
+  return (
+    <Img
+      src={staticFile("assets/marca/palitanos.png")}
+      style={{
+        position: "absolute",
+        left: largura / 2 - w / 2,
+        top: altura * 0.3 - h / 2,
+        width: w,
+        height: h,
+        transform: `scale(${escala})`,
+        opacity: Math.min(1, idade / 4),
+        filter: "drop-shadow(0 6px 12px rgba(0,0,0,0.6))",
+      }}
+    />
+  );
+};
+
+/** final aberto: "BLACK vs RED" e a pergunta que puxa comentario */
+const FinalAberto: React.FC<{
+  idade: number;
+  fps: number;
+  largura: number;
+  altura: number;
+  a: string;
+  b: string;
+  corA: string;
+  corB: string;
+}> = ({ idade, fps, largura, altura, a, b, corA, corB }) => {
+  const escurece = Math.min(0.45, idade / 30);
+  const nomes = idade - 45;
+  const pergunta = idade - ESPERA_DA_PERGUNTA;
+  const molaNomes = spring({ frame: nomes, fps, config: { damping: 10, stiffness: 240, mass: 0.6 } });
+  const molaPergunta = spring({ frame: pergunta, fps, config: { damping: 9, stiffness: 260, mass: 0.6 } });
+  const pulso = 1 + 0.03 * Math.sin(pergunta * 0.3);
+  return (
+    <g>
+      <rect width={largura} height={altura} fill="#000" opacity={escurece} />
+      {nomes >= 0 && (
+        <g transform={`translate(${largura / 2} ${altura * 0.47}) scale(${batida(molaNomes)})`}>
+          <text x={-40} textAnchor="end" fontFamily={PILHA} fontSize={130} fill={corA} {...contorno(12)}>
+            {a}
+          </text>
+          <text textAnchor="middle" y={-6} fontFamily={PILHA} fontSize={80} fill="#ffffff" {...contorno(10)}>
+            vs
+          </text>
+          <text x={40} textAnchor="start" fontFamily={PILHA} fontSize={130} fill={corB} {...contorno(12)}>
+            {b}
+          </text>
+        </g>
+      )}
+      {pergunta >= 0 && (
+        <g transform={`translate(${largura / 2} ${altura * 0.6}) rotate(-3) scale(${batida(molaPergunta) * pulso})`}>
+          <text textAnchor="middle" fontFamily={PILHA} fontSize={120} fill="#ffd23f" {...contorno(14)} letterSpacing={3}>
+            QUEM DEVE
+          </text>
+          <text y={120} textAnchor="middle" fontFamily={PILHA} fontSize={140} fill="#ffd23f" {...contorno(14)} letterSpacing={3}>
+            VENCER?
+          </text>
+          <text y={205} textAnchor="middle" fontFamily={PILHA} fontSize={54} fill="#ffffff" {...contorno(8)}>
+            COMENTA AI!
+          </text>
+        </g>
+      )}
+    </g>
+  );
+};
+
 export const Espetaculo: React.FC<{ timeline: Timeline }> = ({ timeline }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
@@ -341,19 +423,24 @@ export const Espetaculo: React.FC<{ timeline: Timeline }> = ({ timeline }) => {
 
   // placar: entra junto com o LUTE!
   // e sai quando a placa do vencedor sobe: a placa ocupa o alto da tela
-  const entrada =
-    interpolate(
-      frame,
-      [e.entradaDoPlacar, e.entradaDoPlacar + 12],
-      [0, 1],
-      { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-    ) *
-    interpolate(
-      frame,
-      [e.saidaDoPlacar - 14, e.saidaDoPlacar],
-      [1, 0],
-      { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-    );
+  // (luta cinematica: o placar nunca entra)
+  const entrada = !Number.isFinite(e.entradaDoPlacar)
+    ? 0
+    : interpolate(
+        frame,
+        [e.entradaDoPlacar, e.entradaDoPlacar + 12],
+        [0, 1],
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+      ) *
+      (Number.isFinite(e.saidaDoPlacar)
+        ? interpolate(
+            frame,
+            [e.saidaDoPlacar - 14, e.saidaDoPlacar],
+            [1, 0],
+            { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+          )
+        : 1);
+  const noFinal = e.final !== undefined && frame >= e.final;
 
   // letreiros: em cada vaga so aparece o mais recente
   const porVaga = new Map<string, Rotulo>();
@@ -372,6 +459,9 @@ export const Espetaculo: React.FC<{ timeline: Timeline }> = ({ timeline }) => {
 
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
+      {/* marca d'agua: no placar enquanto ele esta na tela, no rodape fora dele */}
+      <MarcaDagua vaga="placar" opacidade={noFinal ? 0 : entrada} larguraTela={width} />
+      <MarcaDagua vaga="rodape" opacidade={noFinal ? 0 : 1 - entrada} larguraTela={width} />
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
         {entrada > 0 && (
           <g>
@@ -438,7 +528,22 @@ export const Espetaculo: React.FC<{ timeline: Timeline }> = ({ timeline }) => {
               altura={height}
             />
           ))}
+        {noFinal && e.final !== undefined && (
+          <FinalAberto
+            idade={frame - e.final}
+            fps={fps}
+            largura={width}
+            altura={height}
+            a={nomeDe(timeline, fighterA)}
+            b={nomeDe(timeline, fighterB)}
+            corA={corDoElemento(timeline, fighterA)}
+            corB={corDoElemento(timeline, fighterB)}
+          />
+        )}
       </svg>
+      {noFinal && e.final !== undefined && (
+        <LogoDoFinal idade={frame - e.final} fps={fps} largura={width} altura={height} />
+      )}
     </AbsoluteFill>
   );
 };

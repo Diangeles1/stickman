@@ -35,6 +35,8 @@ import {
   SOM_VENCEDOR,
   TRILHA,
   NARRADOR,
+  VOLUME_DOS_EFEITOS,
+  SONS_DE_PODER,
   SOM_AURA,
   SONS,
   type CamadaDeSom,
@@ -240,6 +242,31 @@ export const FightAudio: React.FC<FightAudioProps> = ({ timeline }) => {
             />
           </React.Fragment>
         ))}
+
+      {/* efeitos dos acontecimentos: combo, esquiva, contra, brutal... */}
+      {e.efeitos.map((ef, i) => (
+        <Sequence key={`efeito-${i}`} from={ef.real} layout="none">
+          <Audio
+            src={staticFile(`assets/audio/efeitos/${ef.som}.wav`)}
+            volume={VOLUME_DOS_EFEITOS[ef.som.replace(/_\d+$/, "")] ?? 0.4}
+          />
+        </Sequence>
+      ))}
+
+      {/* poderes: cada efeito da luta de gelo e fogo tem o seu som, no
+          quadro em que ele comeca */}
+      {timeline.poderes.map((p, i) => {
+        const som = SONS_DE_PODER[p.tipo];
+        if (!som) return null;
+        return (
+          <Disparo
+            key={`poder-${i}`}
+            som={som}
+            quadro={paraQuadroReal(timeline, p.from)}
+            fps={fps}
+          />
+        );
+      })}
 
       {/* narrador */}
       {e.falas.map((fl, i) => (

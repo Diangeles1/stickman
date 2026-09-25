@@ -18,6 +18,7 @@
  */
 
 import { corpoNoQuadro, juntasDoCorpo } from "../src/animation/corpo";
+import { geometriaDaLamina } from "../src/characters/Katana";
 import { ATAQUES } from "../src/attacks/registry";
 import { compilar } from "../src/core/timeline";
 import {
@@ -42,6 +43,17 @@ const PONTOS: PontoAlvo[] = ["head", "chest", "torso", "center", "legs"];
 const ENCOSTOU = 40;
 
 const luta = (move: AttackName, ponto: PontoAlvo): FightSpec => ({
+  // golpe de arma so existe com a arma na mao: sem ela a pose de katana
+  // aparece sem lamina e o contato e medido na mao, que para de proposito um
+  // comprimento de espada antes do alvo
+  ...(ATAQUES[move].lamina
+    ? {
+        armas: {
+          black: { tipo: "katana" as const, elemento: "gelo" as const },
+          red: { tipo: "katana" as const, elemento: "fogo" as const },
+        },
+      }
+    : {}),
   fighterA: "black",
   fighterB: "red",
   seed: 7,
@@ -90,7 +102,13 @@ for (const move of nomes) {
     const f = imp.frame;
     const a = corpoNoQuadro(t, "black", f);
     const b = corpoNoQuadro(t, "red", f);
-    const p = juntasDoCorpo(a)[def.contactJoint];
+    // quem encosta num golpe de arma e a PONTA DA LAMINA, nao a mao
+    const p = def.lamina
+      ? (() => {
+          const g = geometriaDaLamina(a);
+          return { x: g.mao.x + g.dir.x * g.comprimento, y: g.mao.y + g.dir.y * g.comprimento };
+        })()
+      : juntasDoCorpo(a)[def.contactJoint];
     const q = pontoDoAlvo(ponto, juntasDoCorpo(b));
 
     const dx = q.x - p.x;

@@ -93,8 +93,19 @@ const PERIODO_DA_GINGA = 34;
  * um pe que levanta.
  */
 const GINGA: Pose = {
-  kneeFront: { x: 12, y: -4 },
-  kneeBack: { x: 22, y: -4 },
+  // O PE ENTRA NA CONTA, e e ele que faz o corpo descer: o pe sobe 5 unidades
+  // em relacao ao quadril, entao o quadril desce 5 em relacao ao chao. O
+  // joelho acompanha indo para frente, que e para onde joelho dobra.
+  //
+  // Antes o balanco mexia SO os joelhos. Como o corretor de ossos mantem o
+  // comprimento da perna, o pe era arrastado junto: ele andava ate 130
+  // unidades para os lados a cada ciclo, o planejamento dos pes entendia
+  // aquilo como "a pose quer o pe noutro lugar" e mandava dar um passo. Duas
+  // vezes por segundo, para sempre. Era a perna tremendo.
+  footFront: { x: 0, y: -5 },
+  footBack: { x: 0, y: -5 },
+  kneeFront: { x: 10, y: -3 },
+  kneeBack: { x: 16, y: -3 },
   neck: { x: 2, y: 3 },
   head: { x: 3, y: 4 },
   handFront: { x: 2, y: 5 },
@@ -364,6 +375,75 @@ export const juntasDoCorpo = (c: Corpo) =>
  * e resolver os dois com IK ao mesmo tempo seria dependencia circular. O ponto
  * do alvo e lido do corpo sem mira, que nao depende de ninguem.
  */
+/**
+ * POSTURA: a assinatura corporal de cada lutador.
+ *
+ * Dois lutadores com a mesma biblioteca de poses lutam igual, e um animador
+ * que viu a luta resumiu o problema assim: "eles ainda compartilham a mesma
+ * linguagem de movimento". Cor diferente nao e personagem diferente.
+ *
+ * Aqui o perfil do preset (velocidade contra forca) vira POSTURA, aplicada em
+ * cima de qualquer pose de espera ou de deslocamento:
+ *
+ *   PESADO (forca > velocidade)   base larga, quadril baixo, tronco a frente
+ *   RAPIDO (velocidade > forca)   base estreita, quadril alto, tronco reto
+ *
+ * NAO se aplica a pose de ATAQUE. A altura da ponta da lamina e do punho no
+ * contato e calibrada contra o ponto mirado (ver scripts/contato.mts, mira.mts):
+ * mexer na postura ali sairia da calibragem e o golpe deixaria de encostar.
+ * O ataque e o mesmo para os dois; o que muda e o corpo que chega nele.
+ */
+const POSES_COM_POSTURA = new Set<PoseName>([
+  "idle", "guard", "guardaKatana",
+  "block", "bloqueioKatana", "absorver", "absorverKatana",
+]);
+// So a ESPERA e a DEFESA, que e onde a personalidade se le: e a pose em que
+// o lutador passa mais tempo e a primeira coisa que o espectador ve dele.
+//
+// Tudo que faz parte de um golpe (carga, ataque) fica de fora, e por um
+// motivo medido: a postura e um deslocamento fixo, e quando ela existe numa
+// pose e nao na seguinte, o corpo salta essa diferenca inteira de uma vez. No
+// meio de um golpe isso colapsa a corrente pe-quadril-tronco-braco num
+// instante so (auditoria de cadeia: "corpo se movendo como bloco"), e a
+// corrente e justamente o que faz o golpe ter peso.
+
+const aplicarPostura = (pose: Pose, peso: number): Pose => {
+  if (Math.abs(peso) < 0.05) return pose;
+  // a base abre no pesado, mas NUNCA alem do que a perna alcanca: passando
+  // do alcance util, o planejamento dos pes entende como perna esticada e
+  // manda dar passos no lugar (ver PASSO_MINIMO)
+  const largura = 1 + 0.16 * peso;
+  const altura = 1 - 0.05 * peso;
+  const inclinacao = 7 * peso;
+  const mexer = (p: Vec2 | undefined, dx: number, esc = 1): Vec2 | undefined =>
+    p ? { x: p.x * esc + dx, y: p.y } : p;
+  return {
+    ...pose,
+    // tronco e cabeca vao para frente no pesado, ficam retos no rapido
+    neck: mexer(pose.neck, inclinacao),
+    head: mexer(pose.head, inclinacao * 1.5),
+    // a base abre e o quadril baixa (o pe fica mais perto do quadril)
+    footBack: pose.footBack
+      ? { x: pose.footBack.x * largura, y: pose.footBack.y * altura }
+      : pose.footBack,
+    footFront: pose.footFront
+      ? { x: pose.footFront.x * largura, y: pose.footFront.y * altura }
+      : pose.footFront,
+    kneeBack: pose.kneeBack
+      ? { x: pose.kneeBack.x * largura, y: pose.kneeBack.y * altura }
+      : pose.kneeBack,
+    kneeFront: pose.kneeFront
+      ? { x: pose.kneeFront.x * largura, y: pose.kneeFront.y * altura }
+      : pose.kneeFront,
+  };
+};
+
+/** -1 puro rapido, +1 puro pesado */
+export const pesoDoLutador = (id: FighterId): number => {
+  const { speed, power } = PRESETS[id].profile;
+  return Math.max(-1, Math.min(1, power - speed));
+};
+
 const corpoBase = (
   timeline: Timeline,
   id: FighterId,
@@ -393,6 +473,10 @@ const corpoBase = (
     a.poseNome === "guard" ? gingar(respirando, frame, defasagem) : respirando,
     fechamento,
   );
+  // a postura do lutador por cima da pose (ver aplicarPostura)
+  if (POSES_COM_POSTURA.has(a.poseNome)) {
+    pose = aplicarPostura(pose, pesoDoLutador(id));
+  }
 
   // DANCA DA VITORIA: por cima de tudo, entrando em 12 quadros a partir da
   // guarda (misturada em angulos, os ossos nao esticam). Continua alguns
@@ -542,6 +626,11 @@ export const POSES_DE_APOIO = new Set<PoseName>([
   "punch", "punchFast", "punchHeavy", "uppercut",
   "kick", "kickLow", "kickHigh", "spinKick", "knee", "elbow", "charge",
   "hitHead", "hitChest", "hitBody", "hitLeg",
+  "guardaKatana", "bloqueioKatana", "cargaKatana", "cargaBaixa",
+  "absorver", "absorverKatana", "pousoKatana",
+  "corteSobe", "corteDesce", "corteLateral", "corteRapido", "corteMergulho",
+  "corridaKatana1", "corridaKatana2", "saltoParaTras", "lancar", "bracosFrente",
+  "katanaErguida",
 ]);
 
 const POSES_DE_LOCOMOCAO = new Set<PoseName>([
@@ -564,6 +653,13 @@ const VELOCIDADE_DE_ARRASTO = 16;
  * lutador faz o tempo todo.
  */
 const DISTANCIA_DO_PASSO = 55;
+/**
+ * Deslocamento minimo para um passo existir, em unidades de mundo.
+ *
+ * Abaixo disto o pe chegaria praticamente no mesmo lugar, e um passo que nao
+ * sai do lugar nao e passo: e tremor.
+ */
+const PASSO_MINIMO = 18;
 /** Fracao do alcance da perna acima da qual o pe precisa se mover. */
 const ALCANCE_UTIL = 0.97;
 /** Perto do chao (unidades de mundo) o pe esta sujeito ao limite abaixo. */
@@ -687,8 +783,17 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
         if (st.modo === "plantado") {
           const erro = cru.x - st.px;
           const alcance = Math.hypot(st.px - j.hip.x, j.hip.y);
+          // UM PASSO SO VALE SE ELE MUDA ALGUMA COISA.
+          //
+          // A perna esticada demais pede um passo, mas se a pose quer o pe
+          // exatamente onde ele ja esta, esse passo cai no mesmo lugar, a
+          // perna continua esticada e no quadro seguinte ele pede outro. Era
+          // dai que vinha a perna tremendo: um lutador parado levantava um pe
+          // a cada seis quadros, alternando, sem sair do lugar.
+          const esticada = alcance > perna * ALCANCE_UTIL;
           const precisa =
-            Math.abs(erro) > DISTANCIA_DO_PASSO || alcance > perna * ALCANCE_UTIL;
+            Math.abs(erro) > DISTANCIA_DO_PASSO ||
+            (esticada && Math.abs(erro) > PASSO_MINIMO);
           // um pe de cada vez: os dois no ar ao mesmo tempo e pulo, nao passo
           if (precisa && outro.modo !== "passo") {
             st.modo = "passo";
@@ -812,7 +917,14 @@ const miraAtiva = (
   id: FighterId,
   frame: number,
 ): AimEvent | undefined =>
-  timeline.aims.find((m) => m.who === id && frame >= m.from && frame <= m.to);
+  // GOLPE DE ARMA nao usa cinematica inversa. O braco tem ~200 unidades de
+  // alcance e a lamina outras 290: o ponto de contato fica bem alem do que a
+  // mao alcanca, entao mirar a MAO nele so torcia o braco e piorava (medido:
+  // o erro da ponta subia de 30 para 300). Quem resolve o contato de arma e a
+  // distancia de combate, calculada a partir da ponta nesta pose.
+  timeline.aims.find(
+    (m) => m.who === id && !m.recuo && frame >= m.from && frame <= m.to,
+  );
 
 /**
  * Resolve o corpo de um lutador no quadro pedido, ja com a mira corrigida.

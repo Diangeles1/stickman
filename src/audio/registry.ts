@@ -233,3 +233,78 @@ export const TRILHA = {
 
 /** volume do narrador e quanto a trilha abaixa enquanto ele fala */
 export const NARRADOR = { volume: 0.6, trilhaSobFala: 0.45 };
+
+/**
+ * Volume dos efeitos dos acontecimentos (ver effects/espetaculo.ts,
+ * efeitosDe). Abaixo dos golpes: o efeito enfeita o impacto, nao compete.
+ */
+export const VOLUME_DOS_EFEITOS: Record<string, number> = {
+  esquiva: 0.5,
+  contra: 0.38,
+  brutal: 0.55,
+  tensao: 0.4,
+  bloqueio: 0.22,
+  combo: 0.3,
+};
+
+// ---- LUTA DE KATANA, GELO E FOGO -------------------------------------------
+// Sons sinteticos (scripts/compor-efeitos.mts), montados em camadas como os
+// golpes: ar antes do contato, o contato, e o grave logo depois.
+
+const E = `${A}/efeitos`;
+
+/** corte de katana que acerta: o ar cortado, a lamina e a carne */
+SONS.corte = [
+  { arquivo: `${E}/corte.wav`, volume: 0.62, offset: -0.18 },
+  { arquivo: `${A}/impacts/impact_body_01.wav`, volume: 0.5, offset: 0 },
+  { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.32, offset: 0.02 },
+];
+
+/** lamina contra lamina */
+SONS.clang = [
+  { arquivo: `${E}/corte.wav`, volume: 0.45, offset: -0.18 },
+  { arquivo: `${E}/clang.wav`, volume: 0.9, offset: 0 },
+  { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.35, offset: 0.02 },
+];
+
+/** poderes: cada um disparado pelo evento que o cria (ver FightAudio) */
+export const SONS_DE_PODER: Record<string, SomComposto> = {
+  geloNoChao: [
+    { arquivo: `${E}/gelo.wav`, volume: 0.75, offset: 0 },
+    { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.4, offset: 0.02 },
+  ],
+  chaoQueimado: [{ arquivo: `${E}/fogo.wav`, volume: 0.45, offset: 0 }],
+  estilhacosGelo: [
+    { arquivo: `${E}/gelo.wav`, volume: 0.5, offset: 0 },
+    { arquivo: `${A}/debris/crack_01.wav`, volume: 0.45, offset: 0 },
+  ],
+  explosaoFogo: [
+    { arquivo: `${A}/explosions/explosion_01.wav`, volume: 0.7, offset: 0 },
+    { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.6, offset: 0.02 },
+  ],
+  bolaDeFogo: [
+    { arquivo: `${E}/fogo.wav`, volume: 0.5, offset: 0 },
+    { arquivo: `${A}/whoosh/whoosh_medium.wav`, volume: 0.45, offset: 0 },
+  ],
+  vapor: [{ arquivo: `${E}/vapor.wav`, volume: 0.5, offset: 0 }],
+  feixeFogo: [
+    { arquivo: `${E}/feixe.wav`, volume: 0.75, offset: 0 },
+    { arquivo: `${E}/fogo.wav`, volume: 0.5, offset: 0 },
+  ],
+  raioGelo: [
+    { arquivo: `${E}/feixe.wav`, volume: 0.6, offset: 0 },
+    { arquivo: `${E}/gelo.wav`, volume: 0.5, offset: 0 },
+  ],
+  esferaInferno: [
+    { arquivo: `${E}/fogo.wav`, volume: 0.6, offset: 0 },
+    { arquivo: `${A}/energy/aura_charge_01.wav`, volume: 0.55, offset: 0 },
+  ],
+  zeroAbsoluto: [
+    { arquivo: `${E}/gelo.wav`, volume: 0.6, offset: 0 },
+    { arquivo: `${A}/energy/aura_charge_01.wav`, volume: 0.45, offset: 0 },
+  ],
+  quebraLaminas: [{ arquivo: `${E}/ting.wav`, volume: 0.85, offset: 0 }],
+  choque: [{ arquivo: `${A}/heavy/camera_rumble_01.wav`, volume: 0.45, offset: 0.02 }],
+  rachadura: [{ arquivo: `${A}/debris/crack_01.wav`, volume: 0.5, offset: 0 }],
+  trilhaGelo: [{ arquivo: `${E}/gelo.wav`, volume: 0.3, offset: 0 }],
+};

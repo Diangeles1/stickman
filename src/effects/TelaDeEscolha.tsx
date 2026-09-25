@@ -21,14 +21,16 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+import { CORES, Katana } from "../characters/Katana";
 import { POSES } from "../characters/poses";
 import { PRESETS } from "../characters/presets";
 import { ALTURA_QUADRIL } from "../characters/skeleton";
 import { Stickman } from "../characters/Stickman";
-import type { FighterId, Pose } from "../core/types";
+import type { FighterId, FightSpec, Pose } from "../core/types";
 import { FALAS } from "../audio/falas";
 import { NARRADOR } from "../audio/registry";
 import { FONTE } from "./Espetaculo";
+import { MarcaDagua } from "./MarcaDagua";
 import { NOMES } from "./espetaculo";
 
 /** segundos de contagem */
@@ -47,8 +49,8 @@ const contorno = (px: number) => ({
 });
 
 /** guarda respirando: o peito sobe e desce, os punhos acompanham */
-const respirando = (frame: number, fase: number): Pose => {
-  const g = POSES.guard;
+const respirando = (frame: number, fase: number, armado = false): Pose => {
+  const g = armado ? POSES.guardaKatana : POSES.guard;
   const k = Math.sin(frame * 0.09 + fase) * 3;
   const sobe = (p?: { x: number; y: number }) =>
     p ? { x: p.x, y: p.y + k } : p;
@@ -69,7 +71,10 @@ const Painel: React.FC<{
   frame: number;
   fps: number;
   largura: number;
-}> = ({ id, lado, frame, fps, largura }) => {
+  nome?: string;
+  poder?: string;
+  arma?: { tipo: "katana"; elemento: "gelo" | "fogo" };
+}> = ({ id, lado, frame, fps, largura, nome, poder, arma }) => {
   const preset = PRESETS[id];
   const entra = spring({ frame: frame - (lado < 0 ? 0 : 4), fps, config: { damping: 14, stiffness: 160 } });
   const desliza = interpolate(entra, [0, 1], [lado * largura * 0.6, 0]);
@@ -109,13 +114,35 @@ const Painel: React.FC<{
       <g clipPath={`url(#painel-${id})`}>
       <Stickman
         preset={preset}
-        pose={respirando(frame, lado < 0 ? 0 : 1.7)}
+        pose={respirando(frame, lado < 0 ? 0 : 1.7, Boolean(arma))}
         baseX={x0 + w / 2}
         baseY={quadril}
         facing={(lado < 0 ? 1 : -1) as 1 | -1}
         scaleExtra={escalaExtra}
         contorno
       />
+      {arma && (
+        <Katana
+          corpo={{
+            x: x0 + w / 2,
+            baseY: quadril,
+            facing: (lado < 0 ? 1 : -1) as 1 | -1,
+            scale: preset.scale * escalaExtra,
+            spin: 0,
+            giro: 1,
+            pose: respirando(frame, lado < 0 ? 0 : 1.7, true),
+            poseNome: "guardaKatana",
+            noAr: false,
+            velocidade: 0,
+            aceleracao: 0,
+            agachamento: 0,
+            correcaoDaMira: 0,
+            alcancou: true,
+          }}
+          elemento={arma.elemento}
+          frame={frame}
+        />
+      )}
       </g>
       <text
         x={x0 + w / 2}
@@ -130,13 +157,38 @@ const Painel: React.FC<{
         paintOrder="stroke"
         letterSpacing={3}
       >
-        {NOMES[id]}
+        {nome ?? NOMES[id]}
       </text>
+      {poder && (
+        <text
+          x={x0 + w / 2}
+          y={topo + altura - 18}
+          textAnchor="middle"
+          fontFamily={PILHA}
+          fontSize={52}
+          fill={arma ? CORES[arma.elemento].borda : "#ffffff"}
+          stroke="#1b1b22"
+          strokeWidth={8}
+          strokeLinejoin="round"
+          paintOrder="stroke"
+          letterSpacing={2}
+        >
+          {poder}
+        </text>
+      )}
     </g>
   );
 };
 
-export const TelaDeEscolha: React.FC<{ a: FighterId; b: FighterId }> = ({ a, b }) => {
+export const TelaDeEscolha: React.FC<{
+  a: FighterId;
+  b: FighterId;
+  /** nomes na tela (padrao: os nomes de cor) */
+  nomes?: Partial<Record<FighterId, string>>;
+  /** subtitulo de cada painel: o poder do lutador */
+  poderes?: Partial<Record<FighterId, string>>;
+  armas?: FightSpec["armas"];
+}> = ({ a, b, nomes, poderes, armas }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
 
@@ -201,8 +253,8 @@ export const TelaDeEscolha: React.FC<{ a: FighterId; b: FighterId }> = ({ a, b }
           </text>
         </g>
 
-        <Painel id={a} lado={-1} frame={frame} fps={fps} largura={width} />
-        <Painel id={b} lado={1} frame={frame} fps={fps} largura={width} />
+        <Painel id={a} lado={-1} frame={frame} fps={fps} largura={width} nome={nomes?.[a]} poder={poderes?.[a]} arma={armas?.[a]} />
+        <Painel id={b} lado={1} frame={frame} fps={fps} largura={width} nome={nomes?.[b]} poder={poderes?.[b]} arma={armas?.[b]} />
 
         {/* contagem */}
         {restante > 0 && (
@@ -252,6 +304,7 @@ export const TelaDeEscolha: React.FC<{ a: FighterId; b: FighterId }> = ({ a, b }
 
         <rect width={width} height={height} fill="#ffffff" opacity={clarao} />
       </svg>
+      <MarcaDagua vaga="rodape" larguraTela={width} />
       {/* tique a cada segundo, com um grave de batida de coracao */}
       {Array.from({ length: SEGUNDOS_DE_ESCOLHA }, (_, k) => (
         <Sequence key={k} from={k * fps} layout="none">
@@ -264,7 +317,7 @@ export const TelaDeEscolha: React.FC<{ a: FighterId; b: FighterId }> = ({ a, b }
         <Audio src={staticFile(FALAS.escolha.arquivo)} volume={NARRADOR.volume} />
       </Sequence>
       {(["tres", "dois", "um"] as const).map((fala, k) => (
-        <Sequence key={fala} from={(k + 2) * fps + 2} layout="none">
+        <Sequence key={fala} from={(k + 2) * fps + 6} layout="none">
           <Audio src={staticFile(FALAS[fala].arquivo)} volume={NARRADOR.volume} />
         </Sequence>
       ))}

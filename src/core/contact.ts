@@ -82,7 +82,10 @@ export const pontoDoAlvo = (
     case "guarda":
       // o antebraco da frente, perto do punho: e onde um golpe BLOQUEADO
       // encosta. Mirar na cabeca atras da guarda fazia o punho parar 137
-      // unidades longe de qualquer coisa, no ar entre os bracos e o rosto
+      // unidades longe de qualquer coisa, no ar entre os bracos e o rosto.
+      // E tambem onde a katana de quem defende e segurada, entao e ali que
+      // lamina encontra lamina: um corte alto aparado acima da cabeca so
+      // seria alcancavel pelo corte que sobe, e o horizontal ficava no ar
       return entre(juntas.elbowFront, juntas.handFront, 0.65);
   }
 };
@@ -189,6 +192,13 @@ export const distanciaDeCombate = (
   atacante: FighterId,
   alvo: FighterId,
   ponto: PontoAlvo,
+  /**
+   * Pose do alvo no contato. Padrao "guard". Golpe BLOQUEADO encosta na
+   * guarda erguida, que fica mais a frente e mais alta que o peito: sem
+   * medir na pose certa, o corte de katana (que nao tem IK para corrigir)
+   * parava a 200 unidades da defesa.
+   */
+  poseDoAlvo: PoseName = "guard",
 ): number => {
   // os membros sao tracos grossos: a superficie do corpo fica meia espessura
   // a frente do eixo da junta, dos dois lados
@@ -197,7 +207,30 @@ export const distanciaDeCombate = (
   const superficie = meioTronco + meioPunho;
   const folga = superficie - AFUNDAMENTO;
 
-  const noAlvo = posicaoDoAlvo(ponto, alvo);
+  const noAlvo = posicaoDoAlvo(ponto, alvo, poseDoAlvo);
+
+  // ---- GOLPE DE ARMA: quem encosta e a PONTA DA LAMINA --------------------
+  //
+  // A lamina sai da mao na direcao do antebraco (ver characters/Katana.tsx) e
+  // nao tem cinematica inversa: a pose e que define o corte. Entao a distancia
+  // sai da posicao real da ponta NESTA pose, do mesmo jeito que o alcance de
+  // um membro sai da pose dele. Com um comprimento fixo somado na horizontal,
+  // o corte diagonal (a ponta sobe ou desce) errava por mais de 130 unidades.
+  if (golpe.lamina) {
+    const escala = escalaDoMundo(PRESETS[atacante].scale);
+    const j = juntasNoMundo(POSES[golpe.pose], {
+      baseX: 0,
+      baseY: -peMaisBaixo(POSES[golpe.pose]) * escala,
+      facing: 1,
+      scale: PRESETS[atacante].scale,
+    });
+    const dx = j.handFront.x - j.elbowFront.x;
+    const dy = j.handFront.y - j.elbowFront.y;
+    const n = Math.hypot(dx, dy) || 1;
+    const pontaX = j.handFront.x + (dx / n) * golpe.lamina * escala;
+    return Math.max(120, pontaX + noAlvo.x + folga);
+  }
+
   const cadeia = CADEIA_DO_MEMBRO[golpe.contactJoint];
 
   if (!cadeia) {
@@ -246,7 +279,8 @@ export const distanciaDeCombate = (
   const dy = alvoP.y - raiz.y;
   const horizontal = Math.sqrt(Math.max(0, R * R - dy * dy));
 
-  return Math.max(120, raiz.x + horizontal + noAlvo.x + folga);
+  // golpe de arma: a lamina chega ao ponto, a mao fica esse tanto antes
+  return Math.max(120, raiz.x + horizontal + noAlvo.x + folga + (golpe.lamina ?? 0));
 };
 
 /** Folga que a distancia de combate persegue: usada pelo medidor de contato. */
@@ -309,4 +343,11 @@ export const ALVO_PADRAO: Record<string, PontoAlvo> = {
   diveAttack: "chest",
   special: "chest",
   finisher: "chest",
+  // cada corte mira na altura que a ponta dele realmente alcanca
+  corteSobe: "queixo",
+  corteDesce: "legs",
+  corteLateral: "chest",
+  corteRapido: "chest",
+  // o mergulho termina baixo: a ponta chega na altura do plexo, nao do peito
+  corteMergulho: "torso",
 };

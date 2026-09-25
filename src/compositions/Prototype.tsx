@@ -67,7 +67,13 @@ export const Prototype: React.FC<PrototypeProps> = ({
   return (
     <>
       <Sequence durationInFrames={QUADROS_DE_ESCOLHA}>
-        <TelaDeEscolha a={usado.fighterA} b={usado.fighterB} />
+        <TelaDeEscolha
+          a={usado.fighterA}
+          b={usado.fighterB}
+          nomes={usado.nomes}
+          poderes={usado.poderes}
+          armas={usado.armas}
+        />
       </Sequence>
       <Sequence from={QUADROS_DE_ESCOLHA}>{luta}</Sequence>
     </>

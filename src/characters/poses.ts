@@ -44,10 +44,19 @@ const ESCRITAS: Record<PoseName, Pose> = {
     // joelhos apontam para frente, como num corpo de verdade; o de tras
     // apontava para tras e, com a ginga, a base virava um arco de pernas
     // abertas para fora
-    kneeBack: { x: -16, y: 48 },
-    footBack: { x: -52, y: 92 },
-    kneeFront: { x: 32, y: 44 },
-    footFront: { x: 46, y: 92 },
+    // A BASE CABE DENTRO DA PERNA (99 unidades: coxa 50 + canela 49) e OS DOIS
+    // PES ENCOSTAM NO CHAO JUNTOS.
+    //
+    // Duas coisas que pareciam detalhe e nao eram. Base larga demais: o
+    // planejamento dos pes lia a perna como esticada e mandava dar um passo
+    // com o lutador parado. Pe da frente mais alto que o de tras depois da
+    // correcao de ossos: ele ficava 14 unidades no ar, nunca era plantado, e
+    // entao flutuava junto com o balanco da guarda. As duas coisas somadas
+    // eram a perna tremendo.
+    kneeBack: { x: -12, y: 49 },
+    footBack: { x: -44, y: 84 },
+    kneeFront: { x: 30, y: 36 },
+    footFront: { x: 40, y: 91 },
   }),
 
   /**
@@ -83,6 +92,403 @@ const ESCRITAS: Record<PoseName, Pose> = {
     footFront: { x: 36, y: 92 },
     kneeBack: { x: -22, y: 46 },
     footBack: { x: -36, y: 92 },
+  }),
+
+  // --- KATANA ---------------------------------------------------------------
+  //
+  // REGRA DESTAS POSES: o corte nao e do braco, e do CHAO.
+  //
+  // A primeira versao destas poses errava nas duas pontas. Na carga, a lamina
+  // ja apontava para o alvo (entao nao havia o que antecipar: o golpe comecava
+  // onde terminava), e as pernas eram as mesmas da carga ate o contato (entao
+  // nao havia de onde a forca vir). Um animador que viu o resultado descreveu
+  // como "andando com uma espada", e estava certo.
+  //
+  // Agora cada par carga/corte e escrito como uma transferencia de peso:
+  //
+  //   CARGA   peso no pe de TRAS, joelho fundo (o quadril baixa de verdade:
+  //           o pe fica mais perto do quadril, y menor), ombros fechados,
+  //           lamina LONGE do alvo, cabeca ja olhando para ele
+  //   CORTE   o pe de tras empurra e estica, o peso passa para o pe da
+  //           frente, o quadril gira, o tronco abre e so entao a lamina chega
+  //
+  // A altura da ponta da lamina em cada corte e calibrada contra o ponto
+  // mirado (ver scripts/contato.mts): mexer no quadril mexe na ponta, entao
+  // qualquer ajuste de perna aqui pede conferir a auditoria de contato.
+  //
+  // E TODA BASE CABE DENTRO DA PERNA. A perna tem 99 unidades (coxa 50 +
+  // canela 49); estas poses ficam em 93 no maximo, que e o alcance util que o
+  // planejamento dos pes usa. As primeiras versoes pediam 110 e ate 115: o
+  // corretor de ossos encolhia em silencio e, pior, o planejador entendia o
+  // pe como "esticado demais" e mandava dar um passo a cada quadro. O passo
+  // caia no mesmo lugar, o alcance continuava estourado, e o resultado era um
+  // lutador PARADO marchando no lugar.
+
+  /** guarda de katana: base larga, joelhos moles, lamina a frente do corpo */
+  guardaKatana: p({
+    neck: { x: 8, y: -72 },
+    head: { x: 13, y: -111 },
+    elbowFront: { x: 24, y: -36 },
+    handFront: { x: 40, y: -54 },
+    elbowBack: { x: 6, y: -38 },
+    handBack: { x: 32, y: -48 },
+    kneeBack: { x: -6, y: 50 },
+    footBack: { x: -46, y: 78 },
+    kneeFront: { x: 37, y: 29 },
+    footFront: { x: 42, y: 74 },
+  }),
+
+  /**
+   * DEFESA: nao e "a mesma guarda um pouco diferente". E o corpo se ancorando:
+   * base mais larga, joelhos bem dobrados (o quadril baixa 8 unidades), peso
+   * distribuido, lamina atravessada na frente do rosto e os dois cotovelos
+   * para dentro. E dessa ancoragem que o recuo do bloqueio pode partir.
+   */
+  bloqueioKatana: p({
+    neck: { x: -2, y: -70 },
+    head: { x: 0, y: -109 },
+    elbowFront: { x: 26, y: -44 },
+    handFront: { x: 34, y: -70 },
+    elbowBack: { x: 4, y: -42 },
+    handBack: { x: 26, y: -62 },
+    kneeBack: { x: -9, y: 49 },
+    footBack: { x: -50, y: 76 },
+    kneeFront: { x: 42, y: 30 },
+    footFront: { x: 46, y: 86 },
+  }),
+
+  /**
+   * CARGA ALTA (para o corte que desce): a lamina sobe por cima do ombro e
+   * vai para TRAS da cabeca, o peso vai todo para o pe de tras e o joelho
+   * afunda. O corpo fica que nem um arco armado.
+   */
+  cargaKatana: p({
+    neck: { x: -10, y: -70 },
+    head: { x: 2, y: -108 },
+    elbowFront: { x: 14, y: -94 },
+    handFront: { x: -12, y: -100 },
+    elbowBack: { x: -6, y: -90 },
+    handBack: { x: -22, y: -94 },
+    kneeBack: { x: 0, y: 50 },
+    footBack: { x: -44, y: 72 },
+    kneeFront: { x: 43, y: 25 },
+    footFront: { x: 28, y: 72 },
+  }),
+
+  /**
+   * CARGA BAIXA (para o corte que sobe): o corpo enrola para baixo e para
+   * tras, com as duas maos abaixo do quadril e a lamina apontando para tras
+   * e para baixo. Antes ela apontava para FRENTE, e o "corte ascendente"
+   * comecava praticamente na posicao em que terminava.
+   */
+  cargaBaixa: p({
+    neck: { x: 12, y: -68 },
+    head: { x: 26, y: -104 },
+    // a lamina vai para tras quase na horizontal, um pouco abaixo do quadril:
+    // apontando mais para baixo ela cruzava as proprias pernas na tela
+    elbowFront: { x: -20, y: -36 },
+    handFront: { x: -48, y: -26 },
+    elbowBack: { x: -24, y: -30 },
+    handBack: { x: -50, y: -34 },
+    kneeBack: { x: -1, y: 50 },
+    footBack: { x: -46, y: 70 },
+    kneeFront: { x: 44, y: 24 },
+    footFront: { x: 26, y: 70 },
+  }),
+
+  /**
+   * CORTE QUE SOBE. O pe de tras ja empurrou (perna esticada, longe), o peso
+   * esta no pe da frente que plantou a frente, o quadril girou e o tronco
+   * abriu para tras enquanto a lamina sobe.
+   */
+  corteSobe: p({
+    neck: { x: -6, y: -74 },
+    head: { x: -2, y: -112 },
+    elbowFront: { x: 40, y: -72 },
+    handFront: { x: 72, y: -72 },
+    elbowBack: { x: 22, y: -50 },
+    handBack: { x: 48, y: -62 },
+    kneeBack: { x: -9, y: 49 },
+    footBack: { x: -50, y: 76 },
+    kneeFront: { x: 42, y: 28 },
+    footFront: { x: 50, y: 76 },
+  }),
+
+  /**
+   * CORTE QUE DESCE. O peso desaba para frente: o tronco vem por cima do pe
+   * da frente, o pe de tras fica esticado atras e a lamina desce na diagonal.
+   */
+  corteDesce: p({
+    neck: { x: 22, y: -64 },
+    head: { x: 34, y: -100 },
+    elbowFront: { x: 44, y: -50 },
+    handFront: { x: 64, y: -30 },
+    elbowBack: { x: 28, y: -40 },
+    handBack: { x: 50, y: -26 },
+    kneeBack: { x: -10, y: 49 },
+    footBack: { x: -52, y: 74 },
+    kneeFront: { x: 43, y: 26 },
+    footFront: { x: 52, y: 74 },
+  }),
+
+  /**
+   * CORTE RAPIDO: o golpe que sai da propria guarda.
+   *
+   * Nao tem carga: o corpo quase nao se prepara, so o braco dispara e volta.
+   * E o oposto do corte pesado, e e o contraste entre os dois que da ritmo a
+   * luta. Numa troca de katana e ele que aparece mais.
+   */
+  corteRapido: p({
+    neck: { x: 10, y: -72 },
+    head: { x: 16, y: -110 },
+    elbowFront: { x: 30, y: -56 },
+    handFront: { x: 56, y: -56 },
+    elbowBack: { x: 4, y: -44 },
+    handBack: { x: 28, y: -50 },
+    kneeBack: { x: -5, y: 50 },
+    footBack: { x: -44, y: 80 },
+    kneeFront: { x: 37, y: 32 },
+    footFront: { x: 42, y: 89 },
+  }),
+
+  /**
+   * CORTE HORIZONTAL. O que manda aqui e o GIRO DO QUADRIL: o pe de tras
+   * pivota, o quadril vira, o ombro de tras vem junto e o braco chega por
+   * ultimo, esticado.
+   */
+  corteLateral: p({
+    neck: { x: 14, y: -70 },
+    head: { x: 22, y: -108 },
+    elbowFront: { x: 42, y: -58 },
+    handFront: { x: 66, y: -58 },
+    elbowBack: { x: -10, y: -52 },
+    handBack: { x: -32, y: -42 },
+    kneeBack: { x: -11, y: 49 },
+    footBack: { x: -52, y: 75 },
+    kneeFront: { x: 42, y: 27 },
+    footFront: { x: 52, y: 75 },
+  }),
+
+  /**
+   * ABSORVER O BLOQUEIO. O golpe parou na guarda, mas a forca nao sumiu: ela
+   * entra pelo braco e desce ate o pe.
+   *
+   * Sem esta pose, o bloqueio era um evento que acontecia e desaparecia: quem
+   * defendia ficava na mesma pose antes e depois de aparar um corte pesado, e
+   * a colisao nao tinha consequencia nenhuma no corpo.
+   *
+   * O que muda, na ordem em que a forca viaja: os punhos sao empurrados para
+   * DENTRO (cotovelos dobram e colam no corpo), o tronco roda para tras, a
+   * cabeca vai junto, o joelho da frente cede e o pe de tras se ancora.
+   */
+  absorver: p({
+    neck: { x: -14, y: -70 },
+    head: { x: -22, y: -107 },
+    elbowFront: { x: 12, y: -44 },
+    handFront: { x: 20, y: -66 },
+    elbowBack: { x: -8, y: -42 },
+    handBack: { x: 8, y: -60 },
+    kneeBack: { x: -5, y: 50 },
+    footBack: { x: -48, y: 74 },
+    kneeFront: { x: 38, y: 24 },
+    footFront: { x: 44, y: 78 },
+  }),
+  /** o mesmo, com a katana atravessada e empurrada contra o proprio corpo */
+  absorverKatana: p({
+    neck: { x: -16, y: -68 },
+    head: { x: -26, y: -104 },
+    elbowFront: { x: 10, y: -42 },
+    handFront: { x: 16, y: -66 },
+    elbowBack: { x: -12, y: -40 },
+    handBack: { x: 4, y: -58 },
+    kneeBack: { x: -6, y: 50 },
+    footBack: { x: -50, y: 72 },
+    kneeFront: { x: 41, y: 23 },
+    footFront: { x: 46, y: 83 },
+  }),
+
+  // --- MOVIMENTO AVANCADO ----------------------------------------------------
+  //
+  // O que separa uma luta de anime de dois bonecos trocando golpes e o que
+  // acontece ENTRE os golpes: correr, saltar para tras, girar no ar, cair
+  // cortando. Todas estas poses respeitam o alcance da perna (99 unidades) e
+  // sao pensadas em par, para a alternancia ler como ciclo.
+
+  /** corrida armada: joelho da frente alto, lamina recolhida junto ao corpo */
+  corridaKatana1: p({
+    neck: { x: 24, y: -68 },
+    head: { x: 36, y: -104 },
+    elbowFront: { x: 6, y: -44 },
+    handFront: { x: 30, y: -34 },
+    elbowBack: { x: -22, y: -46 },
+    handBack: { x: -44, y: -26 },
+    kneeFront: { x: 48, y: -15 },
+    footFront: { x: 52, y: 34 },
+    kneeBack: { x: -24, y: 44 },
+    footBack: { x: -64, y: 72 },
+  }),
+  /** o outro tempo da corrida: as pernas trocam, o tronco segue a frente */
+  corridaKatana2: p({
+    neck: { x: 24, y: -68 },
+    head: { x: 36, y: -104 },
+    elbowFront: { x: 10, y: -46 },
+    handFront: { x: 36, y: -40 },
+    elbowBack: { x: -20, y: -44 },
+    handBack: { x: -40, y: -22 },
+    kneeFront: { x: 23, y: 44 },
+    footFront: { x: -26, y: 48 },
+    kneeBack: { x: 50, y: -5 },
+    footBack: { x: 70, y: 40 },
+  }),
+
+  /**
+   * SALTO PARA TRAS: o corpo se joga para tras e para cima, pernas dobradas
+   * na frente, lamina atravessada. E o recuo que abre distancia num quadro.
+   */
+  saltoParaTras: p({
+    neck: { x: -14, y: -72 },
+    head: { x: -26, y: -106 },
+    elbowFront: { x: 16, y: -48 },
+    handFront: { x: 40, y: -58 },
+    elbowBack: { x: -6, y: -46 },
+    handBack: { x: 18, y: -54 },
+    kneeFront: { x: 48, y: 14 },
+    footFront: { x: 30, y: 60 },
+    kneeBack: { x: 24, y: 44 },
+    footBack: { x: -20, y: 66 },
+  }),
+
+  /**
+   * GIRO NO AR: corpo recolhido, joelhos no peito, lamina junto. O giro em si
+   * e a rotacao do corpo inteiro (spin), nao a pose: aqui o corpo so fica
+   * compacto, que e o que permite girar.
+   */
+  giroNoAr: p({
+    neck: { x: 0, y: -70 },
+    head: { x: 0, y: -108 },
+    elbowFront: { x: 22, y: -48 },
+    handFront: { x: 30, y: -20 },
+    elbowBack: { x: -20, y: -46 },
+    handBack: { x: -26, y: -18 },
+    kneeFront: { x: 34, y: 6 },
+    footFront: { x: 18, y: 44 },
+    kneeBack: { x: -22, y: 10 },
+    footBack: { x: -8, y: 48 },
+  }),
+
+  /**
+   * MERGULHO: de cabeca para o alvo, corpo esticado numa linha, lamina a
+   * frente. E a pose de quem cai cortando.
+   */
+  mergulho: p({
+    neck: { x: 34, y: -62 },
+    head: { x: 54, y: -92 },
+    elbowFront: { x: 46, y: -46 },
+    handFront: { x: 70, y: -30 },
+    elbowBack: { x: 24, y: -44 },
+    handBack: { x: 48, y: -28 },
+    kneeFront: { x: -20, y: 46 },
+    footFront: { x: -52, y: 78 },
+    kneeBack: { x: -30, y: 40 },
+    footBack: { x: -70, y: 62 },
+  }),
+
+  /**
+   * CORTE EM MERGULHO: o fim do mergulho, com a lamina descendo na diagonal
+   * e o corpo aberto. E o golpe que fecha um salto.
+   */
+  corteMergulho: p({
+    neck: { x: 26, y: -64 },
+    head: { x: 40, y: -100 },
+    elbowFront: { x: 48, y: -40 },
+    handFront: { x: 66, y: -14 },
+    elbowBack: { x: 26, y: -40 },
+    handBack: { x: 48, y: -18 },
+    kneeFront: { x: 43, y: 26 },
+    footFront: { x: 52, y: 74 },
+    kneeBack: { x: -10, y: 49 },
+    footBack: { x: -52, y: 74 },
+  }),
+
+  // --- PODERES ---------------------------------------------------------------
+
+  /** ajoelhado com a mao espalmada no chao: o gelo sai dali */
+  maoNoChao: p({
+    neck: { x: 40, y: -58 },
+    head: { x: 62, y: -88 },
+    elbowFront: { x: 52, y: -20 },
+    handFront: { x: 70, y: 8 },
+    elbowBack: { x: 10, y: -40 },
+    handBack: { x: -10, y: -26 },
+    kneeFront: { x: 36, y: 20 },
+    footFront: { x: 40, y: 60 },
+    kneeBack: { x: -10, y: 44 },
+    footBack: { x: -56, y: 50 },
+  }),
+  /** lanca com uma mao: braco da frente esticado, o outro puxado para tras */
+  lancar: p({
+    neck: { x: 12, y: -72 },
+    head: { x: 18, y: -110 },
+    elbowFront: { x: 40, y: -62 },
+    handFront: { x: 66, y: -68 },
+    elbowBack: { x: -20, y: -50 },
+    handBack: { x: -36, y: -32 },
+    kneeBack: { x: -26, y: 52 },
+    footBack: { x: -64, y: 92 },
+    kneeFront: { x: 40, y: 42 },
+    footFront: { x: 62, y: 92 },
+  }),
+  /** as duas maos para frente, corpo segurando o coice do feixe */
+  bracosFrente: p({
+    neck: { x: -4, y: -72 },
+    head: { x: 0, y: -111 },
+    elbowFront: { x: 36, y: -62 },
+    handFront: { x: 62, y: -64 },
+    elbowBack: { x: 30, y: -58 },
+    handBack: { x: 56, y: -60 },
+    kneeBack: { x: -30, y: 50 },
+    footBack: { x: -74, y: 92 },
+    kneeFront: { x: 40, y: 44 },
+    footFront: { x: 60, y: 92 },
+  }),
+  /** katana erguida na vertical sobre a cabeca */
+  katanaErguida: p({
+    neck: { x: 0, y: -74 },
+    head: { x: 2, y: -113 },
+    elbowFront: { x: 26, y: -100 },
+    handFront: { x: 16, y: -126 },
+    elbowBack: { x: -10, y: -100 },
+    handBack: { x: 10, y: -120 },
+    kneeBack: { x: -22, y: 46 },
+    footBack: { x: -48, y: 92 },
+    kneeFront: { x: 24, y: 46 },
+    footFront: { x: 46, y: 92 },
+  }),
+  /** patinando: agachado, inclinado para frente, lamina baixa para tras */
+  deslizar: p({
+    neck: { x: 34, y: -60 },
+    head: { x: 50, y: -94 },
+    elbowFront: { x: 6, y: -34 },
+    handFront: { x: -18, y: -14 },
+    elbowBack: { x: 30, y: -44 },
+    handBack: { x: 50, y: -30 },
+    kneeFront: { x: 42, y: 32 },
+    footFront: { x: 54, y: 80 },
+    kneeBack: { x: -40, y: 50 },
+    footBack: { x: -92, y: 70 },
+  }),
+  /** ajoelhado, exausto, apoiado na katana fincada no chao */
+  ajoelhado: p({
+    neck: { x: 10, y: -68 },
+    head: { x: 22, y: -100 },
+    elbowFront: { x: 30, y: -36 },
+    handFront: { x: 44, y: -12 },
+    elbowBack: { x: 4, y: -36 },
+    handBack: { x: 26, y: -24 },
+    kneeFront: { x: 36, y: 20 },
+    footFront: { x: 40, y: 60 },
+    kneeBack: { x: -10, y: 44 },
+    footBack: { x: -56, y: 50 },
   }),
 
   // --- locomocao -----------------------------------------------------------
@@ -194,6 +600,51 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: 40, y: 4 },
     elbowBack: { x: -24, y: -24 },
     handBack: { x: -38, y: 6 },
+  }),
+
+  // --- salto ARMADO ----------------------------------------------------------
+  // Quem esta com a espada nao pula de bracos abertos: o braco da lamina fica
+  // controlado, pronto para cortar na descida, e o outro equilibra. Com as
+  // poses de salto desarmado a katana sumia atras do corpo no meio do pulo.
+
+  /** impulso: joelhos recolhidos, lamina recolhida junto ao corpo */
+  puloKatana: p({
+    neck: { x: 2, y: -78 },
+    head: { x: 4, y: -117 },
+    kneeFront: { x: 26, y: 18 },
+    footFront: { x: 40, y: 58 },
+    kneeBack: { x: -20, y: 22 },
+    footBack: { x: -36, y: 62 },
+    elbowFront: { x: 10, y: -50 },
+    handFront: { x: 34, y: -66 },
+    elbowBack: { x: -18, y: -58 },
+    handBack: { x: -30, y: -88 },
+  }),
+  /** no ar: a lamina sobe por cima do ombro, ja armada para descer */
+  arKatana: p({
+    neck: { x: -4, y: -76 },
+    head: { x: -8, y: -115 },
+    kneeFront: { x: 34, y: 24 },
+    footFront: { x: 58, y: 48 },
+    kneeBack: { x: -28, y: 34 },
+    footBack: { x: -58, y: 58 },
+    elbowFront: { x: 18, y: -88 },
+    handFront: { x: -6, y: -98 },
+    elbowBack: { x: -26, y: -56 },
+    handBack: { x: -46, y: -80 },
+  }),
+  /** pouso: agacha absorvendo, lamina baixa e a frente */
+  pousoKatana: p({
+    neck: { x: 6, y: -62 },
+    head: { x: 12, y: -100 },
+    kneeFront: { x: 34, y: 54 },
+    footFront: { x: 44, y: 92 },
+    kneeBack: { x: -32, y: 56 },
+    footBack: { x: -48, y: 92 },
+    elbowFront: { x: 28, y: -30 },
+    handFront: { x: 52, y: -22 },
+    elbowBack: { x: -20, y: -28 },
+    handBack: { x: -32, y: 0 },
   }),
 
   // --- defensivas ----------------------------------------------------------
