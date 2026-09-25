@@ -44,6 +44,33 @@ FALAS = {
     "like": "Dá like e se inscreve no canal!",
 }
 
+# PRONUNCIA BRASILEIRA, escrita a mao em IPA.
+#
+# O conversor de texto para fonemas que o Kokoro usa (espeak-ng "pt-br")
+# erra justamente o que faz soar brasileiro: "escolha" virava "escolia",
+# "personagem" ganhava um schwa ingles ("pe-re-sonagem") e as vogais nasais
+# (ẽ, ũ, ɐ̃) eram jogadas fora porque vinham num formato que o vocabulario do
+# modelo nao tem. Resultado: sotaque gringo. Aqui cada fala tem a pronuncia
+# de um brasileiro: "ti/di" viram "tchi/dji", "r" final aspirado, "l" final
+# vira "u", e os "e/o" finais fechados viram "i/u".
+N = "\u0303"  # til combinante: o unico jeito de nasal que o vocabulario aceita
+PRONUNCIA = {
+    "escolha": f"ʁˈapidu, iskˈoʎɐ ˈu{N} pehsonˈaʒe{N}j!",
+    "tres": "tɾˈejs!",
+    "dois": "dˈojs!",
+    "um": f"ˈu{N}!",
+    "lutem": f"lˈute{N}j!",
+    "combo": f"ki kˈo{N}bu!",
+    "desviou": "ʤizviˈow!",
+    "contra": "kˌo" + N + "tɾɐ atˈaki!",
+    "pancada": f"ki pɐ{N}kˈadɐ!",
+    "agora": "ˈɛ aɡˈɔɾɐ!",
+    "nocaute": "nokˈawʧi!",
+    "venceu_black": f"u pɾˈetu ve{N}sˈew!",
+    "venceu_red": f"u vehmˈeʎu ve{N}sˈew!",
+    "like": f"dˈa lˈajki i si i{N}skɾˈɛvi nu kanˈaw!",
+}
+
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAIDA = os.path.join(RAIZ, "public", "assets", "audio", "narrador")
 
@@ -57,7 +84,9 @@ def main() -> None:
     os.makedirs(SAIDA, exist_ok=True)
     duracoes = {}
     for chave, texto in FALAS.items():
-        amostras, taxa = k.create(texto, voice=VOZ, speed=VELOCIDADE, lang="pt-br")
+        amostras, taxa = k.create(
+            PRONUNCIA[chave], voice=VOZ, speed=VELOCIDADE, is_phonemes=True
+        )
         # corta o silencio das pontas: a fala tem que comecar no quadro
         # marcado, nao 200ms depois
         a = np.abs(amostras)
