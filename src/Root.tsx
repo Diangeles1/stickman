@@ -23,6 +23,7 @@ import { gerarLuta } from "./data/gerador";
 import { trocarVencedor } from "./data/trocar";
 import { TESTE_KATANA } from "./data/fights/teste-katana";
 import { GELO_VS_FOGO } from "./data/fights/gelo-vs-fogo";
+import { DUELO } from "./data/fights/duelo";
 import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
 
@@ -190,6 +191,29 @@ export const RemotionRoot: React.FC = () => {
         height={LUTA_COMPLETA.height}
         defaultProps={{ spec: LUTA_VERMELHO_VENCE, escolha: true }}
       />
+      {/*
+        BENCHMARK #3: oito segundos de duelo armado. A versao SemEfeitos e a
+        que julga a animacao; a outra existe so para comparar.
+      */}
+      <Composition
+        id="Duelo-SemEfeitos"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(DUELO)}
+        fps={DUELO.fps}
+        width={DUELO.width}
+        height={DUELO.height}
+        defaultProps={{ spec: DUELO, semEfeitos: true }}
+      />
+      <Composition
+        id="Duelo"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(DUELO)}
+        fps={DUELO.fps}
+        width={DUELO.width}
+        height={DUELO.height}
+        defaultProps={{ spec: DUELO }}
+      />
+
       {/* PALITANOS: BLACK ICE vs RED FIRE */}
       <Composition
         id="GeloVsFogo"

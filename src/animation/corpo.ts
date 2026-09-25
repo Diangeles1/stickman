@@ -364,6 +364,72 @@ export const juntasDoCorpo = (c: Corpo) =>
  * e resolver os dois com IK ao mesmo tempo seria dependencia circular. O ponto
  * do alvo e lido do corpo sem mira, que nao depende de ninguem.
  */
+/**
+ * POSTURA: a assinatura corporal de cada lutador.
+ *
+ * Dois lutadores com a mesma biblioteca de poses lutam igual, e um animador
+ * que viu a luta resumiu o problema assim: "eles ainda compartilham a mesma
+ * linguagem de movimento". Cor diferente nao e personagem diferente.
+ *
+ * Aqui o perfil do preset (velocidade contra forca) vira POSTURA, aplicada em
+ * cima de qualquer pose de espera ou de deslocamento:
+ *
+ *   PESADO (forca > velocidade)   base larga, quadril baixo, tronco a frente
+ *   RAPIDO (velocidade > forca)   base estreita, quadril alto, tronco reto
+ *
+ * NAO se aplica a pose de ATAQUE. A altura da ponta da lamina e do punho no
+ * contato e calibrada contra o ponto mirado (ver scripts/contato.mts, mira.mts):
+ * mexer na postura ali sairia da calibragem e o golpe deixaria de encostar.
+ * O ataque e o mesmo para os dois; o que muda e o corpo que chega nele.
+ */
+const POSES_COM_POSTURA = new Set<PoseName>([
+  "idle", "guard", "guardaKatana",
+  "block", "bloqueioKatana", "absorver", "absorverKatana",
+]);
+// So a ESPERA e a DEFESA, que e onde a personalidade se le: e a pose em que
+// o lutador passa mais tempo e a primeira coisa que o espectador ve dele.
+//
+// Tudo que faz parte de um golpe (carga, ataque) fica de fora, e por um
+// motivo medido: a postura e um deslocamento fixo, e quando ela existe numa
+// pose e nao na seguinte, o corpo salta essa diferenca inteira de uma vez. No
+// meio de um golpe isso colapsa a corrente pe-quadril-tronco-braco num
+// instante so (auditoria de cadeia: "corpo se movendo como bloco"), e a
+// corrente e justamente o que faz o golpe ter peso.
+
+const aplicarPostura = (pose: Pose, peso: number): Pose => {
+  if (Math.abs(peso) < 0.05) return pose;
+  const largura = 1 + 0.22 * peso;
+  const altura = 1 - 0.05 * peso;
+  const inclinacao = 7 * peso;
+  const mexer = (p: Vec2 | undefined, dx: number, esc = 1): Vec2 | undefined =>
+    p ? { x: p.x * esc + dx, y: p.y } : p;
+  return {
+    ...pose,
+    // tronco e cabeca vao para frente no pesado, ficam retos no rapido
+    neck: mexer(pose.neck, inclinacao),
+    head: mexer(pose.head, inclinacao * 1.5),
+    // a base abre e o quadril baixa (o pe fica mais perto do quadril)
+    footBack: pose.footBack
+      ? { x: pose.footBack.x * largura, y: pose.footBack.y * altura }
+      : pose.footBack,
+    footFront: pose.footFront
+      ? { x: pose.footFront.x * largura, y: pose.footFront.y * altura }
+      : pose.footFront,
+    kneeBack: pose.kneeBack
+      ? { x: pose.kneeBack.x * largura, y: pose.kneeBack.y * altura }
+      : pose.kneeBack,
+    kneeFront: pose.kneeFront
+      ? { x: pose.kneeFront.x * largura, y: pose.kneeFront.y * altura }
+      : pose.kneeFront,
+  };
+};
+
+/** -1 puro rapido, +1 puro pesado */
+export const pesoDoLutador = (id: FighterId): number => {
+  const { speed, power } = PRESETS[id].profile;
+  return Math.max(-1, Math.min(1, power - speed));
+};
+
 const corpoBase = (
   timeline: Timeline,
   id: FighterId,
@@ -393,6 +459,10 @@ const corpoBase = (
     a.poseNome === "guard" ? gingar(respirando, frame, defasagem) : respirando,
     fechamento,
   );
+  // a postura do lutador por cima da pose (ver aplicarPostura)
+  if (POSES_COM_POSTURA.has(a.poseNome)) {
+    pose = aplicarPostura(pose, pesoDoLutador(id));
+  }
 
   // DANCA DA VITORIA: por cima de tudo, entrando em 12 quadros a partir da
   // guarda (misturada em angulos, os ossos nao esticam). Continua alguns
@@ -543,6 +613,7 @@ export const POSES_DE_APOIO = new Set<PoseName>([
   "kick", "kickLow", "kickHigh", "spinKick", "knee", "elbow", "charge",
   "hitHead", "hitChest", "hitBody", "hitLeg",
   "guardaKatana", "bloqueioKatana", "cargaKatana", "cargaBaixa",
+  "absorver", "absorverKatana",
   "corteSobe", "corteDesce", "corteLateral", "lancar", "bracosFrente",
   "katanaErguida",
 ]);

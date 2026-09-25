@@ -113,6 +113,7 @@ const POSES_ARMADAS: Partial<Record<PoseName, PoseName>> = {
   guard: "guardaKatana",
   idle: "guardaKatana",
   block: "bloqueioKatana",
+  absorver: "absorverKatana",
   coil: "cargaKatana",
 };
 /**
@@ -673,14 +674,30 @@ export const compilar = (spec: FightSpec): Timeline => {
         attacker: atacante,
         bloqueado: true,
       });
-      // A GUARDA ABSORVE, MAS O CORPO SENTE: o bloqueio empurra quem defende
-      // para tras, mais quanto mais forte for quem bateu. Sem isto o soco
-      // pesado batia na guarda como numa parede, e a forca dele sumia.
+      // A GUARDA ABSORVE, MAS O CORPO SENTE.
+      //
+      // Duas coisas ao mesmo tempo, e as duas importam:
+      //
+      //   o PE desliza    o corpo inteiro e empurrado para tras, mais quanto
+      //                   mais forte for quem bateu
+      //   o CORPO recua   os punhos sao empurrados para dentro, o tronco roda
+      //                   para tras e o joelho da frente cede (pose absorver)
+      //
+      // Antes so havia o deslizamento: quem defendia terminava o bloqueio na
+      // mesma pose em que comecou, e um corte pesado aparado nao tinha
+      // consequencia nenhuma no corpo.
       chave(alvo, frameContato);
-      estado[alvo].x +=
-        direcao * (30 + 60 * PRESETS[atacante].profile.power);
-      chave(alvo, frameContato + s(0.12));
-      fimDaReacao = frameContato + s(0.12);
+      const forcaDoGolpe = PRESETS[atacante].profile.power;
+      estado[alvo].x += direcao * (30 + 60 * forcaDoGolpe);
+      estado[alvo].pose = "absorver";
+      // o recuo chega LOGO depois do contato, nao junto: um quadro de atraso
+      // e o que separa "foi atingido" de "estava assim antes"
+      chave(alvo, frameContato + 2, 1 + 0.35 * forcaDoGolpe);
+      chave(alvo, frameContato + s(0.1));
+      // e volta a defesa: a guarda nao caiu, ela so cedeu
+      estado[alvo].pose = "block";
+      chave(alvo, frameContato + s(0.22));
+      fimDaReacao = frameContato + s(0.22);
       if (!opcoes.continua) {
         estado[alvo].pose = "guard";
         chave(alvo, frameContato + s(0.4));

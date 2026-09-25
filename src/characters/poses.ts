@@ -86,11 +86,28 @@ const ESCRITAS: Record<PoseName, Pose> = {
   }),
 
   // --- KATANA ---------------------------------------------------------------
-  // A lamina sai da mao da frente na direcao do ANTEBRACO (cotovelo -> mao).
-  // Entao cada pose de katana e, antes de tudo, a direcao do antebraco: e ela
-  // que diz para onde a espada aponta. As duas maos ficam no cabo.
+  //
+  // REGRA DESTAS POSES: o corte nao e do braco, e do CHAO.
+  //
+  // A primeira versao destas poses errava nas duas pontas. Na carga, a lamina
+  // ja apontava para o alvo (entao nao havia o que antecipar: o golpe comecava
+  // onde terminava), e as pernas eram as mesmas da carga ate o contato (entao
+  // nao havia de onde a forca vir). Um animador que viu o resultado descreveu
+  // como "andando com uma espada", e estava certo.
+  //
+  // Agora cada par carga/corte e escrito como uma transferencia de peso:
+  //
+  //   CARGA   peso no pe de TRAS, joelho fundo (o quadril baixa de verdade:
+  //           o pe fica mais perto do quadril, y menor), ombros fechados,
+  //           lamina LONGE do alvo, cabeca ja olhando para ele
+  //   CORTE   o pe de tras empurra e estica, o peso passa para o pe da
+  //           frente, o quadril gira, o tronco abre e so entao a lamina chega
+  //
+  // A altura da ponta da lamina em cada corte e calibrada contra o ponto
+  // mirado (ver scripts/contato.mts): mexer no quadril mexe na ponta, entao
+  // qualquer ajuste de perna aqui pede conferir a auditoria de contato.
 
-  /** guarda de katana: lamina para cima e para frente, como no kendo */
+  /** guarda de katana: base larga, joelhos moles, lamina a frente do corpo */
   guardaKatana: p({
     neck: { x: 8, y: -72 },
     head: { x: 13, y: -111 },
@@ -98,96 +115,159 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: 40, y: -54 },
     elbowBack: { x: 6, y: -38 },
     handBack: { x: 32, y: -48 },
-    kneeBack: { x: -18, y: 48 },
-    footBack: { x: -56, y: 92 },
-    kneeFront: { x: 34, y: 44 },
-    footFront: { x: 50, y: 92 },
-  }),
-  /** defesa: lamina quase em pe na frente do rosto, base firme */
-  bloqueioKatana: p({
-    neck: { x: 2, y: -72 },
-    head: { x: 5, y: -111 },
-    elbowFront: { x: 26, y: -46 },
-    handFront: { x: 36, y: -70 },
-    elbowBack: { x: 6, y: -44 },
-    handBack: { x: 28, y: -62 },
     kneeBack: { x: -22, y: 46 },
-    footBack: { x: -62, y: 92 },
-    kneeFront: { x: 36, y: 44 },
-    footFront: { x: 54, y: 92 },
+    footBack: { x: -52, y: 86 },
+    kneeFront: { x: 31, y: 39 },
+    footFront: { x: 46, y: 86 },
   }),
-  /** carga alta: lamina por cima do ombro, apontando para tras */
+
+  /**
+   * DEFESA: nao e "a mesma guarda um pouco diferente". E o corpo se ancorando:
+   * base mais larga, joelhos bem dobrados (o quadril baixa 8 unidades), peso
+   * distribuido, lamina atravessada na frente do rosto e os dois cotovelos
+   * para dentro. E dessa ancoragem que o recuo do bloqueio pode partir.
+   */
+  bloqueioKatana: p({
+    neck: { x: -2, y: -70 },
+    head: { x: 0, y: -109 },
+    elbowFront: { x: 26, y: -44 },
+    handFront: { x: 34, y: -70 },
+    elbowBack: { x: 4, y: -42 },
+    handBack: { x: 26, y: -62 },
+    kneeBack: { x: -26, y: 44 },
+    footBack: { x: -60, y: 82 },
+    kneeFront: { x: 33, y: 38 },
+    footFront: { x: 54, y: 82 },
+  }),
+
+  /**
+   * CARGA ALTA (para o corte que desce): a lamina sobe por cima do ombro e
+   * vai para TRAS da cabeca, o peso vai todo para o pe de tras e o joelho
+   * afunda. O corpo fica que nem um arco armado.
+   */
   cargaKatana: p({
-    neck: { x: -6, y: -72 },
-    head: { x: -10, y: -110 },
-    elbowFront: { x: 22, y: -96 },
-    handFront: { x: 2, y: -108 },
-    elbowBack: { x: 4, y: -92 },
-    handBack: { x: -4, y: -104 },
-    kneeBack: { x: -22, y: 50 },
-    footBack: { x: -56, y: 92 },
-    kneeFront: { x: 30, y: 40 },
-    footFront: { x: 50, y: 92 },
+    neck: { x: -10, y: -70 },
+    head: { x: 2, y: -108 },
+    elbowFront: { x: 14, y: -94 },
+    handFront: { x: -12, y: -100 },
+    elbowBack: { x: -6, y: -90 },
+    handBack: { x: -22, y: -94 },
+    kneeBack: { x: -1, y: 50 },
+    footBack: { x: -44, y: 74 },
+    kneeFront: { x: 42, y: 27 },
+    footFront: { x: 28, y: 74 },
   }),
-  /** carga baixa: lamina baixa e para tras, pronta para subir */
+
+  /**
+   * CARGA BAIXA (para o corte que sobe): o corpo enrola para baixo e para
+   * tras, com as duas maos abaixo do quadril e a lamina apontando para tras
+   * e para baixo. Antes ela apontava para FRENTE, e o "corte ascendente"
+   * comecava praticamente na posicao em que terminava.
+   */
   cargaBaixa: p({
-    neck: { x: 12, y: -70 },
-    head: { x: 18, y: -108 },
-    elbowFront: { x: -4, y: -32 },
-    handFront: { x: -22, y: 2 },
-    elbowBack: { x: -8, y: -30 },
-    handBack: { x: -18, y: -4 },
-    kneeBack: { x: -24, y: 52 },
-    footBack: { x: -60, y: 92 },
-    kneeFront: { x: 36, y: 38 },
-    footFront: { x: 54, y: 92 },
+    neck: { x: 12, y: -68 },
+    head: { x: 26, y: -104 },
+    // a lamina vai para tras quase na horizontal, um pouco abaixo do quadril:
+    // apontando mais para baixo ela cruzava as proprias pernas na tela
+    elbowFront: { x: -20, y: -36 },
+    handFront: { x: -48, y: -26 },
+    elbowBack: { x: -24, y: -30 },
+    handBack: { x: -50, y: -34 },
+    kneeBack: { x: -2, y: 50 },
+    footBack: { x: -46, y: 72 },
+    kneeFront: { x: 43, y: 26 },
+    footFront: { x: 26, y: 72 },
   }),
-  /** corte que sobe (baixo-esquerda para alto-direita): lamina subindo */
+
+  /**
+   * CORTE QUE SOBE. O pe de tras ja empurrou (perna esticada, longe), o peso
+   * esta no pe da frente que plantou a frente, o quadril girou e o tronco
+   * abriu para tras enquanto a lamina sobe.
+   */
   corteSobe: p({
-    // o TRONCO desenrola junto: o corte que sobe nasce no quadril e abre o
-    // peito. Com o tronco parado (ele quase nao mudava da carga para ca), o
-    // corte saia so do braco e a auditoria de cadeia acusava "corpo se
-    // movendo como bloco".
     neck: { x: -6, y: -74 },
     head: { x: -2, y: -112 },
-    // o arco termina A FRENTE, nao acima. A ponta da lamina fica 290 unidades
-    // alem da mao, entao uma inclinacao pequena aqui vira muita altura la: com
-    // a mao 6 unidades mais alta, a ponta passava 60 acima do queixo e o corte
-    // "ascendente" nao encostava em ninguem.
     elbowFront: { x: 40, y: -72 },
     handFront: { x: 72, y: -72 },
     elbowBack: { x: 22, y: -50 },
-    handBack: { x: 44, y: -70 },
-    kneeBack: { x: -30, y: 56 },
-    footBack: { x: -68, y: 92 },
-    kneeFront: { x: 44, y: 40 },
-    footFront: { x: 70, y: 92 },
+    handBack: { x: 48, y: -62 },
+    kneeBack: { x: -22, y: 45 },
+    footBack: { x: -56, y: 80 },
+    kneeFront: { x: 35, y: 36 },
+    footFront: { x: 56, y: 80 },
   }),
-  /** corte que desce (alto para diagonal baixa): lamina descendo */
+
+  /**
+   * CORTE QUE DESCE. O peso desaba para frente: o tronco vem por cima do pe
+   * da frente, o pe de tras fica esticado atras e a lamina desce na diagonal.
+   */
   corteDesce: p({
-    neck: { x: 20, y: -66 },
-    head: { x: 30, y: -102 },
+    neck: { x: 22, y: -64 },
+    head: { x: 34, y: -100 },
     elbowFront: { x: 44, y: -50 },
     handFront: { x: 64, y: -30 },
     elbowBack: { x: 28, y: -40 },
     handBack: { x: 50, y: -26 },
-    kneeBack: { x: -30, y: 56 },
-    footBack: { x: -68, y: 92 },
-    kneeFront: { x: 46, y: 40 },
-    footFront: { x: 72, y: 92 },
+    kneeBack: { x: -22, y: 45 },
+    footBack: { x: -58, y: 78 },
+    kneeFront: { x: 37, y: 34 },
+    footFront: { x: 58, y: 78 },
   }),
-  /** corte horizontal: lamina reta para frente, braco esticado */
+
+  /**
+   * CORTE HORIZONTAL. O que manda aqui e o GIRO DO QUADRIL: o pe de tras
+   * pivota, o quadril vira, o ombro de tras vem junto e o braco chega por
+   * ultimo, esticado.
+   */
   corteLateral: p({
-    neck: { x: 16, y: -70 },
-    head: { x: 24, y: -108 },
+    neck: { x: 14, y: -70 },
+    head: { x: 22, y: -108 },
     elbowFront: { x: 42, y: -58 },
     handFront: { x: 66, y: -58 },
-    elbowBack: { x: -8, y: -50 },
-    handBack: { x: -28, y: -40 },
-    kneeBack: { x: -30, y: 56 },
-    footBack: { x: -68, y: 92 },
-    kneeFront: { x: 44, y: 40 },
-    footFront: { x: 70, y: 92 },
+    elbowBack: { x: -10, y: -52 },
+    handBack: { x: -32, y: -42 },
+    kneeBack: { x: -24, y: 44 },
+    footBack: { x: -58, y: 79 },
+    kneeFront: { x: 35, y: 36 },
+    footFront: { x: 58, y: 79 },
+  }),
+
+  /**
+   * ABSORVER O BLOQUEIO. O golpe parou na guarda, mas a forca nao sumiu: ela
+   * entra pelo braco e desce ate o pe.
+   *
+   * Sem esta pose, o bloqueio era um evento que acontecia e desaparecia: quem
+   * defendia ficava na mesma pose antes e depois de aparar um corte pesado, e
+   * a colisao nao tinha consequencia nenhuma no corpo.
+   *
+   * O que muda, na ordem em que a forca viaja: os punhos sao empurrados para
+   * DENTRO (cotovelos dobram e colam no corpo), o tronco roda para tras, a
+   * cabeca vai junto, o joelho da frente cede e o pe de tras se ancora.
+   */
+  absorver: p({
+    neck: { x: -14, y: -70 },
+    head: { x: -22, y: -107 },
+    elbowFront: { x: 12, y: -44 },
+    handFront: { x: 20, y: -66 },
+    elbowBack: { x: -8, y: -42 },
+    handBack: { x: 8, y: -60 },
+    kneeBack: { x: -24, y: 44 },
+    footBack: { x: -62, y: 80 },
+    kneeFront: { x: 30, y: 40 },
+    footFront: { x: 48, y: 80 },
+  }),
+  /** o mesmo, com a katana atravessada e empurrada contra o proprio corpo */
+  absorverKatana: p({
+    neck: { x: -16, y: -68 },
+    head: { x: -26, y: -104 },
+    elbowFront: { x: 10, y: -42 },
+    handFront: { x: 16, y: -66 },
+    elbowBack: { x: -12, y: -40 },
+    handBack: { x: 4, y: -58 },
+    kneeBack: { x: -26, y: 42 },
+    footBack: { x: -64, y: 78 },
+    kneeFront: { x: 32, y: 38 },
+    footFront: { x: 50, y: 78 },
   }),
 
   // --- PODERES ---------------------------------------------------------------

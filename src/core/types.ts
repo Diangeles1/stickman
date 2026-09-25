@@ -81,6 +81,8 @@ export type PoseName =
   // katana
   | "guardaKatana"
   | "bloqueioKatana"
+  | "absorver"
+  | "absorverKatana"
   | "cargaKatana"
   | "cargaBaixa"
   | "corteSobe"
