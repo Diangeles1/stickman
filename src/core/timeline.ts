@@ -102,6 +102,18 @@ export const ALTURA_QUADRIL = -ALTURA_DO_ESQUELETO;
 
 /** Golpes que acontecem no ar: o atacante pula para golpear. */
 const GOLPES_AEREOS = new Set<PoseName>(["airAttack", "diveAttack"]);
+
+/**
+ * Lutador ARMADO nao luta de guarda de boxe: estas poses sao trocadas pelas
+ * de katana na hora de escrever a chave. O resto do compilador continua
+ * pensando em "guard", "block" e "coil", e nao precisa saber da espada.
+ */
+const POSES_ARMADAS: Partial<Record<PoseName, PoseName>> = {
+  guard: "guardaKatana",
+  idle: "guardaKatana",
+  block: "bloqueioKatana",
+  coil: "cargaKatana",
+};
 /**
  * Tempo no ar do pulo de ataque, em quadros. 0,65s da ~190 unidades de
  * altura com a gravidade do mundo: o golpe vem DE CIMA (com 0,55s o pulo
@@ -171,7 +183,8 @@ export const compilar = (spec: FightSpec): Timeline => {
     tracks[quem].keys.push({
       frame,
       x: e.x,
-      pose: e.pose,
+      // lutador armado: a guarda, a defesa e a carga viram as de katana
+      pose: spec.armas?.[quem] ? (POSES_ARMADAS[e.pose] ?? e.pose) : e.pose,
       airborne: e.airborne,
       ...(exagero !== undefined && exagero !== 1 ? { exagero } : {}),
     });
@@ -379,7 +392,7 @@ export const compilar = (spec: FightSpec): Timeline => {
     const perfil = perfilDeMovimento(atacante);
     const xNoContato =
       estado[atacante].x + lado * RECUO_DA_CARGA * (opcoes.encadeado ? 0.25 : 1);
-    estado[atacante].pose = "coil";
+    estado[atacante].pose = def.carga ?? "coil";
     if (!opcoes.encadeado) {
       estado[atacante].x -= lado * RECUO_DA_CARGA * perfil.recuoDoPeso;
     }
@@ -530,6 +543,7 @@ export const compilar = (spec: FightSpec): Timeline => {
       // na esquiva o alvo comeca a sair s(0.2) antes do contato (ver abaixo):
       // a mira fica no lugar onde ele estava nesse instante
       ...(opcoes.esquivado ? { congelarEm: frameContato - s(0.2) } : {}),
+      ...(def.lamina ? { recuo: def.lamina } : {}),
     });
 
     // ultimo quadro em que o ALVO recebe chave nesta sequencia. O compilador
@@ -610,7 +624,7 @@ export const compilar = (spec: FightSpec): Timeline => {
         direction: direcao,
         hitStop: Math.max(1, Math.round(def.hitStop * 0.6)),
         cracksGround: false,
-        sound: "block",
+        sound: def.somBloqueio ?? "block",
         victim: alvo,
         attacker: atacante,
         bloqueado: true,

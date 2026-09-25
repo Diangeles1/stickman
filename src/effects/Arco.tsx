@@ -39,7 +39,11 @@ export const ArcoDoGolpe: React.FC<{
 }> = ({ timeline, frame, id, cor, largura, opacidade }) => {
   const aim = timeline.aims.find(
     (m) =>
-      m.who === id && frame >= m.from && frame <= m.contact + QUADROS_DE_SAIDA,
+      // golpe de arma tem o rastro da lamina (ArcoDaKatana), nao o do braco
+      m.who === id &&
+      !m.recuo &&
+      frame >= m.from &&
+      frame <= m.contact + QUADROS_DE_SAIDA,
   );
   if (!aim) return null;
 

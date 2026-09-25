@@ -246,7 +246,8 @@ export const distanciaDeCombate = (
   const dy = alvoP.y - raiz.y;
   const horizontal = Math.sqrt(Math.max(0, R * R - dy * dy));
 
-  return Math.max(120, raiz.x + horizontal + noAlvo.x + folga);
+  // golpe de arma: a lamina chega ao ponto, a mao fica esse tanto antes
+  return Math.max(120, raiz.x + horizontal + noAlvo.x + folga + (golpe.lamina ?? 0));
 };
 
 /** Folga que a distancia de combate persegue: usada pelo medidor de contato. */
@@ -309,4 +310,7 @@ export const ALVO_PADRAO: Record<string, PontoAlvo> = {
   diveAttack: "chest",
   special: "chest",
   finisher: "chest",
+  corteSobe: "chest",
+  corteDesce: "chest",
+  corteLateral: "chest",
 };

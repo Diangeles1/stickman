@@ -21,6 +21,7 @@ import { BENCHMARK2 } from "./data/fights/benchmark2";
 import { LUTA_COMPLETA } from "./data/fights/luta-completa";
 import { gerarLuta } from "./data/gerador";
 import { trocarVencedor } from "./data/trocar";
+import { TESTE_KATANA } from "./data/fights/teste-katana";
 import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
 
@@ -187,6 +188,15 @@ export const RemotionRoot: React.FC = () => {
         width={LUTA_COMPLETA.width}
         height={LUTA_COMPLETA.height}
         defaultProps={{ spec: LUTA_VERMELHO_VENCE, escolha: true }}
+      />
+      <Composition
+        id="TesteKatana"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(TESTE_KATANA)}
+        fps={TESTE_KATANA.fps}
+        width={TESTE_KATANA.width}
+        height={TESTE_KATANA.height}
+        defaultProps={{ spec: TESTE_KATANA }}
       />
       <Composition
         id="LutaCompleta-SemEfeitos"

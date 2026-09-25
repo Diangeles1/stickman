@@ -85,6 +85,184 @@ const ESCRITAS: Record<PoseName, Pose> = {
     footBack: { x: -36, y: 92 },
   }),
 
+  // --- KATANA ---------------------------------------------------------------
+  // A lamina sai da mao da frente na direcao do ANTEBRACO (cotovelo -> mao).
+  // Entao cada pose de katana e, antes de tudo, a direcao do antebraco: e ela
+  // que diz para onde a espada aponta. As duas maos ficam no cabo.
+
+  /** guarda de katana: lamina para cima e para frente, como no kendo */
+  guardaKatana: p({
+    neck: { x: 8, y: -72 },
+    head: { x: 13, y: -111 },
+    elbowFront: { x: 24, y: -36 },
+    handFront: { x: 40, y: -54 },
+    elbowBack: { x: 6, y: -38 },
+    handBack: { x: 32, y: -48 },
+    kneeBack: { x: -18, y: 48 },
+    footBack: { x: -56, y: 92 },
+    kneeFront: { x: 34, y: 44 },
+    footFront: { x: 50, y: 92 },
+  }),
+  /** defesa: lamina quase em pe na frente do rosto, base firme */
+  bloqueioKatana: p({
+    neck: { x: 2, y: -72 },
+    head: { x: 5, y: -111 },
+    elbowFront: { x: 26, y: -46 },
+    handFront: { x: 36, y: -70 },
+    elbowBack: { x: 6, y: -44 },
+    handBack: { x: 28, y: -62 },
+    kneeBack: { x: -22, y: 46 },
+    footBack: { x: -62, y: 92 },
+    kneeFront: { x: 36, y: 44 },
+    footFront: { x: 54, y: 92 },
+  }),
+  /** carga alta: lamina por cima do ombro, apontando para tras */
+  cargaKatana: p({
+    neck: { x: -6, y: -72 },
+    head: { x: -10, y: -110 },
+    elbowFront: { x: 22, y: -96 },
+    handFront: { x: 2, y: -108 },
+    elbowBack: { x: 4, y: -92 },
+    handBack: { x: -4, y: -104 },
+    kneeBack: { x: -22, y: 50 },
+    footBack: { x: -56, y: 92 },
+    kneeFront: { x: 30, y: 40 },
+    footFront: { x: 50, y: 92 },
+  }),
+  /** carga baixa: lamina baixa e para tras, pronta para subir */
+  cargaBaixa: p({
+    neck: { x: 12, y: -70 },
+    head: { x: 18, y: -108 },
+    elbowFront: { x: -4, y: -32 },
+    handFront: { x: -22, y: 2 },
+    elbowBack: { x: -8, y: -30 },
+    handBack: { x: -18, y: -4 },
+    kneeBack: { x: -24, y: 52 },
+    footBack: { x: -60, y: 92 },
+    kneeFront: { x: 36, y: 38 },
+    footFront: { x: 54, y: 92 },
+  }),
+  /** corte que sobe (baixo-esquerda para alto-direita): lamina subindo */
+  corteSobe: p({
+    neck: { x: 14, y: -70 },
+    head: { x: 22, y: -108 },
+    elbowFront: { x: 40, y: -76 },
+    handFront: { x: 60, y: -98 },
+    elbowBack: { x: 22, y: -50 },
+    handBack: { x: 44, y: -70 },
+    kneeBack: { x: -30, y: 56 },
+    footBack: { x: -68, y: 92 },
+    kneeFront: { x: 44, y: 40 },
+    footFront: { x: 70, y: 92 },
+  }),
+  /** corte que desce (alto para diagonal baixa): lamina descendo */
+  corteDesce: p({
+    neck: { x: 20, y: -66 },
+    head: { x: 30, y: -102 },
+    elbowFront: { x: 44, y: -50 },
+    handFront: { x: 64, y: -30 },
+    elbowBack: { x: 28, y: -40 },
+    handBack: { x: 50, y: -26 },
+    kneeBack: { x: -30, y: 56 },
+    footBack: { x: -68, y: 92 },
+    kneeFront: { x: 46, y: 40 },
+    footFront: { x: 72, y: 92 },
+  }),
+  /** corte horizontal: lamina reta para frente, braco esticado */
+  corteLateral: p({
+    neck: { x: 16, y: -70 },
+    head: { x: 24, y: -108 },
+    elbowFront: { x: 42, y: -58 },
+    handFront: { x: 66, y: -58 },
+    elbowBack: { x: -8, y: -50 },
+    handBack: { x: -28, y: -40 },
+    kneeBack: { x: -30, y: 56 },
+    footBack: { x: -68, y: 92 },
+    kneeFront: { x: 44, y: 40 },
+    footFront: { x: 70, y: 92 },
+  }),
+
+  // --- PODERES ---------------------------------------------------------------
+
+  /** ajoelhado com a mao espalmada no chao: o gelo sai dali */
+  maoNoChao: p({
+    neck: { x: 40, y: -58 },
+    head: { x: 62, y: -88 },
+    elbowFront: { x: 52, y: -20 },
+    handFront: { x: 70, y: 8 },
+    elbowBack: { x: 10, y: -40 },
+    handBack: { x: -10, y: -26 },
+    kneeFront: { x: 36, y: 20 },
+    footFront: { x: 40, y: 60 },
+    kneeBack: { x: -10, y: 44 },
+    footBack: { x: -56, y: 50 },
+  }),
+  /** lanca com uma mao: braco da frente esticado, o outro puxado para tras */
+  lancar: p({
+    neck: { x: 12, y: -72 },
+    head: { x: 18, y: -110 },
+    elbowFront: { x: 40, y: -62 },
+    handFront: { x: 66, y: -68 },
+    elbowBack: { x: -20, y: -50 },
+    handBack: { x: -36, y: -32 },
+    kneeBack: { x: -26, y: 52 },
+    footBack: { x: -64, y: 92 },
+    kneeFront: { x: 40, y: 42 },
+    footFront: { x: 62, y: 92 },
+  }),
+  /** as duas maos para frente, corpo segurando o coice do feixe */
+  bracosFrente: p({
+    neck: { x: -4, y: -72 },
+    head: { x: 0, y: -111 },
+    elbowFront: { x: 36, y: -62 },
+    handFront: { x: 62, y: -64 },
+    elbowBack: { x: 30, y: -58 },
+    handBack: { x: 56, y: -60 },
+    kneeBack: { x: -30, y: 50 },
+    footBack: { x: -74, y: 92 },
+    kneeFront: { x: 40, y: 44 },
+    footFront: { x: 60, y: 92 },
+  }),
+  /** katana erguida na vertical sobre a cabeca */
+  katanaErguida: p({
+    neck: { x: 0, y: -74 },
+    head: { x: 2, y: -113 },
+    elbowFront: { x: 26, y: -100 },
+    handFront: { x: 16, y: -126 },
+    elbowBack: { x: -10, y: -100 },
+    handBack: { x: 10, y: -120 },
+    kneeBack: { x: -22, y: 46 },
+    footBack: { x: -48, y: 92 },
+    kneeFront: { x: 24, y: 46 },
+    footFront: { x: 46, y: 92 },
+  }),
+  /** patinando: agachado, inclinado para frente, lamina baixa para tras */
+  deslizar: p({
+    neck: { x: 34, y: -60 },
+    head: { x: 50, y: -94 },
+    elbowFront: { x: 6, y: -34 },
+    handFront: { x: -18, y: -14 },
+    elbowBack: { x: 30, y: -44 },
+    handBack: { x: 50, y: -30 },
+    kneeFront: { x: 42, y: 32 },
+    footFront: { x: 54, y: 80 },
+    kneeBack: { x: -40, y: 50 },
+    footBack: { x: -92, y: 70 },
+  }),
+  /** ajoelhado, exausto, apoiado na katana fincada no chao */
+  ajoelhado: p({
+    neck: { x: 10, y: -68 },
+    head: { x: 22, y: -100 },
+    elbowFront: { x: 30, y: -36 },
+    handFront: { x: 44, y: -12 },
+    elbowBack: { x: 4, y: -36 },
+    handBack: { x: 26, y: -24 },
+    kneeFront: { x: 36, y: 20 },
+    footFront: { x: 40, y: 60 },
+    kneeBack: { x: -10, y: 44 },
+    footBack: { x: -56, y: 50 },
+  }),
+
   // --- locomocao -----------------------------------------------------------
   // duas poses por ciclo, alternadas. Tres ou mais nao melhoraram a leitura no
   // prototipo e so aumentaram o trabalho de ajuste.

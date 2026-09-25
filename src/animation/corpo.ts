@@ -542,6 +542,9 @@ export const POSES_DE_APOIO = new Set<PoseName>([
   "punch", "punchFast", "punchHeavy", "uppercut",
   "kick", "kickLow", "kickHigh", "spinKick", "knee", "elbow", "charge",
   "hitHead", "hitChest", "hitBody", "hitLeg",
+  "guardaKatana", "bloqueioKatana", "cargaKatana", "cargaBaixa",
+  "corteSobe", "corteDesce", "corteLateral", "lancar", "bracosFrente",
+  "katanaErguida",
 ]);
 
 const POSES_DE_LOCOMOCAO = new Set<PoseName>([
@@ -812,7 +815,12 @@ const miraAtiva = (
   id: FighterId,
   frame: number,
 ): AimEvent | undefined =>
-  timeline.aims.find((m) => m.who === id && frame >= m.from && frame <= m.to);
+  // golpe de arma nao usa IK: a lamina e longa e a pose e que define o corte
+  // (mirar a MAO num ponto perto do proprio corpo torcia o antebraco, e a
+  // lamina, que segue o antebraco, apontava para tras)
+  timeline.aims.find(
+    (m) => m.who === id && !m.recuo && frame >= m.from && frame <= m.to,
+  );
 
 /**
  * Resolve o corpo de um lutador no quadro pedido, ja com a mira corrigida.
@@ -845,6 +853,8 @@ export const corpoNoQuadro = (
   // dentro do adversario.
   const folga = folgaDesejada(id, aim.alvo);
   noMundo.x -= folga * aim.direcao;
+  // golpe de arma: a mao para antes, a lamina e que chega ao ponto
+  if (aim.recuo) noMundo.x -= aim.recuo * aim.direcao;
 
   // FOLLOW-THROUGH: depois do contato o alvo da mira avanca, entao o membro
   // PASSA do ponto antes de voltar. Membro que para exatamente onde acertou

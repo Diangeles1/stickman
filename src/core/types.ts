@@ -77,7 +77,22 @@ export type PoseName =
   | "getUp"
   | "charge"
   | "danca"
-  | "placa";
+  | "placa"
+  // katana
+  | "guardaKatana"
+  | "bloqueioKatana"
+  | "cargaKatana"
+  | "cargaBaixa"
+  | "corteSobe"
+  | "corteDesce"
+  | "corteLateral"
+  // poderes
+  | "maoNoChao"
+  | "lancar"
+  | "bracosFrente"
+  | "katanaErguida"
+  | "deslizar"
+  | "ajoelhado";
 
 /** Identidade visual de um lutador. Adicionar cor nova nao mexe em codigo. */
 export type FighterId = "black" | "red" | "blue" | "gold" | "green" | "white" | "purple";
@@ -124,7 +139,10 @@ export type AttackName =
   | "airAttack"
   | "diveAttack"
   | "special"
-  | "finisher";
+  | "finisher"
+  | "corteSobe"
+  | "corteDesce"
+  | "corteLateral";
 
 /**
  * Definicao de um golpe: as cinco fases que o briefing pede, mais o que o
@@ -178,6 +196,16 @@ export type AttackDef = {
    * pulo terminava com um corpo em cima do outro.
    */
   elevacao?: number;
+  /**
+   * GOLPE DE ARMA: comprimento util da lamina, em unidades de mundo. O ponto
+   * que encosta no alvo e a lamina, nao a mao: quem ataca fica mais longe
+   * por essa distancia, e a mira poe a MAO recuada dela.
+   */
+  lamina?: number;
+  /** pose da carga (preparacao); padrao "coil" */
+  carga?: PoseName;
+  /** som quando o golpe e defendido; padrao "block" */
+  somBloqueio?: string;
 };
 
 /** Um beat do roteiro. E isto que vira JSON e o que a geracao aleatoria monta. */
@@ -266,7 +294,15 @@ export type FightSpec = {
    * "vilarejo" e "cidade" sao o limpo com um cenario de rabisco no fundo
    * (ver backgrounds/Rabisco.tsx): traco cinza claro que ferve e se mexe.
    */
-  scenario: "arena" | "limpo" | "vilarejo" | "cidade";
+  scenario: "arena" | "limpo" | "vilarejo" | "cidade" | "noite";
+  /**
+   * ARMAS: quem luta armado e com qual elemento. Lutador armado troca as
+   * poses de guarda, defesa e carga pelas de katana (ver POSES_ARMADAS em
+   * core/timeline.ts) e desenha a lamina na mao.
+   */
+  armas?: Partial<Record<FighterId, { tipo: "katana"; elemento: "gelo" | "fogo" }>>;
+  /** nomes na tela; sem isto usa os nomes de cor (PRETO, VERMELHO...) */
+  nomes?: Partial<Record<FighterId, string>>;
   beats: Beat[];
 };
 
@@ -340,6 +376,11 @@ export type AimEvent = {
    * cabeca que se abaixava, como um missil teleguiado.
    */
   congelarEm?: number;
+  /**
+   * Golpe de arma: a mao mira este tanto (unidades de mundo) ANTES do ponto,
+   * na direcao do golpe. E a lamina que chega ao ponto.
+   */
+  recuo?: number;
 };
 
 /** Onde cada lutador esta e o que faz, num beat. */

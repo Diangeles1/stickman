@@ -39,6 +39,7 @@ import { ArcoDoGolpe } from "../effects/Arco";
 import { espetaculoDe } from "../effects/espetaculo";
 import { EstrelaDeImpacto, PoeiraDaQueda } from "../effects/Queda";
 import { Placa } from "../effects/Placa";
+import { ArcoDaKatana, Katana } from "../characters/Katana";
 import { DebugOverlay } from "../debug/DebugOverlay";
 import { poeiraAmbiente } from "../particles/particles";
 import type { Timeline } from "../core/types";
@@ -342,6 +343,15 @@ export const FightScene: React.FC<FightSceneProps> = ({
         {/* a placa do vencedor fica ATRAS do corpo: sai de tras da cabeca */}
         <Placa timeline={timeline} frame={frame} lutadores={lutadores} />
 
+        {/* rastro do corte da katana: atras dos corpos, como o arco do golpe */}
+        {fx &&
+          lutadores.map(({ id }) => {
+            const arma = timeline.spec.armas?.[id];
+            return arma ? (
+              <ArcoDaKatana key={`arco-k-${id}`} timeline={timeline} frame={frame} id={id} elemento={arma.elemento} />
+            ) : null;
+          })}
+
         {lutadores.map(({ id, corpo, preset, tremor }) => (
           <Stickman
             key={id}
@@ -356,6 +366,19 @@ export const FightScene: React.FC<FightSceneProps> = ({
             contorno={!limpo}
           />
         ))}
+
+        {/* katanas: na frente do corpo, presas a mao da frente */}
+        {lutadores.map(({ id, corpo, tremor }) => {
+          const arma = timeline.spec.armas?.[id];
+          return arma ? (
+            <Katana
+              key={`katana-${id}`}
+              corpo={{ ...corpo, x: corpo.x + (fx ? tremor : 0) }}
+              elemento={arma.elemento}
+              frame={frameReal}
+            />
+          ) : null;
+        })}
 
         {fx && (
           <Particulas

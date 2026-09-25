@@ -28,6 +28,61 @@ import type { AttackDef, AttackName, ImpactTier } from "../core/types";
 const def = (d: AttackDef): AttackDef => d;
 
 export const ATAQUES: Record<AttackName, AttackDef> = {
+  // ---- KATANA ---------------------------------------------------------------
+  // A mao para uma LAMINA antes do ponto (ver AttackDef.lamina): quem corta
+  // fica longe, a espada e que chega. Mais rapidos que o soco equivalente: a
+  // katana nao carrega o peso do corpo inteiro, carrega a ponta.
+  corteSobe: def({
+    name: "corteSobe",
+    pose: "corteSobe",
+    carga: "cargaBaixa",
+    windup: 12,
+    strike: 12,
+    recover: 14,
+    contactAt: 5,
+    tier: "medium",
+    knockback: 170,
+    hitStop: 4,
+    contactJoint: "handFront",
+    sound: "corte",
+    somBloqueio: "clang",
+    lamina: 170,
+    seguimento: { x: 0.6, y: -1 },
+  }),
+  corteDesce: def({
+    name: "corteDesce",
+    pose: "corteDesce",
+    carga: "cargaKatana",
+    windup: 14,
+    strike: 12,
+    recover: 16,
+    contactAt: 5,
+    tier: "medium",
+    knockback: 220,
+    hitStop: 5,
+    contactJoint: "handFront",
+    sound: "corte",
+    somBloqueio: "clang",
+    lamina: 170,
+    seguimento: { x: 0.5, y: 1 },
+  }),
+  corteLateral: def({
+    name: "corteLateral",
+    pose: "corteLateral",
+    carga: "cargaKatana",
+    windup: 12,
+    strike: 12,
+    recover: 14,
+    contactAt: 5,
+    tier: "medium",
+    knockback: 190,
+    hitStop: 4,
+    contactJoint: "handFront",
+    sound: "corte",
+    somBloqueio: "clang",
+    lamina: 190,
+  }),
+
   punch: def({
     name: "punch",
     pose: "punch",
