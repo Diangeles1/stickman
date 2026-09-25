@@ -321,7 +321,7 @@ const montar = (t: Timeline): Espetaculo => {
     abertura,
     entradaDoPlacar: abertura.lute,
     saidaDoPlacar: ateAPlaca,
-    falas: narrar(t, rotulos, abertura.lute, real),
+    falas: narrar(t, real),
     efeitos: efeitosDe(rotulos, ko),
   };
 };
@@ -370,37 +370,27 @@ const atingidoAnterior = (e: Espetaculo, id: FighterId, r: number): number => {
 
 // ---- narrador ---------------------------------------------------------------
 
-/** a fala entra logo DEPOIS do golpe: o impacto soa limpo e o locutor reage */
-const REACAO = 8;
 /** folga minima entre o fim de uma fala e o comeco da proxima */
 const RESPIRO = 8;
-/** falas que nunca sao cortadas por outra: os momentos da historia */
-const IMPORTANTES = new Set<Fala>(["nocaute", "venceu_black", "venceu_red", "like"]);
 
 /**
- * Escolhe as falas do narrador a partir dos letreiros. Ele nao comenta tudo:
- * so a primeira de cada coisa e os momentos grandes, e nunca fala por cima
- * de si mesmo. Locutor que fala sem parar vira ruido.
+ * Escolhe as falas do narrador.
+ *
+ * O NARRADOR NAO ENTRA NA LUTA. Nem no comeco ("Lutem!"), nem no fim
+ * ("Nocaute!", "O Preto venceu!"): durante a briga quem fala sao os sons
+ * (ver efeitosDe) e a imagem. Voz por cima de golpe faz duas coisas ruins de
+ * uma vez: tapa o impacto, que e o que da peso ao golpe, e conta com palavra
+ * o que a tela ja mostrou, o que deixa a cena mais lenta do que ela e.
+ *
+ * Sobra para ele o que a imagem NAO diz sozinha: a abertura (a tela de
+ * escolha, em TelaDeEscolha), a pergunta do final e a chamada da placa de
+ * like. Ai a voz nao compete com nada.
  */
 const narrar = (
   t: Timeline,
-  rotulos: Rotulo[],
-  lute: number,
   real: (logico: number) => number,
 ): { real: number; fala: Fala }[] => {
-  const candidatas: { real: number; fala: Fala }[] = [{ real: lute + 2, fala: "lutem" }];
-  for (const r of [...rotulos].sort((a, b) => a.inicio - b.inicio)) {
-    // Os golpes da luta nao sao narrados: cada um tem o seu efeito sonoro
-    // (ver efeitosDe). O narrador fica com a abertura e o desfecho.
-    let fala: Fala | null = null;
-    if (r.texto === "K.O.!") fala = "nocaute";
-    else if (r.texto.endsWith("VENCE!")) {
-      const vencedor = Object.entries(NOMES).find(([, n]) => r.texto.startsWith(n))?.[0];
-      fala = vencedor === "red" ? "venceu_red" : "venceu_black";
-    }
-    if (!fala) continue;
-    candidatas.push({ real: r.inicio + REACAO, fala });
-  }
+  const candidatas: { real: number; fala: Fala }[] = [];
   const placa = t.scheduled.find((b) => b.beat.type === "placa");
   if (placa) candidatas.push({ real: real(placa.from + PUXA) + 4, fala: "like" });
 
@@ -409,14 +399,8 @@ const narrar = (
     c.real + Math.ceil(FALAS[c.fala].segundos * 60) + RESPIRO;
   const aceitas: { real: number; fala: Fala }[] = [];
   for (const c of candidatas) {
-    const choca = aceitas.filter((a) => c.real < fim(a) && a.real < fim(c));
-    if (choca.length === 0) {
-      aceitas.push(c);
-    } else if (IMPORTANTES.has(c.fala) && choca.every((a) => !IMPORTANTES.has(a.fala))) {
-      // o momento grande tira a fala pequena do caminho
-      for (const a of choca) aceitas.splice(aceitas.indexOf(a), 1);
-      aceitas.push(c);
-    }
+    if (aceitas.some((a) => c.real < fim(a) && a.real < fim(c))) continue;
+    aceitas.push(c);
   }
   return aceitas.sort((a, b) => a.real - b.real);
 };
