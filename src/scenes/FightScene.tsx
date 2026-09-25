@@ -40,6 +40,8 @@ import { espetaculoDe } from "../effects/espetaculo";
 import { EstrelaDeImpacto, PoeiraDaQueda } from "../effects/Queda";
 import { Placa } from "../effects/Placa";
 import { ArcoDaKatana, Katana } from "../characters/Katana";
+import { CamadaDePoderes, laminaInteira, PoderesNaTela } from "../effects/Poderes";
+import { CeuNoturno, Chuva } from "../backgrounds/Noite";
 import { DebugOverlay } from "../debug/DebugOverlay";
 import { poeiraAmbiente } from "../particles/particles";
 import type { Timeline } from "../core/types";
@@ -102,7 +104,8 @@ export const FightScene: React.FC<FightSceneProps> = ({
   const fx = !semEfeitos;
   const { fighterA, fighterB, seed, scenario } = timeline.spec;
   // os cenarios de rabisco sao o limpo com desenho no fundo
-  const limpo = scenario !== "arena";
+  const limpo = scenario !== "arena" && scenario !== "noite";
+  const noite = scenario === "noite";
   const espetaculo = fx ? espetaculoDe(timeline) : null;
 
   // QUADRO DE IMPACTO (anime): nos golpes mais fortes, um ou dois quadros
@@ -178,6 +181,14 @@ export const FightScene: React.FC<FightSceneProps> = ({
     };
   });
 
+  // poderes: gelo, fogo, sangue, feixes (effects/Poderes.tsx)
+  const poderesAtivos = fx && timeline.poderes.length > 0;
+  const corpos = Object.fromEntries(lutadores.map((l) => [l.id, l.corpo]));
+  const xDe = (id: string, q: number) => corpoNoQuadro(timeline, id as never, q).x;
+  const chuvaCongelada = timeline.poderes.find(
+    (e) => e.tipo === "chuvaCongelada" && frame >= e.from && frame <= e.to,
+  );
+
   if (anime && modoAnime) {
     return (
       <svg
@@ -221,8 +232,8 @@ export const FightScene: React.FC<FightSceneProps> = ({
     >
       <defs>
         <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#050609" />
-          <stop offset="100%" stopColor="#0d0f15" />
+          <stop offset="0%" stopColor={noite ? "#070b1c" : "#050609"} />
+          <stop offset="100%" stopColor={noite ? "#1a2442" : "#0d0f15"} />
         </linearGradient>
       </defs>
       <rect
@@ -240,6 +251,7 @@ export const FightScene: React.FC<FightSceneProps> = ({
             frame={frameReal}
           />
         )}
+        {noite && <CeuNoturno camX={cam.center.x} />}
         <Arena
           seed={seed}
           rachaduras={rachaduras}
@@ -253,6 +265,9 @@ export const FightScene: React.FC<FightSceneProps> = ({
             frame={frameReal}
             parte="chao"
           />
+        )}
+        {poderesAtivos && (
+          <CamadaDePoderes timeline={timeline} frame={frame} parte="chao" corpos={corpos} xDe={xDe} />
         )}
 
         {/* poeira no ar: o cenario respira mesmo quando ninguem se move.
@@ -297,6 +312,9 @@ export const FightScene: React.FC<FightSceneProps> = ({
             quadro do golpe isso vira sujeira em cima da acao. */}
         {fx && (
           <g data-layer="atras-dos-corpos">
+            {poderesAtivos && (
+              <CamadaDePoderes timeline={timeline} frame={frame} parte="atras" corpos={corpos} xDe={xDe} />
+            )}
             {lutadores.map(({ id, corpo, preset, rapido, rastro }) => (
               <g key={`tras-${id}`}>
                 <ArcoDoGolpe
@@ -376,6 +394,7 @@ export const FightScene: React.FC<FightSceneProps> = ({
               corpo={{ ...corpo, x: corpo.x + (fx ? tremor : 0) }}
               elemento={arma.elemento}
               frame={frameReal}
+              inteira={laminaInteira(timeline, id, frame)}
             />
           ) : null;
         })}
@@ -389,8 +408,25 @@ export const FightScene: React.FC<FightSceneProps> = ({
           />
         )}
 
+        {poderesAtivos && (
+          <CamadaDePoderes timeline={timeline} frame={frame} parte="frente" corpos={corpos} xDe={xDe} />
+        )}
+
         {debug && <DebugOverlay timeline={timeline} frame={frame} />}
       </g>
+
+      {noite && (
+        <Chuva
+          frame={frameReal}
+          largura={width}
+          altura={height}
+          congelada={chuvaCongelada ? 1 : 0}
+          quadroDoCongelamento={chuvaCongelada?.from ?? 0}
+        />
+      )}
+      {poderesAtivos && (
+        <PoderesNaTela timeline={timeline} frame={frame} largura={width} altura={height} />
+      )}
 
       {/* o flash cobre a TELA, nao o mundo: fica fora do grupo da camera */}
       {fx && (

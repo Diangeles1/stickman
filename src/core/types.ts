@@ -241,6 +241,8 @@ export type Beat =
       target: FighterId;
       move: AttackName;
       targetPoint?: PontoAlvo;
+      /** o alvo PULA por cima do golpe (corte baixo) em vez de sair para tras */
+      pulo?: boolean;
     }
   | {
       type: "combo";
@@ -273,6 +275,24 @@ export type Beat =
    * segura no alto. `linhas` e o que esta escrito, de cima para baixo.
    */
   | { type: "placa"; who: FighterId; duration: number; linhas: string[] }
+  /**
+   * TECNICA: uma cena coreografada de poder (luta de gelo contra fogo). Cada
+   * uma escreve poses, camera, impactos e efeitos de poder de uma vez; ver
+   * `tecnica` em core/timeline.ts.
+   */
+  | {
+      type: "tecnica";
+      tecnica:
+        | "encontro"
+        | "investida"
+        | "campoDeGelo"
+        | "bolasDeFogo"
+        | "infernoVsZero"
+        | "choqueFinal"
+        | "encarar";
+      gelo: FighterId;
+      fogo: FighterId;
+    }
   | { type: "cta"; duration: number }
   | { type: "hook"; duration: number };
 
@@ -303,6 +323,12 @@ export type FightSpec = {
   armas?: Partial<Record<FighterId, { tipo: "katana"; elemento: "gelo" | "fogo" }>>;
   /** nomes na tela; sem isto usa os nomes de cor (PRETO, VERMELHO...) */
   nomes?: Partial<Record<FighterId, string>>;
+  /**
+   * CINEMATICO: luta contada como cena de anime, sem placar de jogo. Some a
+   * barra de vida e os letreiros de combo; ficam os nomes das tecnicas e o
+   * final aberto (logo, "BLACK vs RED", "QUEM DEVE VENCER?").
+   */
+  cinematico?: boolean;
   beats: Beat[];
 };
 
@@ -428,6 +454,51 @@ export type Timeline = {
    * espectador tem que ver devagar: a esquiva por um fio e o nocaute.
    */
   camaraLenta: { from: number; to: number; factor: number }[];
+  /** efeitos de poder (gelo, fogo, sangue, feixes...), ver effects/Poderes.tsx */
+  poderes: PoderEvent[];
+};
+
+export type TipoPoder =
+  | "auraGelo"
+  | "auraFogo"
+  | "geloNoChao"
+  | "chaoQueimado"
+  | "trilhaGelo"
+  | "explosaoFogo"
+  | "estilhacosGelo"
+  | "choque"
+  | "sangue"
+  | "marcaDeCorte"
+  | "bolaDeFogo"
+  | "vapor"
+  | "feixeFogo"
+  | "raioGelo"
+  | "esferaInferno"
+  | "zeroAbsoluto"
+  | "telaBranca"
+  | "quebraLaminas"
+  | "rachadura"
+  | "chuvaCongelada"
+  | "nomeDaTecnica";
+
+/**
+ * Um efeito de poder no tempo. O compilador decide QUANDO e ONDE (a partir
+ * da coreografia); effects/Poderes.tsx decide COMO fica. `a` e a origem,
+ * `b` o destino (projetil, feixe, alcance do gelo no chao).
+ */
+export type PoderEvent = {
+  tipo: TipoPoder;
+  from: number;
+  to: number;
+  quem?: FighterId;
+  a?: Vec2;
+  b?: Vec2;
+  /** 0 a 1, ou tamanho, conforme o tipo */
+  forca?: number;
+  /** direcao horizontal (1 direita, -1 esquerda), quando importa */
+  dir?: number;
+  /** texto (nome da tecnica) */
+  texto?: string;
 };
 
 export type CameraKey = {

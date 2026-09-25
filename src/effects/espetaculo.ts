@@ -83,6 +83,8 @@ export type Espetaculo = {
   falas: { real: number; fala: Fala }[];
   /** efeitos sonoros dos acontecimentos (combo, esquiva, contra...) */
   efeitos: { real: number; som: string }[];
+  /** luta cinematica: quadro real em que comeca o final aberto */
+  final?: number;
 };
 
 /** Dano por golpe limpo. Bloqueio so arranha. */
@@ -119,6 +121,7 @@ const montar = (t: Timeline): Espetaculo => {
   const { fighterA, fighterB } = t.spec;
   const real = (logico: number) =>
     Math.ceil(logicoParaReal(t, logico) - 1e-6);
+  if (t.spec.cinematico) return montarCinematico(t, real);
   /** de que lado da tela o lutador esta neste quadro */
   const ladoDe = (id: FighterId, logico: number): -1 | 1 => {
     const outro = id === fighterA ? fighterB : fighterA;
@@ -445,3 +448,64 @@ const efeitosDe = (
   if (ko) saida.push({ real: Math.max(0, ko.real - TENSAO), som: "tensao" });
   return saida.sort((a, b) => a.real - b.real);
 };
+
+// ---- luta cinematica -----------------------------------------------------------
+
+const COR_DO_ELEMENTO = { gelo: "#8fe3ff", fogo: "#ff8a2a" } as const;
+
+/**
+ * LUTA CINEMATICA (spec.cinematico): sem placar, sem combo, sem K.O. Os
+ * letreiros sao so os NOMES DAS TECNICAS, na cor do elemento de quem usa, e
+ * o fim e aberto (logo, nomes, "QUEM DEVE VENCER?").
+ */
+const montarCinematico = (
+  t: Timeline,
+  real: (logico: number) => number,
+): Espetaculo => {
+  const rotulos: Rotulo[] = [];
+  let final: number | undefined;
+  for (const e of t.poderes) {
+    if (e.tipo !== "nomeDaTecnica" || !e.texto) continue;
+    if (e.texto === "FINAL") {
+      final = real(e.from);
+      continue;
+    }
+    const elemento = e.quem ? t.spec.armas?.[e.quem]?.elemento : undefined;
+    rotulos.push({
+      inicio: real(e.from),
+      duracao: real(e.to) - real(e.from),
+      texto: e.texto,
+      cor: elemento ? COR_DO_ELEMENTO[elemento] : "#ffffff",
+      // cabe na largura da tela: "ZERO ABSOLUTE" tem 13 letras e a 150 saia
+      // pelos dois lados. ~62 por letra e o que a Bangers ocupa neste corpo.
+      tamanho: Math.min(150, Math.round(940 / (e.texto.length * 0.42))),
+      lado: 0,
+      y: 0.2,
+      vaga: "tecnica",
+      pancada: true,
+    });
+  }
+  const esquivas = t.aims
+    .filter((m) => m.congelarEm !== undefined)
+    .map((m) => real(m.contact));
+  const falas: { real: number; fala: Fala }[] = [];
+  if (final !== undefined && "quem" in FALAS) {
+    falas.push({ real: final + ESPERA_DA_PERGUNTA + 4, fala: "quem" as Fala });
+  }
+  return {
+    rotulos,
+    golpes: [],
+    impactosAnime: [],
+    quedas: [],
+    esquivas,
+    abertura: { vs: -999, lute: -999, fim: -999 },
+    entradaDoPlacar: Infinity,
+    saidaDoPlacar: Infinity,
+    falas,
+    efeitos: [],
+    final,
+  };
+};
+
+/** quadros entre o comeco do final e a pergunta (logo, depois nomes) */
+export const ESPERA_DA_PERGUNTA = 100;

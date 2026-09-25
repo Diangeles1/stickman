@@ -25,6 +25,7 @@ import {
 } from "./contact";
 import type {
   AimEvent,
+  Beat,
   AttackName,
   CameraKey,
   FightSpec,
@@ -171,6 +172,7 @@ export const compilar = (spec: FightSpec): Timeline => {
   const cameraKeys: CameraKey[] = [];
   const slowMo: Timeline["slowMo"] = [];
   const camaraLenta: Timeline["camaraLenta"] = [];
+  const poderes: Timeline["poderes"] = [];
 
   let cursor = 0;
 
@@ -327,6 +329,8 @@ export const compilar = (spec: FightSpec): Timeline => {
        * embalo do proximo; recuar entre os dois jogava fora essa logica.
        */
       mantemPressao?: boolean;
+      /** esquiva pulando por cima (corte baixo) */
+      pulo?: boolean;
     } = {},
   ) => {
     const duracoes = duracaoDe(atacante, move);
@@ -565,6 +569,22 @@ export const compilar = (spec: FightSpec): Timeline => {
       // atravessa o espaco vazio, que e a leitura certa de um golpe errado.
       chave(alvo, frameContato - s(0.2));
 
+      if (opcoes.pulo) {
+        // CORTE BAIXO: o alvo agacha e PULA; a lamina passa por baixo dos pes
+        estado[alvo].pose = "coil";
+        chave(alvo, frameContato - s(0.14));
+        estado[alvo].pose = "jump";
+        estado[alvo].airborne = true;
+        chave(alvo, frameContato - s(0.1));
+        estado[alvo].pose = "airborne";
+        chave(alvo, frameContato + s(0.22));
+        estado[alvo].pose = "land";
+        estado[alvo].airborne = false;
+        chave(alvo, frameContato + s(0.3));
+        estado[alvo].pose = "guard";
+        chave(alvo, frameContato + s(0.46));
+        fimDaReacao = frameContato + s(0.46);
+      } else {
       // golpe na cabeca se esquiva ABAIXANDO; no corpo, jogando o peso para
       // tras. Duas leituras diferentes para dois golpes diferentes.
       estado[alvo].pose = ponto === "head" ? "duck" : "dodge";
@@ -577,6 +597,7 @@ export const compilar = (spec: FightSpec): Timeline => {
       estado[alvo].pose = "guard";
       chave(alvo, frameContato + s(0.34));
       fimDaReacao = frameContato + s(0.34);
+      }
 
       // o ritmo cai para o espectador LER que passou perto
       slowMo.push({
@@ -905,6 +926,303 @@ export const compilar = (spec: FightSpec): Timeline => {
       : Math.max(cursor + recover, voltaDoAlvo, ultimaDoAtacante + 1);
   };
 
+
+  // ==========================================================================
+  // TECNICAS: as cenas de poder da luta de gelo contra fogo.
+  //
+  // Cada uma escreve tudo de uma vez: poses, deslocamento, camera, impactos e
+  // os efeitos de poder (effects/Poderes.tsx). A regra do roteiro manda na
+  // coreografia: o GELO e controle e velocidade (desliza, corta preciso), o
+  // FOGO e forca e explosao (dispara com explosao, lanca, empurra).
+  // ==========================================================================
+  /** altura da mao em guarda, no mundo: onde as laminas se encontram */
+  const MAO_Y = ALTURA_QUADRIL - 190;
+  const PARA_SEMPRE = 1e9;
+  const poder = (e: Timeline["poderes"][number]) => poderes.push(e);
+  const nome = (texto: string, quem: FighterId, quadro: number, dur = s(0.9)) =>
+    poder({ tipo: "nomeDaTecnica", texto, quem, from: quadro, to: quadro + dur });
+  const pose = (quem: FighterId, p: PoseName, quadro: number, x?: number) => {
+    if (x !== undefined) estado[quem].x = x;
+    estado[quem].pose = p;
+    chave(quem, quadro);
+  };
+
+  const tecnica = (b: Extract<Beat, { type: "tecnica" }>): number => {
+    const G = b.gelo;
+    const F = b.fogo;
+    const c = cursor;
+    const lado = estado[G].x <= estado[F].x ? 1 : -1; // gelo -> fogo
+    switch (b.tecnica) {
+      case "encontro": {
+        // os dois parados, cada um no seu elemento; a camera passa entre eles
+        // e alterna closes. Silencio antes da luta.
+        const dur = s(2.4);
+        pose(G, "guard", c, -380);
+        pose(F, "guard", c, 380);
+        pose(G, "guard", c + dur);
+        pose(F, "guard", c + dur);
+        poder({ tipo: "auraGelo", quem: G, from: c + 6, to: PARA_SEMPRE, forca: 0.9 });
+        poder({ tipo: "auraFogo", quem: F, from: c + 30, to: PARA_SEMPRE, forca: 0.9 });
+        poder({ tipo: "geloNoChao", a: { x: -380, y: 0 }, b: { x: -220, y: 0 }, from: c + 8, to: c + 70 });
+        poder({ tipo: "chaoQueimado", a: { x: 380, y: 0 }, from: c + 30, to: PARA_SEMPRE, forca: 170 });
+        const perto = (x: number, quadro: number, y = ALTURA_QUADRIL - 260) =>
+          cameraKeys.push({ frame: quadro, center: { x, y }, zoom: 2.1, ease: 4 });
+        cameraKeys.push({ frame: c, center: { x: -380, y: ALTURA_QUADRIL - 80 }, zoom: 1.05, ease: 1 });
+        cameraKeys.push({ frame: c + 2, center: { x: 380, y: ALTURA_QUADRIL - 80 }, zoom: 1.05, ease: s(0.9) });
+        perto(-380 + 20, c + s(1.0)); // olho do gelo
+        perto(380 - 20, c + s(1.3)); // olho do fogo
+        perto(-380 + 90, c + s(1.6), MAO_Y); // katana de gelo
+        perto(380 - 90, c + s(1.85), MAO_Y); // katana de fogo
+        cameraKeys.push({ frame: c + s(2.1), center: { x: 0, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 6, fit: true });
+        return c + dur;
+      }
+
+      case "investida": {
+        // gelo DESLIZA (trilha de gelo), fogo DISPARA (explosao no pe); as
+        // laminas se encontram no meio: gelo para um lado, fogo para o outro
+        const m = (estado[G].x + estado[F].x) / 2;
+        const encontro = c + s(0.6);
+        pose(G, "deslizar", c + 8, estado[G].x + lado * 40);
+        pose(F, "sprint1", c + 8, estado[F].x - lado * 40);
+        poder({ tipo: "trilhaGelo", quem: G, from: c + 8, to: encontro });
+        poder({ tipo: "explosaoFogo", a: { x: estado[F].x + lado * 50, y: -40 }, from: c + 8, to: c + 40, forca: 150 });
+        pose(G, "corteLateral", encontro, m - lado * 235);
+        pose(F, "corteDesce", encontro, m + lado * 235);
+        impacts.push({
+          frame: encontro,
+          at: { x: m, y: MAO_Y },
+          tier: "extreme",
+          direction: lado,
+          hitStop: 8,
+          cracksGround: false,
+          sound: "clang",
+        });
+        poder({ tipo: "choque", a: { x: m, y: MAO_Y }, from: encontro, to: encontro + 40, dir: -lado, forca: 240 });
+        cameraKeys.push({ frame: encontro - 6, center: { x: m, y: ALTURA_QUADRIL - 120 }, zoom: 1.35, ease: 6, shake: 34 });
+        // o choque separa os dois
+        pose(G, "guard", encontro + s(0.35), m - lado * 330);
+        pose(F, "guard", encontro + s(0.35), m + lado * 330);
+        cameraKeys.push({ frame: encontro + s(0.3), center: { x: m, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 12, fit: true });
+        return encontro + s(0.5);
+      }
+
+      case "campoDeGelo": {
+        // mao no chao: o gelo toma a arena. O fogo escorrega; o gelo passa
+        // patinando e corta.
+        const xG = estado[G].x;
+        pose(G, "maoNoChao", c + 10);
+        const toque = c + 16;
+        nome("ICE FIELD", G, toque);
+        poder({ tipo: "estilhacosGelo", a: { x: xG + lado * 60, y: -20 }, from: toque, to: toque + 36, forca: 200, dir: lado });
+        poder({ tipo: "geloNoChao", a: { x: xG, y: 0 }, b: { x: xG + lado * 1500, y: 0 }, from: toque, to: toque + s(0.5) });
+        cameraKeys.push({ frame: toque, center: { x: (xG + estado[F].x) / 2, y: ALTURA_QUADRIL - 60 }, zoom: 0.85, ease: 8, shake: 16 });
+        // o fogo tenta avancar e o pe escorrega
+        const escorrega = toque + s(0.45);
+        pose(F, "advance", escorrega - 8);
+        pose(F, "stagger", escorrega, estado[F].x - lado * 50);
+        // o gelo levanta e patina, passando por ele
+        pose(G, "guard", toque + s(0.4));
+        const xF = estado[F].x;
+        const passa = escorrega + s(0.35);
+        pose(G, "deslizar", escorrega + 4, xG + lado * 60);
+        poder({ tipo: "trilhaGelo", quem: G, from: escorrega + 4, to: passa + 10 });
+        pose(G, "corteLateral", passa, xF + lado * 60);
+        impacts.push({
+          frame: passa,
+          at: { x: xF, y: MAO_Y + 40 },
+          tier: "medium",
+          direction: lado,
+          hitStop: 6,
+          cracksGround: false,
+          sound: "corte",
+          victim: F,
+          attacker: G,
+        });
+        poder({ tipo: "sangue", a: { x: xF, y: MAO_Y + 40 }, from: passa, to: passa + 60, dir: lado, forca: 1 });
+        poder({ tipo: "marcaDeCorte", quem: F, from: passa, to: PARA_SEMPRE });
+        // passa direto e so para longe: as bolas de fogo precisam de espaco
+        pose(G, "deslizar", passa + 12, xF + lado * 420);
+        pose(G, "guard", passa + s(0.4), xF + lado * 600);
+        // o fogo cambaleia, vira e olha o corte
+        pose(F, "hitChest", passa + 4, xF);
+        pose(F, "guard", passa + s(0.5));
+        cameraKeys.push({ frame: passa - 10, center: { x: xF, y: ALTURA_QUADRIL - 120 }, zoom: 1.25, ease: 8 });
+        cameraKeys.push({ frame: passa + s(0.35), center: { x: 0, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 14, fit: true });
+        return passa + s(0.55);
+      }
+
+      case "bolasDeFogo": {
+        // tres bolas de fogo; o gelo desvia de cada uma de um jeito e a ultima
+        // explode atras dele. O fogo derrete o gelo do chao: vapor.
+        const ladoF = estado[F].x <= estado[G].x ? 1 : -1; // fogo -> gelo
+        pose(F, "lancar", c + 12);
+        nome("FIRE BULLETS", F, c + 12);
+        // plano aberto: a bola precisa ser vista saindo de um e chegando no outro
+        cameraKeys.push({ frame: c, center: { x: 0, y: ALTURA_QUADRIL - 60 }, zoom: 0.9, ease: 10, fit: true });
+        const xG = estado[G].x;
+        const mao = { x: estado[F].x + ladoF * 150, y: MAO_Y };
+        // o gelo desvia de cada uma de um jeito: inclina para tras, pula, e
+        // na terceira desliza POR BAIXO dela, na direcao do fogo; a bola passa
+        // por cima e explode atras dele
+        let xAtual = xG;
+        let q = c + 14;
+        for (let i = 0; i < 3; i++) {
+          const chega = q + 20;
+          const alvo =
+            i === 0
+              ? { x: xAtual, y: MAO_Y }
+              : i === 1
+                ? { x: xAtual, y: -110 }
+                : { x: xAtual + ladoF * 240, y: MAO_Y - 30 };
+          poder({ tipo: "bolaDeFogo", a: mao, b: alvo, from: q, to: chega, forca: 46 });
+          poder({ tipo: "vapor", a: { x: alvo.x, y: -60 }, from: chega, to: chega + 30, forca: 140 });
+          if (i < 2) {
+            pose(F, "guard", q + 6);
+            pose(F, "lancar", q + 12);
+          }
+          if (i === 0) {
+            xAtual += ladoF * 70;
+            pose(G, "dodge", chega - 5, xAtual);
+            pose(G, "guard", chega + 10);
+          } else if (i === 1) {
+            pose(G, "coil", chega - 12);
+            estado[G].airborne = true;
+            pose(G, "jump", chega - 7);
+            pose(G, "airborne", chega + 8);
+            estado[G].airborne = false;
+            pose(G, "land", chega + 14);
+          } else {
+            xAtual -= ladoF * 90;
+            pose(G, "deslizar", chega - 4, xAtual);
+          }
+          q += 26;
+        }
+        // o fogo no chao derrete o gelo: ele some a partir daqui
+        poderes.forEach((e) => {
+          if (e.tipo === "geloNoChao" && !e.forca) e.forca = c + 30;
+        });
+        // a ultima explode atras do gelo e EMPURRA ele na direcao do fogo
+        const fim = q;
+        cameraKeys.push({ frame: fim - 6, center: { x: xAtual, y: ALTURA_QUADRIL - 80 }, zoom: 1.0, ease: 6, shake: 26 });
+        pose(G, "deslizar", fim + 6, estado[F].x + ladoF * 330);
+        pose(G, "guard", fim + 20);
+        pose(F, "guard", fim);
+        cameraKeys.push({ frame: fim + 10, center: { x: 0, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 12, fit: true });
+        return fim + 26;
+      }
+
+      case "infernoVsZero": {
+        // o fogo junta uma esfera enorme; o gelo fecha os olhos, a chuva
+        // congela no ar; os dois lancam e os poderes colidem no meio
+        // os dois abrem distancia: a esfera e os feixes precisam do meio livre
+        const m = (estado[G].x + estado[F].x) / 2;
+        pose(G, "retreat", c + 8, m - lado * 330);
+        pose(F, "retreat", c + 8, m + lado * 330);
+        const xG = estado[G].x;
+        const xF = estado[F].x;
+        pose(F, "katanaErguida", c + 16);
+        const esfera = { x: xF, y: ALTURA_QUADRIL - 560 };
+        poder({ tipo: "esferaInferno", a: esfera, from: c + 12, to: c + s(1.3), forca: 250 });
+        nome("INFERNO", F, c + 18);
+        pose(G, "guard", c + s(0.5));
+        pose(G, "katanaErguida", c + s(0.75));
+        poder({ tipo: "zeroAbsoluto", quem: G, from: c + s(0.7), to: c + s(2.4) });
+        poder({ tipo: "chuvaCongelada", from: c + s(0.75), to: c + s(2.4) });
+        nome("ZERO ABSOLUTE", G, c + s(0.8));
+        // aberto e alto: a esfera cresce em cima do fogo, o gelo no quadro
+        cameraKeys.push({ frame: c + 4, center: { x: (xG + xF) / 2, y: ALTURA_QUADRIL - 300 }, zoom: 0.72, ease: 14 });
+        cameraKeys.push({ frame: c + s(0.7), center: { x: xG, y: ALTURA_QUADRIL - 200 }, zoom: 1.4, ease: 8 });
+        // lancam: o fogo empurra as maos, o gelo desce a katana
+        const lanca = c + s(1.3);
+        pose(F, "bracosFrente", lanca);
+        pose(G, "corteDesce", lanca);
+        const colisao = { x: m, y: ALTURA_QUADRIL - 200 };
+        const fimFeixe = lanca + s(1.1);
+        poder({ tipo: "feixeFogo", a: { x: xF - lado * 120, y: ALTURA_QUADRIL - 210 }, b: colisao, from: lanca, to: fimFeixe, forca: 120 });
+        poder({ tipo: "raioGelo", a: { x: xG + lado * 150, y: ALTURA_QUADRIL - 190 }, b: colisao, from: lanca, to: fimFeixe, forca: 100 });
+        // o vapor so vem DEPOIS que os feixes se encontram e brigam um pouco:
+        // antes disso ele escondia os dois poderes
+        poder({ tipo: "vapor", a: colisao, from: lanca + s(0.5), to: fimFeixe, forca: 150 });
+        // tremor crescente
+        for (let k = 0; k < 5; k++) {
+          cameraKeys.push({
+            frame: lanca + k * 13,
+            center: { x: m, y: ALTURA_QUADRIL - 120 },
+            zoom: 0.92 + k * 0.06,
+            ease: 12,
+            shake: 8 + k * 9,
+          });
+        }
+        pose(F, "bracosFrente", fimFeixe);
+        pose(G, "corteDesce", fimFeixe);
+        // explosao: tela branca, fogo e gelo juntos
+        impacts.push({
+          frame: fimFeixe,
+          at: colisao,
+          tier: "extreme",
+          direction: lado,
+          hitStop: 10,
+          cracksGround: true,
+          sound: "explosion",
+        });
+        poder({ tipo: "telaBranca", from: fimFeixe, to: fimFeixe + 14 });
+        poder({ tipo: "explosaoFogo", a: colisao, from: fimFeixe, to: fimFeixe + 40, forca: 420 });
+        poder({ tipo: "estilhacosGelo", a: colisao, from: fimFeixe, to: fimFeixe + 36, forca: 400 });
+        poder({ tipo: "vapor", a: { x: m, y: -150 }, from: fimFeixe + 8, to: fimFeixe + s(1.2), forca: 420 });
+        // depois: o gelo ajoelhado, o fogo de pe (parece que o fogo venceu)
+        pose(G, "ajoelhado", fimFeixe + 16, xG - lado * 120);
+        pose(F, "guard", fimFeixe + 16, xF + lado * 80);
+        cameraKeys.push({ frame: fimFeixe + 16, center: { x: m, y: ALTURA_QUADRIL - 60 }, zoom: 0.95, ease: 20, fit: true });
+        pose(G, "ajoelhado", fimFeixe + s(0.75));
+        return fimFeixe + s(0.8);
+      }
+
+      case "choqueFinal": {
+        // o gelo abre o olho e levanta; os dois correm; as katanas cruzam, a
+        // tela fica branca, silencio, TING: as duas espadas quebram
+        const m = (estado[G].x + estado[F].x) / 2;
+        pose(G, "guard", c + 10);
+        pose(G, "run1", c + 18);
+        pose(F, "run1", c + 14);
+        const cruza = c + s(0.55);
+        pose(G, "corteDesce", cruza, m - lado * 235);
+        pose(F, "corteDesce", cruza, m + lado * 235);
+        cameraKeys.push({ frame: c + 16, center: { x: m, y: ALTURA_QUADRIL - 100 }, zoom: 1.2, ease: s(0.4) });
+        impacts.push({
+          frame: cruza,
+          at: { x: m, y: MAO_Y },
+          tier: "extreme",
+          direction: lado,
+          hitStop: 7,
+          cracksGround: false,
+          sound: "clang",
+        });
+        poder({ tipo: "telaBranca", from: cruza, to: cruza, forca: 1 });
+        poder({ tipo: "quebraLaminas", a: { x: m, y: MAO_Y }, from: cruza + 2, to: cruza + 90 });
+        // seguem o corte e param de costas um para o outro? Nao: param frente
+        // a frente, sem espada, se encarando
+        pose(G, "corteDesce", cruza + 10);
+        pose(F, "corteDesce", cruza + 10);
+        return cruza + 14;
+      }
+
+      case "encarar": {
+        const m = (estado[G].x + estado[F].x) / 2;
+        pose(G, "guard", c + 14, m - lado * 230);
+        pose(F, "guard", c + 14, m + lado * 230);
+        poder({ tipo: "rachadura", a: { x: m, y: 0 }, from: c + 20, to: c + 60, forca: 320 });
+        cameraKeys.push({ frame: c + 10, center: { x: m, y: ALTURA_QUADRIL - 140 }, zoom: 0.72, ease: s(1.2) });
+        // longo o bastante para o logo, os nomes e a pergunta serem lidos
+        const dur = s(3.6);
+        pose(G, "guard", c + dur);
+        pose(F, "guard", c + dur);
+        poder({ tipo: "nomeDaTecnica", texto: "FINAL", from: c + s(0.5), to: c + dur });
+        return c + dur;
+      }
+    }
+    return c;
+  };
+
   for (let indice = 0; indice < spec.beats.length; indice++) {
     const beat = spec.beats[indice];
     const inicio = cursor;
@@ -972,6 +1290,7 @@ export const compilar = (spec: FightSpec): Timeline => {
           esquivado: true,
           ponto: beat.targetPoint,
           mantemPressao,
+          pulo: beat.pulo,
         });
         break;
 
@@ -1148,6 +1467,10 @@ export const compilar = (spec: FightSpec): Timeline => {
         break;
       }
 
+      case "tecnica":
+        cursor = tecnica(beat);
+        break;
+
       case "hold":
       case "cta":
       case "hook":
@@ -1172,5 +1495,6 @@ export const compilar = (spec: FightSpec): Timeline => {
     tracks,
     slowMo,
     camaraLenta,
+    poderes,
   };
 };
