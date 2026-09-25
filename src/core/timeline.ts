@@ -102,7 +102,7 @@ const DISTANCIA_NEUTRA = 420;
 export const ALTURA_QUADRIL = -ALTURA_DO_ESQUELETO;
 
 /** Golpes que acontecem no ar: o atacante pula para golpear. */
-const GOLPES_AEREOS = new Set<PoseName>(["airAttack", "diveAttack"]);
+const GOLPES_AEREOS = new Set<PoseName>(["airAttack", "diveAttack", "corteMergulho"]);
 
 /**
  * Lutador ARMADO nao luta de guarda de boxe: estas poses sao trocadas pelas
@@ -114,6 +114,10 @@ const POSES_ARMADAS: Partial<Record<PoseName, PoseName>> = {
   idle: "guardaKatana",
   block: "bloqueioKatana",
   absorver: "absorverKatana",
+  run1: "corridaKatana1",
+  run2: "corridaKatana2",
+  sprint1: "corridaKatana1",
+  sprint2: "corridaKatana2",
   jump: "puloKatana",
   airborne: "arKatana",
   land: "pousoKatana",
@@ -126,6 +130,11 @@ const POSES_ARMADAS: Partial<Record<PoseName, PoseName>> = {
  * peito descendo.
  */
 const TEMPO_NO_AR = s(0.65);
+/**
+ * Tempo no ar do salto para tras, em quadros. A altura sai daqui: 30 quadros
+ * dao ~112 unidades, meio corpo, que e onde o salto se le como salto.
+ */
+const TEMPO_DO_SALTO = 30;
 
 /**
  * PERSONALIDADE NA FISICA: o mesmo golpe, com outro corpo.
@@ -1551,6 +1560,32 @@ export const compilar = (spec: FightSpec): Timeline => {
           ease: s(0.45),
         });
         cursor += beat.duration;
+        break;
+      }
+
+      case "saltoParaTras": {
+        // impulso, voo e pouso agachado. O corpo sobe pelo mesmo caminho de
+        // qualquer salto (ver alturaDoVoo), entao o arco e o mesmo do pulo.
+        const quem = beat.who;
+        const recuo = beat.distancia ?? 260;
+        const paraTras = estado[quem].x <= estado[oposto(quem)].x ? -1 : 1;
+        chave(quem, cursor);
+        estado[quem].pose = "coil";
+        chave(quem, cursor + 6);
+        estado[quem].pose = "saltoParaTras";
+        estado[quem].airborne = true;
+        chave(quem, cursor + 10);
+        estado[quem].x += paraTras * recuo;
+        // TEMPO NO AR e o que define a ALTURA: a parabola do voo sai dele
+        // (ver alturaDoVoo, H = G*T^2/8). Com 16 quadros o salto subia 32
+        // unidades, um sexto de corpo: lia como tropeco, nao como salto.
+        chave(quem, cursor + 10 + TEMPO_DO_SALTO);
+        estado[quem].pose = "land";
+        estado[quem].airborne = false;
+        chave(quem, cursor + 16 + TEMPO_DO_SALTO);
+        estado[quem].pose = "guard";
+        chave(quem, cursor + 30 + TEMPO_DO_SALTO);
+        cursor += 32 + TEMPO_DO_SALTO;
         break;
       }
 

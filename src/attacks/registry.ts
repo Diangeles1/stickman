@@ -88,6 +88,29 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     somBloqueio: "clang",
     lamina: 100,
   }),
+  /**
+   * CORTE EM MERGULHO: o golpe que fecha um salto. O corpo cai junto com a
+   * lamina, entao ele nao precisa de carga: quem carrega e a altura.
+   */
+  corteMergulho: def({
+    name: "corteMergulho",
+    pose: "corteMergulho",
+    carga: "mergulho",
+    windup: 10,
+    strike: 12,
+    recover: 16,
+    contactAt: 5,
+    tier: "extreme",
+    knockback: 380,
+    hitStop: 6,
+    contactJoint: "handFront",
+    sound: "corte",
+    somBloqueio: "clang",
+    lamina: 100,
+    elevacao: 150,
+    seguimento: { x: 0.5, y: 1 },
+    cracksGround: true,
+  }),
   corteLateral: def({
     name: "corteLateral",
     pose: "corteLateral",

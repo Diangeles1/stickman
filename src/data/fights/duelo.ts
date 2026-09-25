@@ -21,7 +21,7 @@
  *   4-5  ESQUIVA        o vermelho corta, o preto sai do caminho
  *   5-6  CONTRA-ATAQUE  o vermelho aproveita a abertura
  *   6-7  ACERTO         o corte entra no preto
- *   7-8  REACAO         o preto cambaleia e se recompoe
+ *   7-8  REACAO         o preto salta para tras, corre e cai cortando
  */
 
 import { s } from "../../core/time";
@@ -71,13 +71,24 @@ export const DUELO: FightSpec = {
     // lamina e marca no corpo do preto.
     { type: "attack", attacker: "red", target: "black", move: "corteLateral" },
 
-    // ---- RESPOSTA DO PRETO ----------------------------------------------
-    // Ele nao fica so apanhando: dois rapidos, o segundo entra.
-    { type: "recover", who: "black", duration: s(0.5) },
-    { type: "blocked", attacker: "black", target: "red", move: "corteRapido" },
-    { type: "attack", attacker: "black", target: "red", move: "corteRapido" },
+    // ---- SALTO PARA TRAS -------------------------------------------------
+    // O preto nao apanha duas vezes: abre distancia no ar em vez de recuar
+    // andando. E o spacing mudando de verdade, de perto para longe.
+    { type: "recover", who: "black", duration: s(0.35) },
+    { type: "saltoParaTras", who: "black", distancia: 460 },
 
-    { type: "recover", who: "red", duration: s(0.5) },
+    // ---- CORRIDA E MERGULHO ----------------------------------------------
+    // De longe, ele corre e cai cortando de cima: o golpe que so existe
+    // porque a distancia existe.
+    //
+    // Sem beat de aproximacao aqui de proposito: o proprio golpe leva o corpo
+    // ate a distancia dele (e a corrida acontece dentro dessa aproximacao).
+    // Com um "approach" antes, o lutador corria para frente ate a marca do
+    // beat e depois voltava correndo de re ate a distancia do golpe.
+    { type: "attack", attacker: "black", target: "red", move: "corteMergulho" },
+
+    // ---- FECHAMENTO -------------------------------------------------------
+    { type: "recover", who: "red", duration: s(0.6) },
     { type: "hold", duration: s(0.5), label: "respiro" },
   ],
 };

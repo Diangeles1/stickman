@@ -628,7 +628,8 @@ export const POSES_DE_APOIO = new Set<PoseName>([
   "hitHead", "hitChest", "hitBody", "hitLeg",
   "guardaKatana", "bloqueioKatana", "cargaKatana", "cargaBaixa",
   "absorver", "absorverKatana", "pousoKatana",
-  "corteSobe", "corteDesce", "corteLateral", "corteRapido", "lancar", "bracosFrente",
+  "corteSobe", "corteDesce", "corteLateral", "corteRapido", "corteMergulho",
+  "corridaKatana1", "corridaKatana2", "saltoParaTras", "lancar", "bracosFrente",
   "katanaErguida",
 ]);
 

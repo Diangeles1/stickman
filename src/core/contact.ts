@@ -348,4 +348,6 @@ export const ALVO_PADRAO: Record<string, PontoAlvo> = {
   corteDesce: "legs",
   corteLateral: "chest",
   corteRapido: "chest",
+  // o mergulho termina baixo: a ponta chega na altura do plexo, nao do peito
+  corteMergulho: "torso",
 };

@@ -83,6 +83,11 @@ export type PoseName =
   | "bloqueioKatana"
   | "absorver"
   | "absorverKatana"
+  | "corridaKatana1"
+  | "corridaKatana2"
+  | "saltoParaTras"
+  | "giroNoAr"
+  | "mergulho"
   | "puloKatana"
   | "arKatana"
   | "pousoKatana"
@@ -92,6 +97,7 @@ export type PoseName =
   | "corteDesce"
   | "corteLateral"
   | "corteRapido"
+  | "corteMergulho"
   // poderes
   | "maoNoChao"
   | "lancar"
@@ -149,7 +155,8 @@ export type AttackName =
   | "corteSobe"
   | "corteDesce"
   | "corteLateral"
-  | "corteRapido";
+  | "corteRapido"
+  | "corteMergulho";
 
 /**
  * Definicao de um golpe: as cinco fases que o briefing pede, mais o que o
@@ -235,6 +242,11 @@ export type Beat =
       targetPoint?: PontoAlvo;
     }
   | { type: "dodge"; who: FighterId; duration: number }
+  /**
+   * SALTO PARA TRAS: abre distancia num movimento so, no ar. E o recuo de
+   * quem sabe lutar, diferente do "retreat", que e um passo para tras.
+   */
+  | { type: "saltoParaTras"; who: FighterId; distancia?: number }
   /**
    * Golpe que PASSA: o atacante desfere, o alvo sai do caminho, e nao ha
    * impacto nenhum.

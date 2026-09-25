@@ -307,6 +307,109 @@ const ESCRITAS: Record<PoseName, Pose> = {
     footFront: { x: 46, y: 83 },
   }),
 
+  // --- MOVIMENTO AVANCADO ----------------------------------------------------
+  //
+  // O que separa uma luta de anime de dois bonecos trocando golpes e o que
+  // acontece ENTRE os golpes: correr, saltar para tras, girar no ar, cair
+  // cortando. Todas estas poses respeitam o alcance da perna (99 unidades) e
+  // sao pensadas em par, para a alternancia ler como ciclo.
+
+  /** corrida armada: joelho da frente alto, lamina recolhida junto ao corpo */
+  corridaKatana1: p({
+    neck: { x: 24, y: -68 },
+    head: { x: 36, y: -104 },
+    elbowFront: { x: 6, y: -44 },
+    handFront: { x: 30, y: -34 },
+    elbowBack: { x: -22, y: -46 },
+    handBack: { x: -44, y: -26 },
+    kneeFront: { x: 48, y: -15 },
+    footFront: { x: 52, y: 34 },
+    kneeBack: { x: -24, y: 44 },
+    footBack: { x: -64, y: 72 },
+  }),
+  /** o outro tempo da corrida: as pernas trocam, o tronco segue a frente */
+  corridaKatana2: p({
+    neck: { x: 24, y: -68 },
+    head: { x: 36, y: -104 },
+    elbowFront: { x: 10, y: -46 },
+    handFront: { x: 36, y: -40 },
+    elbowBack: { x: -20, y: -44 },
+    handBack: { x: -40, y: -22 },
+    kneeFront: { x: 23, y: 44 },
+    footFront: { x: -26, y: 48 },
+    kneeBack: { x: 50, y: -5 },
+    footBack: { x: 70, y: 40 },
+  }),
+
+  /**
+   * SALTO PARA TRAS: o corpo se joga para tras e para cima, pernas dobradas
+   * na frente, lamina atravessada. E o recuo que abre distancia num quadro.
+   */
+  saltoParaTras: p({
+    neck: { x: -14, y: -72 },
+    head: { x: -26, y: -106 },
+    elbowFront: { x: 16, y: -48 },
+    handFront: { x: 40, y: -58 },
+    elbowBack: { x: -6, y: -46 },
+    handBack: { x: 18, y: -54 },
+    kneeFront: { x: 48, y: 14 },
+    footFront: { x: 30, y: 60 },
+    kneeBack: { x: 24, y: 44 },
+    footBack: { x: -20, y: 66 },
+  }),
+
+  /**
+   * GIRO NO AR: corpo recolhido, joelhos no peito, lamina junto. O giro em si
+   * e a rotacao do corpo inteiro (spin), nao a pose: aqui o corpo so fica
+   * compacto, que e o que permite girar.
+   */
+  giroNoAr: p({
+    neck: { x: 0, y: -70 },
+    head: { x: 0, y: -108 },
+    elbowFront: { x: 22, y: -48 },
+    handFront: { x: 30, y: -20 },
+    elbowBack: { x: -20, y: -46 },
+    handBack: { x: -26, y: -18 },
+    kneeFront: { x: 34, y: 6 },
+    footFront: { x: 18, y: 44 },
+    kneeBack: { x: -22, y: 10 },
+    footBack: { x: -8, y: 48 },
+  }),
+
+  /**
+   * MERGULHO: de cabeca para o alvo, corpo esticado numa linha, lamina a
+   * frente. E a pose de quem cai cortando.
+   */
+  mergulho: p({
+    neck: { x: 34, y: -62 },
+    head: { x: 54, y: -92 },
+    elbowFront: { x: 46, y: -46 },
+    handFront: { x: 70, y: -30 },
+    elbowBack: { x: 24, y: -44 },
+    handBack: { x: 48, y: -28 },
+    kneeFront: { x: -20, y: 46 },
+    footFront: { x: -52, y: 78 },
+    kneeBack: { x: -30, y: 40 },
+    footBack: { x: -70, y: 62 },
+  }),
+
+  /**
+   * CORTE EM MERGULHO: o fim do mergulho, com a lamina descendo na diagonal
+   * e o corpo aberto. E o golpe que fecha um salto.
+   */
+  corteMergulho: p({
+    neck: { x: 26, y: -64 },
+    head: { x: 40, y: -100 },
+    elbowFront: { x: 48, y: -40 },
+    handFront: { x: 66, y: -14 },
+    elbowBack: { x: 26, y: -40 },
+    handBack: { x: 48, y: -18 },
+    kneeFront: { x: 43, y: 26 },
+    footFront: { x: 52, y: 74 },
+    kneeBack: { x: -10, y: 49 },
+    footBack: { x: -52, y: 74 },
+  }),
+
   // --- PODERES ---------------------------------------------------------------
 
   /** ajoelhado com a mao espalmada no chao: o gelo sai dali */
