@@ -81,6 +81,8 @@ export type Espetaculo = {
   saidaDoPlacar: number;
   /** o que o narrador fala e quando (quadro real), sem uma fala encavalar */
   falas: { real: number; fala: Fala }[];
+  /** efeitos sonoros dos acontecimentos (combo, esquiva, contra...) */
+  efeitos: { real: number; som: string }[];
 };
 
 /** Dano por golpe limpo. Bloqueio so arranha. */
@@ -317,6 +319,7 @@ const montar = (t: Timeline): Espetaculo => {
     entradaDoPlacar: abertura.lute,
     saidaDoPlacar: ateAPlaca,
     falas: narrar(t, rotulos, abertura.lute, real),
+    efeitos: efeitosDe(rotulos, ko),
   };
 };
 
@@ -369,7 +372,7 @@ const REACAO = 8;
 /** folga minima entre o fim de uma fala e o comeco da proxima */
 const RESPIRO = 8;
 /** falas que nunca sao cortadas por outra: os momentos da historia */
-const IMPORTANTES = new Set<Fala>(["agora", "nocaute", "venceu_black", "venceu_red", "like"]);
+const IMPORTANTES = new Set<Fala>(["nocaute", "venceu_black", "venceu_red", "like"]);
 
 /**
  * Escolhe as falas do narrador a partir dos letreiros. Ele nao comenta tudo:
@@ -383,23 +386,16 @@ const narrar = (
   real: (logico: number) => number,
 ): { real: number; fala: Fala }[] => {
   const candidatas: { real: number; fala: Fala }[] = [{ real: lute + 2, fala: "lutem" }];
-  const ja = new Set<Fala>();
   for (const r of [...rotulos].sort((a, b) => a.inicio - b.inicio)) {
+    // Os golpes da luta nao sao narrados: cada um tem o seu efeito sonoro
+    // (ver efeitosDe). O narrador fica com a abertura e o desfecho.
     let fala: Fala | null = null;
-    if (r.texto === "3 HITS") fala = "combo";
-    else if (r.texto === "ESQUIVA!") fala = "desviou";
-    else if (r.texto === "CONTRA-ATAQUE!") fala = "contra";
-    else if (r.texto === "BRUTAL!") fala = "pancada";
-    else if (r.texto === "GOLPE FINAL") fala = "agora";
-    else if (r.texto === "K.O.!") fala = "nocaute";
+    if (r.texto === "K.O.!") fala = "nocaute";
     else if (r.texto.endsWith("VENCE!")) {
       const vencedor = Object.entries(NOMES).find(([, n]) => r.texto.startsWith(n))?.[0];
       fala = vencedor === "red" ? "venceu_red" : "venceu_black";
     }
     if (!fala) continue;
-    // combo e esquiva: so na primeira vez, senao o narrador se repete
-    if ((fala === "combo" || fala === "desviou") && ja.has(fala)) continue;
-    ja.add(fala);
     candidatas.push({ real: r.inicio + REACAO, fala });
   }
   const placa = t.scheduled.find((b) => b.beat.type === "placa");
@@ -420,4 +416,32 @@ const narrar = (
     }
   }
   return aceitas.sort((a, b) => a.real - b.real);
+};
+
+// ---- efeitos sonoros dos acontecimentos --------------------------------------
+
+/** duracao do som de tensao (efeitos/tensao.wav), em quadros */
+const TENSAO = 84;
+
+/**
+ * Um som proprio para cada acontecimento, no mesmo quadro do letreiro. O
+ * combo sobe de tom a cada golpe, entao o ouvido "conta" junto.
+ * Arquivos gerados por scripts/compor-efeitos.mts.
+ */
+const efeitosDe = (
+  rotulos: Rotulo[],
+  ko: Espetaculo["ko"],
+): { real: number; som: string }[] => {
+  const saida: { real: number; som: string }[] = [];
+  for (const r of rotulos) {
+    const hits = /^(\d+) HITS$/.exec(r.texto);
+    if (hits) saida.push({ real: r.inicio + 2, som: `combo_${Math.min(8, Number(hits[1]))}` });
+    else if (r.texto === "ESQUIVA!") saida.push({ real: r.inicio, som: "esquiva" });
+    else if (r.texto === "CONTRA-ATAQUE!") saida.push({ real: r.inicio + 3, som: "contra" });
+    else if (r.texto === "BRUTAL!") saida.push({ real: r.inicio + 2, som: "brutal" });
+    else if (r.texto === "BLOQUEIO!") saida.push({ real: r.inicio, som: "bloqueio" });
+  }
+  // a tensao sobe ate o golpe final e corta seco no impacto
+  if (ko) saida.push({ real: Math.max(0, ko.real - TENSAO), som: "tensao" });
+  return saida.sort((a, b) => a.real - b.real);
 };

@@ -35,6 +35,7 @@ import {
   SOM_VENCEDOR,
   TRILHA,
   NARRADOR,
+  VOLUME_DOS_EFEITOS,
   SOM_AURA,
   SONS,
   type CamadaDeSom,
@@ -240,6 +241,16 @@ export const FightAudio: React.FC<FightAudioProps> = ({ timeline }) => {
             />
           </React.Fragment>
         ))}
+
+      {/* efeitos dos acontecimentos: combo, esquiva, contra, brutal... */}
+      {e.efeitos.map((ef, i) => (
+        <Sequence key={`efeito-${i}`} from={ef.real} layout="none">
+          <Audio
+            src={staticFile(`assets/audio/efeitos/${ef.som}.wav`)}
+            volume={VOLUME_DOS_EFEITOS[ef.som.replace(/_\d+$/, "")] ?? 0.4}
+          />
+        </Sequence>
+      ))}
 
       {/* narrador */}
       {e.falas.map((fl, i) => (

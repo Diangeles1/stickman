@@ -233,3 +233,16 @@ export const TRILHA = {
 
 /** volume do narrador e quanto a trilha abaixa enquanto ele fala */
 export const NARRADOR = { volume: 0.6, trilhaSobFala: 0.45 };
+
+/**
+ * Volume dos efeitos dos acontecimentos (ver effects/espetaculo.ts,
+ * efeitosDe). Abaixo dos golpes: o efeito enfeita o impacto, nao compete.
+ */
+export const VOLUME_DOS_EFEITOS: Record<string, number> = {
+  esquiva: 0.5,
+  contra: 0.38,
+  brutal: 0.55,
+  tensao: 0.4,
+  bloqueio: 0.22,
+  combo: 0.3,
+};
