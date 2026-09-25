@@ -23,7 +23,7 @@ import numpy as np
 import soundfile as sf
 from kokoro_onnx import Kokoro
 
-VOZ = "pm_alex"
+VOZ = "pm_santa"
 # velocidade normal: acelerada a voz embola e perde a empolgacao
 VELOCIDADE = 1.0
 

@@ -1,27 +1,27 @@
 /**
  * Falas do narrador, geradas por scripts/narrar.py (Kokoro, voz
- * pm_alex). NAO editar a mao: rode o script de novo.
+ * pm_santa). NAO editar a mao: rode o script de novo.
  */
 
 export const FALAS = {
   "escolha": {
     "arquivo": "assets/audio/narrador/escolha.wav",
-    "segundos": 2.063,
+    "segundos": 2.074,
     "texto": "Rápido, escolha um personagem!"
   },
   "tres": {
     "arquivo": "assets/audio/narrador/tres.wav",
-    "segundos": 0.611,
+    "segundos": 0.63,
     "texto": "Três!"
   },
   "dois": {
     "arquivo": "assets/audio/narrador/dois.wav",
-    "segundos": 0.6,
+    "segundos": 0.618,
     "texto": "Dois!"
   },
   "um": {
     "arquivo": "assets/audio/narrador/um.wav",
-    "segundos": 0.504,
+    "segundos": 0.51,
     "texto": "Um!"
   },
   "lutem": {
@@ -31,22 +31,22 @@ export const FALAS = {
   },
   "combo": {
     "arquivo": "assets/audio/narrador/combo.wav",
-    "segundos": 0.805,
+    "segundos": 0.844,
     "texto": "Que combo!"
   },
   "desviou": {
     "arquivo": "assets/audio/narrador/desviou.wav",
-    "segundos": 0.765,
+    "segundos": 0.823,
     "texto": "Desviou!"
   },
   "contra": {
     "arquivo": "assets/audio/narrador/contra.wav",
-    "segundos": 1.115,
+    "segundos": 1.074,
     "texto": "Contra-ataque!"
   },
   "pancada": {
     "arquivo": "assets/audio/narrador/pancada.wav",
-    "segundos": 0.996,
+    "segundos": 0.972,
     "texto": "Que pancada!"
   },
   "agora": {
@@ -56,17 +56,17 @@ export const FALAS = {
   },
   "nocaute": {
     "arquivo": "assets/audio/narrador/nocaute.wav",
-    "segundos": 0.829,
+    "segundos": 0.85,
     "texto": "Nocaute!"
   },
   "venceu_black": {
     "arquivo": "assets/audio/narrador/venceu_black.wav",
-    "segundos": 1.256,
+    "segundos": 1.293,
     "texto": "O Preto venceu!"
   },
   "venceu_red": {
     "arquivo": "assets/audio/narrador/venceu_red.wav",
-    "segundos": 1.402,
+    "segundos": 1.337,
     "texto": "O Vermelho venceu!"
   },
   "like": {
