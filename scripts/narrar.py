@@ -24,8 +24,8 @@ import soundfile as sf
 from kokoro_onnx import Kokoro
 
 VOZ = "pm_santa"
-# velocidade normal: acelerada a voz embola e perde a empolgacao
-VELOCIDADE = 1.0
+# acelerada: locutor de luta fala rapido e empolgado (1.0 soava calmo demais)
+VELOCIDADE = 1.25
 
 FALAS = {
     "escolha": "Rápido, escolha um personagem!",
@@ -76,7 +76,7 @@ PRONUNCIA = {
 # Kokoro (sem frase em volta ele nao acerta a entonacao e a pronuncia sai
 # estranha); dentro da frase cada numero sai com a entonacao de contagem.
 CONTAGEM = ["tres", "dois", "um"]
-VELOCIDADE_DA_CONTAGEM = 0.85
+VELOCIDADE_DA_CONTAGEM = 1.05
 
 
 def contagem(k: Kokoro) -> dict:
