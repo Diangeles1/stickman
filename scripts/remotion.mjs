@@ -16,7 +16,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -24,7 +24,31 @@ const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const tmp = join(raiz, ".tmp");
 mkdirSync(tmp, { recursive: true });
 
+/**
+ * NAVEGADOR: o Remotion baixa um Chromium proprio na primeira vez. Em maquina
+ * sem saida para remotion.media (por exemplo um container com lista de hosts
+ * permitidos) esse download falha com 403 e NENHUM render sai.
+ *
+ * Se existir um headless shell instalado aqui, usamos ele em vez de baixar.
+ * Tem que ser o HEADLESS SHELL, nao o chrome normal: o Chrome novo removeu o
+ * modo headless antigo, que e o que o Remotion pede.
+ *
+ * Para apontar outro, defina REMOTION_BROWSER com o caminho do executavel.
+ */
+const NAVEGADORES = [
+  process.env.REMOTION_BROWSER,
+  "/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell",
+].filter(Boolean);
+const navegador = NAVEGADORES.find((c) => existsSync(c));
+
 const args = process.argv.slice(2);
+if (
+  navegador &&
+  ["render", "still", "benchmark"].includes(args[0]) &&
+  !args.some((a) => a.startsWith("--browser-executable"))
+) {
+  args.push(`--browser-executable=${navegador}`);
+}
 if (args.length === 0) {
   console.error("uso: node scripts/remotion.mjs <comando do remotion> [...]");
   process.exit(1);
