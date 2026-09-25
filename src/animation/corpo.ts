@@ -93,8 +93,19 @@ const PERIODO_DA_GINGA = 34;
  * um pe que levanta.
  */
 const GINGA: Pose = {
-  kneeFront: { x: 12, y: -4 },
-  kneeBack: { x: 22, y: -4 },
+  // O PE ENTRA NA CONTA, e e ele que faz o corpo descer: o pe sobe 5 unidades
+  // em relacao ao quadril, entao o quadril desce 5 em relacao ao chao. O
+  // joelho acompanha indo para frente, que e para onde joelho dobra.
+  //
+  // Antes o balanco mexia SO os joelhos. Como o corretor de ossos mantem o
+  // comprimento da perna, o pe era arrastado junto: ele andava ate 130
+  // unidades para os lados a cada ciclo, o planejamento dos pes entendia
+  // aquilo como "a pose quer o pe noutro lugar" e mandava dar um passo. Duas
+  // vezes por segundo, para sempre. Era a perna tremendo.
+  footFront: { x: 0, y: -5 },
+  footBack: { x: 0, y: -5 },
+  kneeFront: { x: 10, y: -3 },
+  kneeBack: { x: 16, y: -3 },
   neck: { x: 2, y: 3 },
   head: { x: 3, y: 4 },
   handFront: { x: 2, y: 5 },
@@ -398,7 +409,10 @@ const POSES_COM_POSTURA = new Set<PoseName>([
 
 const aplicarPostura = (pose: Pose, peso: number): Pose => {
   if (Math.abs(peso) < 0.05) return pose;
-  const largura = 1 + 0.22 * peso;
+  // a base abre no pesado, mas NUNCA alem do que a perna alcanca: passando
+  // do alcance util, o planejamento dos pes entende como perna esticada e
+  // manda dar passos no lugar (ver PASSO_MINIMO)
+  const largura = 1 + 0.16 * peso;
   const altura = 1 - 0.05 * peso;
   const inclinacao = 7 * peso;
   const mexer = (p: Vec2 | undefined, dx: number, esc = 1): Vec2 | undefined =>
@@ -638,6 +652,13 @@ const VELOCIDADE_DE_ARRASTO = 16;
  * lutador faz o tempo todo.
  */
 const DISTANCIA_DO_PASSO = 55;
+/**
+ * Deslocamento minimo para um passo existir, em unidades de mundo.
+ *
+ * Abaixo disto o pe chegaria praticamente no mesmo lugar, e um passo que nao
+ * sai do lugar nao e passo: e tremor.
+ */
+const PASSO_MINIMO = 18;
 /** Fracao do alcance da perna acima da qual o pe precisa se mover. */
 const ALCANCE_UTIL = 0.97;
 /** Perto do chao (unidades de mundo) o pe esta sujeito ao limite abaixo. */
@@ -761,8 +782,17 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
         if (st.modo === "plantado") {
           const erro = cru.x - st.px;
           const alcance = Math.hypot(st.px - j.hip.x, j.hip.y);
+          // UM PASSO SO VALE SE ELE MUDA ALGUMA COISA.
+          //
+          // A perna esticada demais pede um passo, mas se a pose quer o pe
+          // exatamente onde ele ja esta, esse passo cai no mesmo lugar, a
+          // perna continua esticada e no quadro seguinte ele pede outro. Era
+          // dai que vinha a perna tremendo: um lutador parado levantava um pe
+          // a cada seis quadros, alternando, sem sair do lugar.
+          const esticada = alcance > perna * ALCANCE_UTIL;
           const precisa =
-            Math.abs(erro) > DISTANCIA_DO_PASSO || alcance > perna * ALCANCE_UTIL;
+            Math.abs(erro) > DISTANCIA_DO_PASSO ||
+            (esticada && Math.abs(erro) > PASSO_MINIMO);
           // um pe de cada vez: os dois no ar ao mesmo tempo e pulo, nao passo
           if (precisa && outro.modo !== "passo") {
             st.modo = "passo";

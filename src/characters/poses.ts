@@ -44,10 +44,19 @@ const ESCRITAS: Record<PoseName, Pose> = {
     // joelhos apontam para frente, como num corpo de verdade; o de tras
     // apontava para tras e, com a ginga, a base virava um arco de pernas
     // abertas para fora
-    kneeBack: { x: -16, y: 48 },
-    footBack: { x: -52, y: 92 },
-    kneeFront: { x: 32, y: 44 },
-    footFront: { x: 46, y: 92 },
+    // A BASE CABE DENTRO DA PERNA (99 unidades: coxa 50 + canela 49) e OS DOIS
+    // PES ENCOSTAM NO CHAO JUNTOS.
+    //
+    // Duas coisas que pareciam detalhe e nao eram. Base larga demais: o
+    // planejamento dos pes lia a perna como esticada e mandava dar um passo
+    // com o lutador parado. Pe da frente mais alto que o de tras depois da
+    // correcao de ossos: ele ficava 14 unidades no ar, nunca era plantado, e
+    // entao flutuava junto com o balanco da guarda. As duas coisas somadas
+    // eram a perna tremendo.
+    kneeBack: { x: -12, y: 49 },
+    footBack: { x: -44, y: 84 },
+    kneeFront: { x: 30, y: 36 },
+    footFront: { x: 40, y: 91 },
   }),
 
   /**
@@ -106,6 +115,14 @@ const ESCRITAS: Record<PoseName, Pose> = {
   // A altura da ponta da lamina em cada corte e calibrada contra o ponto
   // mirado (ver scripts/contato.mts): mexer no quadril mexe na ponta, entao
   // qualquer ajuste de perna aqui pede conferir a auditoria de contato.
+  //
+  // E TODA BASE CABE DENTRO DA PERNA. A perna tem 99 unidades (coxa 50 +
+  // canela 49); estas poses ficam em 93 no maximo, que e o alcance util que o
+  // planejamento dos pes usa. As primeiras versoes pediam 110 e ate 115: o
+  // corretor de ossos encolhia em silencio e, pior, o planejador entendia o
+  // pe como "esticado demais" e mandava dar um passo a cada quadro. O passo
+  // caia no mesmo lugar, o alcance continuava estourado, e o resultado era um
+  // lutador PARADO marchando no lugar.
 
   /** guarda de katana: base larga, joelhos moles, lamina a frente do corpo */
   guardaKatana: p({
@@ -115,10 +132,10 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: 40, y: -54 },
     elbowBack: { x: 6, y: -38 },
     handBack: { x: 32, y: -48 },
-    kneeBack: { x: -22, y: 46 },
-    footBack: { x: -52, y: 86 },
-    kneeFront: { x: 31, y: 39 },
-    footFront: { x: 46, y: 86 },
+    kneeBack: { x: -6, y: 50 },
+    footBack: { x: -46, y: 78 },
+    kneeFront: { x: 37, y: 29 },
+    footFront: { x: 42, y: 74 },
   }),
 
   /**
@@ -134,10 +151,10 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: 34, y: -70 },
     elbowBack: { x: 4, y: -42 },
     handBack: { x: 26, y: -62 },
-    kneeBack: { x: -26, y: 44 },
-    footBack: { x: -60, y: 82 },
-    kneeFront: { x: 33, y: 38 },
-    footFront: { x: 54, y: 82 },
+    kneeBack: { x: -9, y: 49 },
+    footBack: { x: -50, y: 76 },
+    kneeFront: { x: 42, y: 30 },
+    footFront: { x: 46, y: 86 },
   }),
 
   /**
@@ -152,10 +169,10 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: -12, y: -100 },
     elbowBack: { x: -6, y: -90 },
     handBack: { x: -22, y: -94 },
-    kneeBack: { x: -1, y: 50 },
-    footBack: { x: -44, y: 74 },
-    kneeFront: { x: 42, y: 27 },
-    footFront: { x: 28, y: 74 },
+    kneeBack: { x: 0, y: 50 },
+    footBack: { x: -44, y: 72 },
+    kneeFront: { x: 43, y: 25 },
+    footFront: { x: 28, y: 72 },
   }),
 
   /**
@@ -173,10 +190,10 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: -48, y: -26 },
     elbowBack: { x: -24, y: -30 },
     handBack: { x: -50, y: -34 },
-    kneeBack: { x: -2, y: 50 },
-    footBack: { x: -46, y: 72 },
-    kneeFront: { x: 43, y: 26 },
-    footFront: { x: 26, y: 72 },
+    kneeBack: { x: -1, y: 50 },
+    footBack: { x: -46, y: 70 },
+    kneeFront: { x: 44, y: 24 },
+    footFront: { x: 26, y: 70 },
   }),
 
   /**
@@ -191,10 +208,10 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: 72, y: -72 },
     elbowBack: { x: 22, y: -50 },
     handBack: { x: 48, y: -62 },
-    kneeBack: { x: -22, y: 45 },
-    footBack: { x: -56, y: 80 },
-    kneeFront: { x: 35, y: 36 },
-    footFront: { x: 56, y: 80 },
+    kneeBack: { x: -9, y: 49 },
+    footBack: { x: -50, y: 76 },
+    kneeFront: { x: 42, y: 28 },
+    footFront: { x: 50, y: 76 },
   }),
 
   /**
@@ -208,10 +225,10 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: 64, y: -30 },
     elbowBack: { x: 28, y: -40 },
     handBack: { x: 50, y: -26 },
-    kneeBack: { x: -22, y: 45 },
-    footBack: { x: -58, y: 78 },
-    kneeFront: { x: 37, y: 34 },
-    footFront: { x: 58, y: 78 },
+    kneeBack: { x: -10, y: 49 },
+    footBack: { x: -52, y: 74 },
+    kneeFront: { x: 43, y: 26 },
+    footFront: { x: 52, y: 74 },
   }),
 
   /**
@@ -228,10 +245,10 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: 56, y: -56 },
     elbowBack: { x: 4, y: -44 },
     handBack: { x: 28, y: -50 },
-    kneeBack: { x: -19, y: 46 },
-    footBack: { x: -50, y: 84 },
-    kneeFront: { x: 33, y: 37 },
-    footFront: { x: 48, y: 84 },
+    kneeBack: { x: -5, y: 50 },
+    footBack: { x: -44, y: 80 },
+    kneeFront: { x: 37, y: 32 },
+    footFront: { x: 42, y: 89 },
   }),
 
   /**
@@ -246,10 +263,10 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: 66, y: -58 },
     elbowBack: { x: -10, y: -52 },
     handBack: { x: -32, y: -42 },
-    kneeBack: { x: -24, y: 44 },
-    footBack: { x: -58, y: 79 },
-    kneeFront: { x: 35, y: 36 },
-    footFront: { x: 58, y: 79 },
+    kneeBack: { x: -11, y: 49 },
+    footBack: { x: -52, y: 75 },
+    kneeFront: { x: 42, y: 27 },
+    footFront: { x: 52, y: 75 },
   }),
 
   /**
@@ -271,10 +288,10 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: 20, y: -66 },
     elbowBack: { x: -8, y: -42 },
     handBack: { x: 8, y: -60 },
-    kneeBack: { x: -24, y: 44 },
-    footBack: { x: -62, y: 80 },
-    kneeFront: { x: 30, y: 40 },
-    footFront: { x: 48, y: 80 },
+    kneeBack: { x: -5, y: 50 },
+    footBack: { x: -48, y: 74 },
+    kneeFront: { x: 38, y: 24 },
+    footFront: { x: 44, y: 78 },
   }),
   /** o mesmo, com a katana atravessada e empurrada contra o proprio corpo */
   absorverKatana: p({
@@ -284,10 +301,10 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: 16, y: -66 },
     elbowBack: { x: -12, y: -40 },
     handBack: { x: 4, y: -58 },
-    kneeBack: { x: -26, y: 42 },
-    footBack: { x: -64, y: 78 },
-    kneeFront: { x: 32, y: 38 },
-    footFront: { x: 50, y: 78 },
+    kneeBack: { x: -6, y: 50 },
+    footBack: { x: -50, y: 72 },
+    kneeFront: { x: 41, y: 23 },
+    footFront: { x: 46, y: 83 },
   }),
 
   // --- PODERES ---------------------------------------------------------------
