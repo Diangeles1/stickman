@@ -28,7 +28,9 @@
     "compositions": "node scripts/remotion.mjs compositions",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src && tsc --noEmit",
-    "upgrade": "remotion upgrade"
+    "upgrade": "remotion upgrade",
+    "canal": "remotion still Banner out/canal/Banner.png && remotion still Avatar out/canal/Avatar.png && remotion still CapaDoVideo out/canal/Capa.png",
+    "canal:youtube": "node scripts/canal-youtube.mjs"
   },
   "sideEffects": [
     "*.css"
