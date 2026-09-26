@@ -149,19 +149,91 @@ export const Stickman: React.FC<StickmanProps> = ({
   const ossos = ossosEmOrdem(deCostas);
   const j: Record<JointName, Vec2> = juntasNoMundo(pose, transformacao);
   const largura = preset.limbWidth * preset.scale * scaleExtra;
-  // 0.62 jogava o membro de tras para razao de contraste 1.8 contra o fundo:
-  // ele sumia em vez de ficar atras. Sobre fundo quase preto, escurecer para
-  // dar profundidade sempre custa legibilidade, entao aqui a cor cede e a
-  // ESPESSURA assume parte do trabalho (ver larguraFundo).
-  const corFundo = escurecer(preset.stroke, 0.8);
-  // membro de tras tambem e mais FINO. Profundidade por duas vias (cor e
-  // espessura) custa menos luminancia do que por uma so, e luminancia e
-  // exatamente o que esta escasso contra este fundo.
-  const larguraFundo = largura * 0.86;
+  /*
+    PROFUNDIDADE POR COR foi REMOVIDA daqui.
+
+    O membro de tras era escurecido (0.8) e afinado (0.86). Contra este fundo
+    a conta ja era apertada -- havia tres blocos de medicao de contraste nos
+    presets so para o membro escurecido nao afundar no preto -- e o custo
+    real aparecia por DENTRO do corpo: braco de tras cruzando o tronco virava
+    uma mancha escura, com uma borda de contorno exposta em volta.
+
+    Quem da profundidade agora e a luz e a sombra de borda, que so existem na
+    silhueta externa. O parametro `profundidade` continua no tipo porque a
+    ficha de poses e o modo de depuracao o usam.
+  */
   const raioCabeca = preset.headRadius * preset.scale * scaleExtra;
+
+  /*
+    IDENTIFICADOR UNICO DESTE DESENHO. As mascaras abaixo vivem em ids
+    globais do documento, e o mesmo lutador aparece varias vezes no quadro
+    (o corpo mais as copias do rastro). Posicao arredondada basta: cada
+    instancia esta num lugar diferente, e o valor e deterministico, entao o
+    mesmo quadro sempre gera o mesmo id.
+  */
+  const uid = `${preset.id}-${Math.round(baseX)}-${Math.round(baseY)}-${Math.round(spin)}`;
+
+  /**
+   * O ESQUELETO INTEIRO como uma forma so, numa cor so.
+   *
+   * Tudo que precisa da silhueta (o corpo, o contorno, as mascaras de luz e
+   * de sombra) pede esta mesma funcao. Desenhar cada um por conta propria foi
+   * o que produziu o defeito que esta correcao conserta.
+   */
+  const ossada = (cor: string, w: number) => (
+    <g stroke={cor} fill={cor} strokeLinecap="round">
+      {ossos.map(([de, para]) => (
+        <line key={`${de}-${para}`} x1={j[de].x} y1={j[de].y} x2={j[para].x} y2={j[para].y} strokeWidth={w} />
+      ))}
+      <circle cx={j.head.x} cy={j.head.y} r={raioCabeca + (w - largura) / 2} />
+    </g>
+  );
+
+  /*
+    DIRECAO DA LUZ. De cima e ligeiramente da frente -- e de onde vem a luz
+    destes cenarios (ceu, neon alto, o poder do outro lutador). Deslocar a
+    mascara nesse sentido deixa exposta a borda voltada PARA a luz, que e
+    exatamente o canto que deveria acender.
+  */
+  const espessuraLuz = largura * 0.2;
+  const espessuraSombra = largura * 0.3;
+  const luzX = facing * 0.35;
+  const corLuz = preset.tracos?.luzDeContorno ?? clarear(preset.stroke, 0.45);
+  const corSombra = escurecer(preset.stroke, 0.72);
 
   return (
     <g data-fighter={preset.id} opacity={opacity}>
+      <defs>
+        {/*
+          A LUZ E A SOMBRA COMO MASCARAS DA SILHUETA INTEIRA, e nao como uma
+          faixa por osso.
+
+          O que havia antes desenhava, para CADA osso, um fio claro na borda
+          de cima e uma faixa escura na borda de baixo. Funciona num membro
+          isolado; num corpo, todo osso que passa por dentro de outro carrega
+          as suas duas faixas para dentro da silhueta, e o resultado foi
+          descrito assim: "essas linhas de camadas de dentro do boneco".
+          Estavam certas por osso e erradas por corpo.
+
+          Uma mascara resolve na definicao: e a silhueta INTEIRA menos ela
+          mesma deslocada. O que sobra e so a borda externa voltada para a
+          luz. Osso que esta no meio do corpo nao tem borda externa, entao
+          nao recebe nada -- que e o que a fisica diz.
+        */}
+        <mask id={`luz-${uid}`}>
+          {ossada("#ffffff", largura)}
+          <g transform={`translate(${(luzX * espessuraLuz).toFixed(2)} ${espessuraLuz.toFixed(2)})`}>
+            {ossada("#000000", largura)}
+          </g>
+        </mask>
+        <mask id={`sombra-${uid}`}>
+          {ossada("#ffffff", largura)}
+          <g transform={`translate(${(-luzX * espessuraSombra).toFixed(2)} ${(-espessuraSombra).toFixed(2)})`}>
+            {ossada("#000000", largura)}
+          </g>
+        </mask>
+      </defs>
+
       {/*
         CONTORNO. O mesmo esqueleto desenhado antes, mais grosso e quase preto.
         Resolve o problema que so aparece quando os dois se encostam: no quadro
@@ -172,154 +244,33 @@ export const Stickman: React.FC<StickmanProps> = ({
         aparece onde ha borda.
       */}
       {contorno && (
-      <g data-part="contorno" stroke={COR_DO_CONTORNO} fill={COR_DO_CONTORNO}>
-        {ossos.map(([de, para]) => (
-          <line
-            key={`c-${de}-${para}`}
-            x1={j[de].x}
-            y1={j[de].y}
-            x2={j[para].x}
-            y2={j[para].y}
-            strokeWidth={largura + CONTORNO * 2}
-            strokeLinecap="round"
-          />
-        ))}
-        <circle cx={j.head.x} cy={j.head.y} r={raioCabeca + CONTORNO} />
+        <g data-part="contorno">{ossada(COR_DO_CONTORNO, largura + CONTORNO * 2)}</g>
+      )}
+
+      {/*
+        O CORPO, NUMA COR SO.
+
+        Antes o membro de tras era pintado 20% mais escuro E 14% mais fino,
+        para dar profundidade. Duas consequencias, e as duas aparecem por
+        dentro da silhueta quando um braco cruza o tronco:
+
+          a mancha escura do proprio membro, que le como buraco no corpo;
+          e uma faixa do CONTORNO em volta dele -- porque o contorno era
+          desenhado na largura do membro da FRENTE enquanto o osso de tras
+          saia mais fino, entao sobrava borda preta exposta dos dois lados.
+          Essa segunda era defeito, nao escolha.
+
+        Uma cor so, uma largura so: nada pode aparecer por dentro. A leitura
+        de profundidade passa inteira para a luz e a sombra das bordas, que e
+        onde ela pertence.
+      */}
+      <g data-part="corpo">{ossada(preset.stroke, largura)}</g>
+      <g data-part="sombra" mask={`url(#sombra-${uid})`} opacity={0.85}>
+        {ossada(corSombra, largura)}
       </g>
-      )}
-
-      {ossos.map(([de, para]) => {
-        // o osso e "de tras" quando qualquer ponta dele e de tras
-        const atras =
-          profundidade &&
-          (ehDeFundo(de, deCostas) || ehDeFundo(para, deCostas));
-        return (
-          <line
-            key={`${de}-${para}`}
-            data-part={`${de}-${para}`}
-            x1={j[de].x}
-            y1={j[de].y}
-            x2={j[para].x}
-            y2={j[para].y}
-            stroke={atras ? corFundo : preset.stroke}
-            strokeWidth={atras ? larguraFundo : largura}
-            strokeLinecap="round"
-          />
-        );
-      })}
-
-      {/*
-        FAIXAS NOS MEMBROS. Travessoes perpendiculares ao osso, entao a pose
-        os carrega sozinha: nao ha nada aqui que precise saber qual golpe esta
-        acontecendo. Ficam por cima do corpo e por baixo da cabeca.
-      */}
-      {/*
-        VOLUME. Segunda passada do esqueleto, mais escura e mais fina,
-        deslocada para BAIXO do eixo de cada osso. O membro deixa de ser fita
-        plana e passa a ler como cilindro com luz vindo de cima.
-
-        Chapada de proposito, em dois tons: e assim que anime sombreia, e
-        degrade num corpo de cor solida acusa o truque. Fica por cima do corpo
-        e por baixo de roupa e marcas, que sao superficie e nao volume.
-      */}
-      {preset.tracos?.volume && (
-        <g data-part="volume">
-          {/*
-            LUZ DE CONTORNO, quando o preset pede. Desenhada ANTES da sombra:
-            ela e um fio na borda de CIMA, e a sombra que vem depois e mais
-            larga nao a cobre, porque as duas moram em lados opostos do osso.
-
-            O fio e fino de proposito. Luz de contorno larga vira um segundo
-            corpo claro colado no primeiro; o que ela precisa fazer e marcar
-            a borda, nao pintar o membro.
-          */}
-          {preset.tracos?.luzDeContorno &&
-            ossos.map(([de, para]) => {
-              const p1 = j[de];
-              const p2 = j[para];
-              const vx = p2.x - p1.x;
-              const vy = p2.y - p1.y;
-              const n = Math.hypot(vx, vy) || 1;
-              const atras =
-                profundidade &&
-                (ehDeFundo(de, deCostas) || ehDeFundo(para, deCostas));
-              // perpendicular para CIMA: o oposto da sombra
-              let nx = -vy / n;
-              let ny = vx / n;
-              if (ny > 0) {
-                nx = -nx;
-                ny = -ny;
-              }
-              const lg = atras ? larguraFundo : largura;
-              return (
-                <line
-                  key={`rim-${de}-${para}`}
-                  x1={p1.x + nx * lg * 0.34}
-                  y1={p1.y + ny * lg * 0.34}
-                  x2={p2.x + nx * lg * 0.34}
-                  y2={p2.y + ny * lg * 0.34}
-                  stroke={preset.tracos?.luzDeContorno}
-                  strokeWidth={lg * 0.2}
-                  strokeLinecap="round"
-                  // o membro de tras recebe menos luz: ele esta mais longe
-                  opacity={atras ? 0.4 : 0.8}
-                />
-              );
-            })}
-          {ossos.map(([de, para]) => {
-            const p1 = j[de];
-            const p2 = j[para];
-            const vx = p2.x - p1.x;
-            const vy = p2.y - p1.y;
-            const n = Math.hypot(vx, vy) || 1;
-            const atras =
-              profundidade &&
-              (ehDeFundo(de, deCostas) || ehDeFundo(para, deCostas));
-            const w = (atras ? larguraFundo : largura) * 0.42;
-            // perpendicular apontando para baixo na tela: e de onde a sombra
-            // vem, porque a luz do cenario esta sempre acima
-            let nx = -vy / n;
-            let ny = vx / n;
-            if (ny < 0) {
-              nx = -nx;
-              ny = -ny;
-            }
-            const desloca = (atras ? larguraFundo : largura) * 0.28;
-            return (
-              <line
-                key={`v-${de}-${para}`}
-                x1={p1.x + nx * desloca}
-                y1={p1.y + ny * desloca}
-                x2={p2.x + nx * desloca}
-                y2={p2.y + ny * desloca}
-                stroke={escurecer(atras ? corFundo : preset.stroke, 0.74)}
-                strokeWidth={w}
-                strokeLinecap="round"
-              />
-            );
-          })}
-          {/*
-            A cabeca ganha a mesma sombra: calota na base, recortada pelo
-            circulo do cranio.
-
-            Feita com clipPath e nao com dois arcos desenhados a mao -- a
-            versao a mao produzia um bico nas pontas quando o raio do arco de
-            volta nao batia com o do cranio, e o bico aparecia como uma aba
-            saindo da cabeca.
-          */}
-          <clipPath id={`cr-${preset.id}`}>
-            <circle cx={j.head.x} cy={j.head.y} r={raioCabeca} />
-          </clipPath>
-          <ellipse
-            cx={j.head.x}
-            cy={j.head.y + raioCabeca * 0.82}
-            rx={raioCabeca * 1.1}
-            ry={raioCabeca * 0.72}
-            fill={escurecer(preset.stroke, 0.74)}
-            clipPath={`url(#cr-${preset.id})`}
-          />
-        </g>
-      )}
+      <g data-part="luz" mask={`url(#luz-${uid})`} opacity={0.9}>
+        {ossada(corLuz, largura)}
+      </g>
 
       {preset.tracos?.roupa && (
         <Roupa
