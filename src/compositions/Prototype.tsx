@@ -11,7 +11,7 @@
 import React from "react";
 import { FightAudio } from "../audio/FightAudio";
 import { Sequence } from "remotion";
-import { Espetaculo } from "../effects/Espetaculo";
+import { Espetaculo } from "../effects/EspetaculoNaTela";
 import { QUADROS_DE_ESCOLHA, TelaDeEscolha } from "../effects/TelaDeEscolha";
 import { FightScene } from "../scenes/FightScene";
 import { compilar } from "../core/timeline";
