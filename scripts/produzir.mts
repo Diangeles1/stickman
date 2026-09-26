@@ -29,7 +29,7 @@
  */
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const RAIZ = join(import.meta.dirname, "..");
@@ -45,6 +45,19 @@ const temFlag = (nome: string) => args.includes(`--${nome}`);
 
 const segundos = Number(opcao("segundos", "30"));
 const soAuditar = temFlag("so-auditar");
+/*
+  RENDERIZAR MESMO COM REPROVACAO.
+
+  Existe porque hoje NENHUMA semente passa nos cinco validadores: `cadeia`
+  reprova em todas, sempre pelo mesmo motivo (o quadril, o pescoco e o ombro
+  atingem a velocidade maxima no MESMO quadro nos golpes rapidos, entao a
+  corrente do corpo nao tem espalhamento para ser lida).
+
+  Sem esta opcao o script seria honesto e inutil ao mesmo tempo. Com ela, o
+  relatorio continua dizendo exatamente o que esta errado em cada semente e
+  quem produz decide se aquilo aparece no video.
+*/
+const ignorarAuditoria = temFlag("mesmo-assim");
 
 /** "10..20" vira 10,11,...,20; numeros soltos entram como estao. */
 const sementes: number[] = [];
@@ -62,6 +75,7 @@ if (sementes.length === 0) {
   console.error("uso: npx tsx scripts/produzir.mts <semente> [mais sementes] [10..20]");
   console.error("     --segundos=30   duracao alvo da luta");
   console.error("     --so-auditar    audita e nao renderiza");
+  console.error("     --mesmo-assim   renderiza mesmo com reprovacao");
   process.exit(1);
 }
 
@@ -103,18 +117,29 @@ for (const semente of sementes) {
     if (!ok) {
       passou = false;
       reprovadas.push({ semente, motivo: `${v}: ${veredito}` });
-      break;
+      if (!ignorarAuditoria) break;
     }
   }
-  if (!passou) {
-    console.log(`  -> pulada (nao renderiza luta reprovada)`);
+  if (!passou && !ignorarAuditoria) {
+    console.log(`  -> pulada (use --mesmo-assim para renderizar assim mesmo)`);
     continue;
   }
+  if (!passou) console.log(`  -> reprovou, mas renderizando (--mesmo-assim)`);
   aprovadas.push(semente);
   if (soAuditar) continue;
 
   const mp4 = join(SAIDA, `luta-${semente}.mp4`);
   const leve = join(SAIDA, `luta-${semente}-leve.mp4`);
+  /*
+    AS PROPS VAO POR ARQUIVO, e nao na linha de comando.
+
+    `--props={"seed":3}` entre aspas nao sobrevive: o comando roda com
+    `shell: true` e o shell come as aspas do JSON antes do Remotion ver. O
+    Remotion aceita um caminho de arquivo no lugar do JSON, e arquivo nao tem
+    problema de escape em shell nenhum.
+  */
+  const propsJson = join(SAIDA, `props-${semente}.json`);
+  writeFileSync(propsJson, JSON.stringify({ seed: semente, segundos }));
   console.log(`  renderizando -> ${mp4}`);
   rodar("node", [
     "scripts/remotion.mjs",
@@ -122,7 +147,7 @@ for (const semente of sementes) {
     "src/index.ts",
     "Luta",
     mp4,
-    `--props={"seed":${semente},"segundos":${segundos}}`,
+    `--props=${propsJson}`,
     "--concurrency=4",
   ]);
   /*
