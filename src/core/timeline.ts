@@ -15,6 +15,15 @@ import { ATAQUES, escalaDuracao, knockbackEfetivo } from "../attacks/registry";
 import { PRESETS } from "../characters/presets";
 import { s } from "./time";
 import { ALTURA_QUADRIL as ALTURA_DO_ESQUELETO } from "../characters/skeleton";
+import { estiloDe } from "../animation/estilo";
+import type { ContextoDeTecnica } from "./tecnicas/contexto";
+import { chegada } from "./tecnicas/chegada";
+import { encontroFeiticeiros } from "./tecnicas/encontro-feiticeiros";
+import { barreira } from "./tecnicas/barreira";
+import { corteADistancia } from "./tecnicas/corte-a-distancia";
+import { azulVermelho } from "./tecnicas/azul-vermelho";
+import { vazioRoxo } from "./tecnicas/vazio-roxo";
+import { dominio } from "./tecnicas/dominio";
 import {
   ALVO_PADRAO,
   POSE_DA_REACAO,
@@ -170,9 +179,11 @@ export const compilar = (spec: FightSpec): Timeline => {
   const B = spec.fighterB;
   const preset = { [A]: PRESETS[A], [B]: PRESETS[B] } as Record<FighterId, typeof PRESETS[FighterId]>;
 
+  // estilo resolvido uma vez e copiado para os dois tracks: o sampler le dali
+  const estilo = estiloDe(spec.estilo);
   const tracks: Record<string, FighterTrack> = {
-    [A]: { id: A, keys: [] },
-    [B]: { id: B, keys: [] },
+    [A]: { id: A, keys: [], estilo },
+    [B]: { id: B, keys: [], estilo },
   };
   const estado: Record<string, Estado> = {
     [A]: { x: -DISTANCIA_DE_ESPERA, pose: "idle", airborne: false },
@@ -1027,7 +1038,43 @@ export const compilar = (spec: FightSpec): Timeline => {
     const F = b.fogo;
     const c = cursor;
     const lado = estado[G].x <= estado[F].x ? 1 : -1; // gelo -> fogo
+    /*
+      Ferramentas emprestadas as cenas que ja vivem fora deste arquivo (ver
+      core/tecnicas/contexto.ts). O compilador continua dono de tudo: a cena
+      escreve nos arrays e devolve o quadro em que termina.
+    */
+    const ctx: ContextoDeTecnica = {
+      G,
+      F,
+      c,
+      lado,
+      s,
+      estado,
+      pose,
+      poder,
+      nome,
+      cameraKeys,
+      impacts,
+      ALTURA_QUADRIL,
+      MAO_Y,
+      DISTANCIA_DE_ESPERA,
+      PARA_SEMPRE,
+    };
     switch (b.tecnica) {
+      case "chegada":
+        return chegada(ctx);
+      case "encontroFeiticeiros":
+        return encontroFeiticeiros(ctx);
+      case "barreira":
+        return barreira(ctx);
+      case "corteADistancia":
+        return corteADistancia(ctx);
+      case "azulVermelho":
+        return azulVermelho(ctx);
+      case "vazioRoxo":
+        return vazioRoxo(ctx);
+      case "dominio":
+        return dominio(ctx);
       case "encontro": {
         // os dois parados, cada um no seu elemento; a camera passa entre eles
         // e alterna closes. Silencio antes da luta.
@@ -1304,8 +1351,21 @@ export const compilar = (spec: FightSpec): Timeline => {
 
       case "encarar": {
         const m = (estado[G].x + estado[F].x) / 2;
-        pose(G, "guard", c + 14, m - lado * 230);
-        pose(F, "guard", c + 14, m + lado * 230);
+        /*
+          Eles ANDAM ate a marca e so entao assentam na guarda.
+
+          Reposicionar direto em "guard" desliza os dois de pe parado ate o
+          ponto final -- guard e pose de apoio e o motor nao tem passo para dar
+          nela. E a chave de posicao precisa de QUADROS entre ela e a anterior:
+          so trocar a pose resolvia metade do problema (o pe), deixando o salto
+          de posicao que o scripts/qualidade.mts acusa como teleporte.
+        */
+        pose(G, "retreat", c);
+        pose(F, "retreat", c);
+        pose(G, "retreat", c + 22, m - lado * 230);
+        pose(F, "retreat", c + 22, m + lado * 230);
+        pose(G, "guard", c + 30);
+        pose(F, "guard", c + 30);
         poder({ tipo: "rachadura", a: { x: m, y: 0 }, from: c + 20, to: c + 60, forca: 320 });
         cameraKeys.push({ frame: c + 10, center: { x: m, y: ALTURA_QUADRIL - 140 }, zoom: 0.72, ease: s(1.2), cena: true });
         // longo o bastante para o logo, os nomes e a pergunta serem lidos
