@@ -27,22 +27,43 @@ export const vazioRoxo: Tecnica = (ctx) => {
       pose(F, "retreat", c + 10, m + lado * 420);
       const xG = estado[G].x;
       const xF = estado[F].x;
-      pose(G, "bracosFrente", c + s(0.4));
-      // as duas esferas lado a lado, antes de juntar
-      const esq = { x: xG + lado * 300, y: ALTURA_QUADRIL - 270 };
-      const dir2 = { x: xG + lado * 430, y: ALTURA_QUADRIL - 270 };
-      poder({ tipo: "esferaInferno", a: esq, from: c + s(0.3), to: c + s(1.1), forca: 72, paleta: "azul" });
-      poder({ tipo: "esferaInferno", a: dir2, from: c + s(0.3), to: c + s(1.1), forca: 72, paleta: "vermelho" });
+      pose(G, "bracosFrente", c + s(0.25));
+      /*
+        AS ESFERAS SAEM DAS MAOS, e isso e ancoragem, nao um numero melhor.
+
+        Antes elas eram dois pontos fixos a 300 e 430 unidades de onde G estava
+        NA COMPILACAO, na altura ALTURA_QUADRIL-270. A mao, em bracosFrente,
+        fica a ~60 unidades e em ALTURA_QUADRIL-64: as esferas nasciam mais de
+        200 unidades acima e 240 a frente da mao que devia estar segurando
+        elas. Descrito exatamente assim: "o roxo surge do nada e nem parece
+        estar vindo da mao do personagem".
+
+        Com ancora, o offset e medido A PARTIR DAS MAOS no quadro, entao elas
+        acompanham o braco enquanto ele se move. Uma alta e uma baixa para
+        caberem lado a lado sem se fundir antes da hora.
+
+        A janela comeca cedo (0.15) porque o raio cresce de 30 ate o tamanho
+        ao longo dela: esse crescimento, com as faiscas sendo sugadas para
+        dentro, E a carga. Esfera que ja nasce pronta nao tem wind-up.
+      */
+      const naMao = { ancora: "entreMaos" as const, quem: G };
+      poder({ ...naMao, tipo: "esferaInferno", a: { x: 120, y: -95 }, from: c + s(0.15), to: c + s(1.1), forca: 72, paleta: "azul" });
+      poder({ ...naMao, tipo: "esferaInferno", a: { x: 120, y: 70 }, from: c + s(0.15), to: c + s(1.1), forca: 72, paleta: "vermelho" });
       // o quadro pega o lutador E as esferas: zoom alto demais cortava ele
-      cameraKeys.push({ frame: c + s(0.35), center: { x: xG + lado * 230, y: ALTURA_QUADRIL - 250 }, zoom: 1.15, ease: 12, cena: true });
-      // juntam e viram uma so
-      const junta = { x: xG + lado * 365, y: ALTURA_QUADRIL - 270 };
-      poder({ tipo: "esferaInferno", a: junta, from: c + s(1.05), to: c + s(1.6), forca: 120, paleta: "vazio" });
+      cameraKeys.push({ frame: c + s(0.35), center: { x: xG + lado * 190, y: ALTURA_QUADRIL - 160 }, zoom: 1.15, ease: 12, cena: true });
+      // juntam e viram uma so, ainda presa as maos
+      const dJunta = { x: 215, y: -12 };
+      poder({ ...naMao, tipo: "esferaInferno", a: dJunta, from: c + s(1.05), to: c + s(1.6), forca: 120, paleta: "vazio" });
       nome("VAZIO", G, c + s(1.15));
       poder({ tipo: "telaBranca", from: c + s(1.5), to: c + s(1.62) });
       const disparo = c + s(1.6);
       const alvoFeixe = { x: xF + lado * 700, y: ALTURA_QUADRIL - 260 };
-      poder({ tipo: "feixeFogo", a: junta, b: alvoFeixe, from: disparo, to: disparo + s(1.05), forca: 260, paleta: "vazio" });
+      /*
+        O FEIXE SAI DA MESMA MAO. So a origem e ancorada: o alvo e um ponto do
+        mundo e nao pode acompanhar o corpo, senao o feixe deixa de atravessar
+        a arena e passa a girar com quem atira.
+      */
+      poder({ ...naMao, tipo: "feixeFogo", a: dJunta, b: alvoFeixe, from: disparo, to: disparo + s(1.05), forca: 260, paleta: "vazio" });
       /*
         O quadro tem que conter o PONTO DE IMPACTO, nao so o meio da arena.
         Sem : com ele a camera recalcula o zoom para caber os dois

@@ -23,7 +23,7 @@
 import React from "react";
 import type { Corpo } from "../animation/corpo";
 import { juntasDoCorpo } from "../animation/corpo";
-import type { FighterId, NomeDePaleta, PoderEvent, Timeline, Vec2 } from "../core/types";
+import type { AncoraDePoder, FighterId, NomeDePaleta, PoderEvent, TipoPoder, Timeline, Vec2 } from "../core/types";
 
 // ---- utilidades --------------------------------------------------------------
 
@@ -60,6 +60,43 @@ const PALETAS: Record<NomeDePaleta, { claro: string; medio: string; forte: strin
 /** Paleta de um efeito: a declarada, ou a natural do tipo. */
 const paletaDe = (e: PoderEvent, padrao: typeof FOGO) =>
   e.paleta ? PALETAS[e.paleta] : padrao;
+
+// ---- ancoragem ---------------------------------------------------------------
+
+type Juntas = ReturnType<typeof juntasDoCorpo>;
+
+const PONTO_DE_ANCORA: Record<AncoraDePoder, (j: Juntas) => Vec2> = {
+  maoFrente: (j) => j.handFront,
+  maoTras: (j) => j.handBack,
+  entreMaos: (j) => ({
+    x: (j.handFront.x + j.handBack.x) / 2,
+    y: (j.handFront.y + j.handBack.y) / 2,
+  }),
+  peito: (j) => ({
+    x: j.neck.x + (j.hip.x - j.neck.x) * 0.3,
+    y: j.neck.y + (j.hip.y - j.neck.y) * 0.3,
+  }),
+  cabeca: (j) => j.head,
+};
+
+/**
+ * Origem do efeito LIDA DO CORPO VIVO, quando ele declara uma ancora.
+ *
+ * O compilador nao tem como saber onde a mao vai estar: ele roda antes da
+ * amostragem, com a posicao que o lutador tinha no beat. Entre um e outro o
+ * corpo respirou, trocou de pose e andou -- e a esfera nascia longe da mao que
+ * devia estar segurando ela.
+ *
+ * Aqui `a` vira deslocamento em relacao a junta, com x espelhado pelo facing
+ * para o offset acompanhar quem virou de lado. Sem ancora nada muda: quem tem
+ * lugar no mundo (rachadura, gelo na rua) continua com posicao absoluta.
+ */
+const ancorado = (e: PoderEvent, corpo?: Corpo): PoderEvent => {
+  if (!e.ancora || !corpo) return e;
+  const base = PONTO_DE_ANCORA[e.ancora](juntasDoCorpo(corpo));
+  const d = e.a ?? { x: 0, y: 0 };
+  return { ...e, a: { x: base.x + d.x * corpo.facing, y: base.y + d.y } };
+};
 
 /**
  * BRILHO. Energia sem glow le como adesivo recortado e colado na cena: a
@@ -564,17 +601,222 @@ const Sangue: React.FC<{ e: PoderEvent; f: number }> = ({ e, f }) => {
   );
 };
 
-/** corte no tronco: uma linha vermelha que fica no corpo de quem levou */
-export const MarcaDeCorte: React.FC<{ e: PoderEvent; f: number; corpo: Corpo }> = ({ e, f, corpo }) => {
-  if (f < e.from) return null;
-  const j = juntasDoCorpo(corpo);
-  const aparece = clamp01((f - e.from) / 6);
-  const c = { x: j.hip.x + (j.neck.x - j.hip.x) * 0.55, y: j.hip.y + (j.neck.y - j.hip.y) * 0.55 };
-  const w = 34 * aparece;
+/**
+ * CORTE. O golpe passando, a ferida abrindo e o sangue saindo -- um evento com
+ * comeco, e nao uma marca que aparece.
+ *
+ * O que havia aqui era duas linhas retas de 34 unidades no meio do tronco,
+ * surgindo em 6 quadros. Tres coisas erradas de uma vez, e todas foram
+ * descritas como "so um traco": reta (lamina viaja em arco), fina (ferida e
+ * abertura, nao risco) e SEM O CORTE -- a marca existia, o instante de cortar
+ * nao. Sangue nenhum.
+ *
+ * Quatro tempos, e a ordem importa mais que cada peca:
+ *
+ *   0-3    CLARAO passando, mais comprido que a ferida e brilhante o
+ *          suficiente para estourar. E o unico momento em que se ve a lamina;
+ *          se ele nao existe, a ferida simplesmente aparece.
+ *   0-7    a FENDA abre do centro para as pontas, curvada no arco do golpe
+ *   1-30   SANGUE saindo na direcao em que a lamina viajou
+ *   7+     a ferida FICA, com o vermelho escuro assentando
+ *
+ * Serve solto no ar (chuva de cortes do dominio) ou preso a um corpo, e nesse
+ * caso acompanha o tronco de quem levou.
+ */
+const Corte: React.FC<{ e: PoderEvent; f: number; corpo?: Corpo }> = ({ e, f, corpo }) => {
+  const idade = f - e.from;
+  if (idade < 0) return null;
+
+  // preso a um corpo, o corte mora no tronco; solto, onde o compilador pediu
+  let c: Vec2;
+  if (corpo) {
+    const j = juntasDoCorpo(corpo);
+    c = { x: j.hip.x + (j.neck.x - j.hip.x) * 0.55, y: j.hip.y + (j.neck.y - j.hip.y) * 0.55 };
+  } else {
+    c = e.a ?? { x: 0, y: -400 };
+  }
+
+  const cor = paletaDe(e, { ...FOGO, forte: SANGUE, medio: "#ff2a34", claro: "#fff4f4" });
+  // forca e o COMPRIMENTO do corte; no corpo ele nao passa do tronco
+  const L = (corpo ? 78 : (e.forca ?? 220)) * 0.5;
+  const v = e.vetor ?? { x: e.dir ?? 1, y: 0.45 };
+  const n = Math.hypot(v.x, v.y) || 1;
+  const ux = v.x / n;
+  const uy = v.y / n;
+  // perpendicular: e nela que a fenda tem espessura e o clarao tem barriga
+  const px = -uy;
+  const py = ux;
+
+  const abre = saiRapido(idade / 7);
+  const p1 = { x: c.x - ux * L * abre, y: c.y - uy * L * abre };
+  const p2 = { x: c.x + ux * L * abre, y: c.y + uy * L * abre };
+  // a barriga do arco: lamina nao viaja reto, e uma fenda reta acusa isso
+  const barriga = L * 0.16;
+  const meio = { x: c.x + px * barriga, y: c.y + py * barriga };
+
+  /** fenda como forma fechada, com espessura `w` no centro afinando nas pontas */
+  const fenda = (w: number) =>
+    `M${p1.x.toFixed(1)} ${p1.y.toFixed(1)}` +
+    ` Q${(meio.x + px * w).toFixed(1)} ${(meio.y + py * w).toFixed(1)} ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}` +
+    ` Q${(meio.x - px * w).toFixed(1)} ${(meio.y - py * w).toFixed(1)} ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}Z`;
+
+  const largura = L * 0.09;
+
   return (
-    <g data-poder="marca-de-corte">
-      <line x1={c.x - w} y1={c.y - w * 0.6} x2={c.x + w} y2={c.y + w * 0.6} stroke="#fff4f4" strokeWidth={10} strokeLinecap="round" />
-      <line x1={c.x - w} y1={c.y - w * 0.6} x2={c.x + w} y2={c.y + w * 0.6} stroke={SANGUE} strokeWidth={6} strokeLinecap="round" />
+    <g data-poder="corte">
+      {/*
+        CLARAO DO GOLPE. Estoura em 4 quadros e vai embora. Ele passa de
+        `abre`: o corte visivel e mais comprido que a ferida que sobra, porque
+        a lamina atravessa e sai do outro lado.
+      */}
+      {idade < 4 && (
+        <g filter="url(#pw-glow-forte)" opacity={1 - idade / 4}>
+          <path
+            d={
+              `M${(c.x - ux * L * 1.55).toFixed(1)} ${(c.y - uy * L * 1.55).toFixed(1)}` +
+              ` Q${(meio.x + px * L * 0.1).toFixed(1)} ${(meio.y + py * L * 0.1).toFixed(1)} ${(c.x + ux * L * 1.55).toFixed(1)} ${(c.y + uy * L * 1.55).toFixed(1)}` +
+              ` Q${(meio.x - px * L * 0.1).toFixed(1)} ${(meio.y - py * L * 0.1).toFixed(1)} ${(c.x - ux * L * 1.55).toFixed(1)} ${(c.y - uy * L * 1.55).toFixed(1)}Z`
+            }
+            fill="#ffffff"
+          />
+        </g>
+      )}
+      {/* halo da ferida: o corte queima nas bordas antes de virar so vermelho */}
+      {idade < 14 && (
+        <g filter="url(#pw-glow-medio)" opacity={(1 - idade / 14) * 0.9}>
+          <path d={fenda(largura * 2.1)} fill={cor.medio} />
+        </g>
+      )}
+      {/* borda clara + carne aberta: duas camadas dao PROFUNDIDADE a fenda */}
+      <path d={fenda(largura * 1.45)} fill={cor.claro} opacity={0.95} />
+      <path d={fenda(largura)} fill={cor.forte} />
+      <path d={fenda(largura * 0.45)} fill={cor.fundo} opacity={0.85} />
+      {/*
+        SANGUE, reusando o spray direcional: sai na direcao em que a lamina
+        viajou, cai e mancha o chao. Um corte sem isso e um risco desenhado.
+      */}
+      <Sangue
+        e={{
+          tipo: "sangue",
+          from: e.from + 1,
+          to: e.from + 30,
+          a: c,
+          forca: 0.35 + L / 170,
+          vetor: { x: ux, y: uy },
+        }}
+        f={f}
+      />
+    </g>
+  );
+};
+
+/** compatibilidade: o corte preso ao corpo de quem levou */
+export const MarcaDeCorte: React.FC<{ e: PoderEvent; f: number; corpo: Corpo }> = ({ e, f, corpo }) => (
+  <Corte e={e} f={f} corpo={corpo} />
+);
+
+/**
+ * EXPANSAO DE DOMINIO: a arena deixa de ser a arena.
+ *
+ * A tecnica existia como telaBranca + nome + chuva de cortes, e foi descrita
+ * assim: "nao mostra expansao de dominio de ninguem, o cenario mudando e tal".
+ * Estava certo -- nao havia nada aqui. Nenhum dominio era desenhado; o que
+ * havia era o nome aparecendo e uma pose.
+ *
+ * O que um dominio precisa mostrar, em ordem de importancia:
+ *
+ *   1. ELE SE EXPANDE. Uma frente sai do corpo de quem abre e engole a arena
+ *      em ~10 quadros. Sem a frente passando, nao ha expansao -- ha um fundo
+ *      que trocou de cor entre dois quadros.
+ *   2. O MUNDO DENTRO E OUTRO. Veu na cor do dominio sobre tudo, mais escuro
+ *      no centro. E o que separa "efeito em cima da rua" de "a rua nao esta
+ *      mais aqui".
+ *   3. ELE TEM BORDA. Um dominio e um espaco FECHADO. A borda pulsando, longe,
+ *      e o que da tamanho ao lugar.
+ *   4. ELE ESTA VIVO. Cortes a deriva no fundo, em profundidades diferentes.
+ *
+ * Fica na camada de TRAS: os lutadores precisam aparecer DENTRO do dominio.
+ * A frente da expansao tambem passa na camada da frente (ver BordaDoDominio),
+ * porque uma onda que engole a arena tem que passar por cima deles tambem.
+ */
+const Dominio: React.FC<{ e: PoderEvent; f: number }> = ({ e, f }) => {
+  const idade = f - e.from;
+  if (idade < 0 || f > e.to + 16) return null;
+  const a = e.a ?? { x: 0, y: -300 };
+  const cor = paletaDe(e, PALETAS.sombra);
+  const RAIO = e.forca ?? 1700;
+  const ABRE = 10;
+
+  // abre em 10 quadros e fecha em 16: o dominio nao some, ele se recolhe
+  const fecha = f > e.to ? 1 - (f - e.to) / 16 : 1;
+  const r = RAIO * saiRapido(Math.min(1, idade / ABRE)) * clamp01(fecha);
+  if (r < 1) return null;
+  const respira = 1 + 0.012 * Math.sin(f * 0.11);
+  const id = `dom-${e.from}`;
+
+  return (
+    <g data-poder="dominio">
+      <defs>
+        <radialGradient id={id} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor={cor.fundo} stopOpacity={0.82} />
+          <stop offset="55%" stopColor={cor.fundo} stopOpacity={0.68} />
+          <stop offset="88%" stopColor={cor.forte} stopOpacity={0.5} />
+          <stop offset="100%" stopColor={cor.claro} stopOpacity={0.18} />
+        </radialGradient>
+      </defs>
+      {/*
+        O VEU. Escuro no centro e quente na borda: o olho le um interior, nao
+        uma tinta. Ele e a peca que faz o cenario mudar.
+      */}
+      <circle cx={a.x} cy={a.y} r={r * respira} fill={`url(#${id})`} opacity={clamp01(fecha)} />
+      {/* cortes a deriva no fundo do dominio, em tres profundidades */}
+      {Array.from({ length: 22 }, (_, i) => {
+        const prof = 0.35 + 0.65 * ruido(i * 3 + 1);
+        const ang = ruido(i * 7) * Math.PI * 2 + f * 0.004 * (1 + prof);
+        const dist = r * (0.2 + 0.72 * ruido(i * 11));
+        const x = a.x + Math.cos(ang) * dist;
+        const y = a.y + Math.sin(ang) * dist * 0.62;
+        const L = 90 * prof + 40;
+        const gira = ruido(i * 13) * 180 + f * 0.25 * prof;
+        return (
+          <path
+            key={i}
+            d={`M${-L} ${-L * 0.18} Q0 0 ${L} ${L * 0.18} Q0 ${L * 0.1} ${-L} ${-L * 0.18}Z`}
+            transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${gira.toFixed(1)})`}
+            fill={cor.medio}
+            opacity={0.1 + 0.3 * prof}
+          />
+        );
+      })}
+      {/* BORDA: o dominio e um espaco fechado, e a borda e o que da tamanho */}
+      <circle cx={a.x} cy={a.y} r={r * respira} fill="none" stroke={cor.claro} strokeWidth={r * 0.006} opacity={0.5 * clamp01(fecha)} />
+      <polygon points={contornoFervente(a, r * 0.965, f, e.from, 0.014)} fill="none" stroke={cor.medio} strokeWidth={r * 0.012} opacity={0.4 * clamp01(fecha)} />
+    </g>
+  );
+};
+
+/**
+ * A FRENTE DA EXPANSAO, na camada da frente.
+ *
+ * Existe so nos quadros em que o dominio esta abrindo, e passa POR CIMA dos
+ * lutadores. Sem isso a expansao acontece atras deles e nao os alcanca -- e o
+ * momento em que a onda varre o personagem e o que vende que ela e maior que
+ * ele.
+ */
+const BordaDoDominio: React.FC<{ e: PoderEvent; f: number }> = ({ e, f }) => {
+  const idade = f - e.from;
+  const ABRE = 10;
+  if (idade < 0 || idade > ABRE + 3) return null;
+  const a = e.a ?? { x: 0, y: -300 };
+  const cor = paletaDe(e, PALETAS.sombra);
+  const k = Math.min(1, idade / ABRE);
+  const r = (e.forca ?? 1700) * saiRapido(k);
+  // a frente perde forca conforme se afasta: energia espalhada por mais borda
+  const forca = (1 - k) ** 0.7;
+  return (
+    <g data-poder="dominio-borda" filter="url(#pw-glow-forte)">
+      <circle cx={a.x} cy={a.y} r={r} fill="none" stroke={cor.claro} strokeWidth={r * 0.05 * forca + 4} opacity={0.85 * forca} />
+      <circle cx={a.x} cy={a.y} r={r * 0.86} fill="none" stroke={cor.medio} strokeWidth={r * 0.03 * forca + 2} opacity={0.5 * forca} />
     </g>
   );
 };
@@ -664,39 +906,171 @@ const Feixe: React.FC<{ e: PoderEvent; f: number; fogo: boolean }> = ({ e, f, fo
   );
 };
 
-/** esfera do INFERNO: cresce acima de quem lanca, com labaredas em volta */
+/**
+ * SUPERFICIE TURBULENTA: o contorno da esfera como poligono que ferve.
+ *
+ * Um circulo perfeito e o que denunciava a esfera como bola parada. Energia
+ * contida nao tem borda lisa -- ela empurra de dentro, com o relevo passeando
+ * em volta em vez de pulsar tudo junto. Duas ondas de periodo diferente
+ * girando em velocidades diferentes dao isso: a soma nunca repete o mesmo
+ * perfil, e o olho le movimento sem ver quadro repetido.
+ */
+const contornoFervente = (a: Vec2, r: number, f: number, semente: number, amplitude = 0.1) => {
+  const n = 28;
+  const pts: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const ang = (i / n) * Math.PI * 2;
+    const rel =
+      1 +
+      amplitude * Math.sin(ang * 3 + f * 0.22 + semente) +
+      amplitude * 0.6 * Math.sin(ang * 5 - f * 0.31 + semente * 2);
+    pts.push(`${(a.x + Math.cos(ang) * r * rel).toFixed(1)},${(a.y + Math.sin(ang) * r * rel).toFixed(1)}`);
+  }
+  return pts.join(" ");
+};
+
+/**
+ * ANEIS DE COMPRESSAO: energia sendo puxada PARA DENTRO.
+ *
+ * Onda de choque anda para fora, e por isso le como "acabou de explodir".
+ * Aqui e o contrario: a esfera esta se carregando, e o que precisa ser lido e
+ * a arena alimentando ela. Anel nasce longe, encolhe ate a superficie e some
+ * -- e onde fica claro que a esfera esta ACUMULANDO, nao so existindo.
+ */
+const AneisDeCompressao: React.FC<{
+  a: Vec2;
+  r: number;
+  f: number;
+  cor: { claro: string; medio: string; forte: string; fundo: string };
+  quantidade?: number;
+}> = ({ a, r, f, cor, quantidade = 3 }) => (
+  <>
+    {Array.from({ length: quantidade }, (_, i) => {
+      const ciclo = 26;
+      const k = ((f + i * (ciclo / quantidade)) % ciclo) / ciclo;
+      const raio = r * (2.6 - 1.55 * k);
+      return (
+        <ellipse
+          key={`c${i}`}
+          cx={a.x}
+          cy={a.y}
+          rx={raio}
+          ry={raio * 0.94}
+          fill="none"
+          stroke={cor.medio}
+          strokeWidth={r * 0.035 * k}
+          opacity={0.45 * k}
+        />
+      );
+    })}
+  </>
+);
+
+/**
+ * ARCOS ELETRICOS saltando da superficie.
+ *
+ * Trocam de forma a cada 3 quadros, nao a cada quadro: relampago que se
+ * redesenha em 60Hz vira ruido cinza e perde o estalo. O `epoca` congela o
+ * sorteio dentro da janela, o que da o intervalo de leitura que um arco
+ * precisa para existir.
+ */
+const ArcosEletricos: React.FC<{
+  a: Vec2;
+  r: number;
+  f: number;
+  cor: { claro: string; medio: string; forte: string; fundo: string };
+  semente: number;
+}> = ({ a, r, f, cor, semente }) => {
+  const epoca = Math.floor(f / 3);
+  return (
+    <g filter="url(#pw-glow-medio)">
+      {Array.from({ length: 5 }, (_, i) => {
+        const s = semente + epoca * 17 + i * 53;
+        if (ruido(s) < 0.45) return null;
+        const ang = ruido(s * 3) * Math.PI * 2;
+        const alcance = r * (1.15 + 0.55 * ruido(s * 5));
+        const passos = 4;
+        const d: string[] = [];
+        for (let k = 0; k <= passos; k++) {
+          const t = k / passos;
+          const desvio = k === 0 || k === passos ? 0 : (ruido(s * 7 + k) - 0.5) * r * 0.5;
+          const rr = r * 0.9 + (alcance - r * 0.9) * t;
+          const x = a.x + Math.cos(ang) * rr - Math.sin(ang) * desvio;
+          const y = a.y + Math.sin(ang) * rr + Math.cos(ang) * desvio;
+          d.push(`${k === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`);
+        }
+        return (
+          <path
+            key={i}
+            d={d.join(" ")}
+            fill="none"
+            stroke={i % 2 ? cor.claro : cor.medio}
+            strokeWidth={r * 0.035}
+            strokeLinecap="round"
+            opacity={0.85}
+          />
+        );
+      })}
+    </g>
+  );
+};
+
+/**
+ * ESFERA DE ENERGIA: cresce na mao de quem lanca e nao para quieta nunca.
+ *
+ * O defeito que esta correcao ataca: com paleta fria a esfera era tres
+ * circulos concentricos e dois aneis pulsando. O raio saturava em ~15 quadros
+ * e dali em diante o desenho era IDENTICO quadro a quadro -- uma bola parada,
+ * exatamente como foi descrito. Chama em volta (paleta quente) escondia o
+ * problema porque a chama se move sozinha.
+ *
+ * Quatro fontes de movimento independentes, que e o que faz energia contida
+ * nunca repetir: superficie fervendo, nucleo derivando dentro da casca, arcos
+ * saltando fora e aneis comprimindo para dentro. Nenhuma depende da outra,
+ * entao a soma nao tem periodo curto.
+ */
 const EsferaInferno: React.FC<{ e: PoderEvent; f: number }> = ({ e, f }) => {
   if (!ativo(e, f)) return null;
   const a = e.a ?? { x: 0, y: -800 };
   const t = progresso(e, f);
-  const r = 30 + (e.forca ?? 300) * saiRapido(t);
+  const idade = f - e.from;
   const cor = paletaDe(e, FOGO);
-  // so as paletas quentes ganham labareda em volta; as outras sao energia
-  // lisa, com haleis pulsando no lugar das chamas
+  const semente = e.from;
+
+  /*
+    O CRESCIMENTO nao termina: depois de chegar ao tamanho, a esfera respira
+    (+-3%). Sem isso o raio congela e todo o resto do movimento parece
+    acontecer dentro de uma moldura parada.
+  */
+  const r = (30 + (e.forca ?? 300) * saiRapido(t)) * (1 + 0.03 * Math.sin(f * 0.26 + semente));
+  // deriva do nucleo dentro da casca: o peso da energia nao fica centrado
+  const nx = a.x + Math.sin(f * 0.19 + semente) * r * 0.07;
+  const ny = a.y + Math.cos(f * 0.23 + semente * 2) * r * 0.07;
   const comChama = !e.paleta || e.paleta === "fogo" || e.paleta === "sombra";
+
   return (
     <g data-poder="esfera-inferno">
       {/* halo contido: em 1.35 do raio ele engolia o lutador junto com a esfera */}
       <circle cx={a.x} cy={a.y} r={r * 1.1} fill={cor.forte} opacity={0.18} />
-      {comChama ? (
+      <AneisDeCompressao a={a} r={r} f={f} cor={cor} />
+      {comChama &&
         Array.from({ length: 14 }, (_, i) => {
+          // as labaredas GIRAM em volta, em vez de cada uma tremer no lugar
           const ang = (i / 14) * Math.PI * 2 + f * 0.05;
           return <Chama key={i} x={a.x + Math.cos(ang) * r * 0.9} y={a.y + Math.sin(ang) * r * 0.9} tamanho={r * 0.28} f={f} semente={i * 5} />;
-        })
-      ) : (
-        <>
-          <circle cx={a.x} cy={a.y} r={r * (1.12 + 0.06 * Math.sin(f * 0.35))} fill="none" stroke={cor.medio} strokeWidth={r * 0.06} opacity={0.55} />
-          <circle cx={a.x} cy={a.y} r={r * (1.3 + 0.1 * Math.sin(f * 0.22 + 1))} fill="none" stroke={cor.claro} strokeWidth={r * 0.02} opacity={0.35} />
-        </>
-      )}
+        })}
       <g filter="url(#pw-glow-medio)">
-        <circle cx={a.x} cy={a.y} r={r * 0.78} fill={cor.forte} opacity={0.8} />
+        <polygon points={contornoFervente(a, r * 0.82, f, semente, 0.12)} fill={cor.forte} opacity={0.8} />
       </g>
-      <circle cx={a.x} cy={a.y} r={r} fill={cor.forte} />
-      <circle cx={a.x} cy={a.y} r={r * 0.75} fill={cor.medio} />
-      <circle cx={a.x} cy={a.y} r={r * 0.45} fill={cor.claro} />
+      {/* casca fervendo, e nao circulo: e a borda que mais acusa bola parada */}
+      <polygon points={contornoFervente(a, r, f, semente, 0.09)} fill={cor.forte} />
+      <polygon points={contornoFervente(nx === a.x ? a : { x: nx, y: ny }, r * 0.72, f * 1.3, semente + 4, 0.14)} fill={cor.medio} />
+      <circle cx={nx} cy={ny} r={r * 0.4} fill={cor.claro} />
+      {/* brilho especular fixo: da a esfera uma superficie, nao um disco */}
+      <ellipse cx={a.x - r * 0.3} cy={a.y - r * 0.34} rx={r * 0.22} ry={r * 0.15} fill="#ffffff" opacity={0.5} transform={`rotate(-28 ${a.x - r * 0.3} ${a.y - r * 0.34})`} />
+      <ArcosEletricos a={a} r={r} f={f} cor={cor} semente={semente} />
       {/* energia sendo sugada para dentro da esfera enquanto ela carrega */}
-      <Faiscas a={a} idade={(f - e.from) % 14} forca={-r * 1.5} cor={cor} semente={e.from + Math.floor((f - e.from) / 14) * 7} quantidade={12} />
+      <Faiscas a={a} idade={idade % 14} forca={-r * 1.5} cor={cor} semente={semente + Math.floor(idade / 14) * 7} quantidade={12} />
     </g>
   );
 };
@@ -779,8 +1153,10 @@ export const CamadaDePoderes: React.FC<{
   xDe: (id: FighterId, quadro: number) => number;
 }> = ({ timeline, frame: f, parte, corpos, xDe }) => {
   const itens: React.ReactNode[] = [];
-  timeline.poderes.forEach((e, i) => {
-    const corpo = e.quem ? corpos[e.quem] : undefined;
+  timeline.poderes.forEach((bruto, i) => {
+    const corpo = bruto.quem ? corpos[bruto.quem] : undefined;
+    // origem lida do corpo vivo quando o efeito declara ancora (ver `ancorado`)
+    const e = ancorado(bruto, corpo);
     const k = `${e.tipo}-${i}`;
     if (parte === "chao") {
       if (e.tipo === "geloNoChao") itens.push(<GeloNoChao key={k} e={e} f={f} />);
@@ -790,6 +1166,14 @@ export const CamadaDePoderes: React.FC<{
         itens.push(<TrilhaGelo key={k} e={e} f={f} xs={(q) => xDe(quem, q)} />);
       } else if (e.tipo === "rachadura") itens.push(<Rachadura key={k} e={e} f={f} />);
     } else if (parte === "atras") {
+      /*
+        O dominio vem ANTES da exigencia de corpo: ele e um lugar, nao uma aura
+        presa a alguem, e continua desenhado depois de `to` enquanto se recolhe.
+      */
+      if (e.tipo === "dominio") {
+        itens.push(<Dominio key={k} e={e} f={f} />);
+        return;
+      }
       if (!corpo || !ativo(e, f)) return;
       if (e.tipo === "auraGelo") itens.push(<AuraGelo key={k} e={e} f={f} corpo={corpo} />);
       else if (e.tipo === "auraFogo") itens.push(<AuraFogo key={k} e={e} f={f} corpo={corpo} />);
@@ -805,7 +1189,14 @@ export const CamadaDePoderes: React.FC<{
       else if (e.tipo === "raioGelo") itens.push(<Feixe key={k} e={e} f={f} fogo={false} />);
       else if (e.tipo === "esferaInferno") itens.push(<EsferaInferno key={k} e={e} f={f} />);
       else if (e.tipo === "quebraLaminas") itens.push(<FragmentosDaLamina key={k} e={e} f={f} />);
-      else if (e.tipo === "marcaDeCorte" && corpo) itens.push(<MarcaDeCorte key={k} e={e} f={f} corpo={corpo} />);
+      else if (e.tipo === "dominio") itens.push(<BordaDoDominio key={k} e={e} f={f} />);
+      /*
+        Corte sem `quem` desenha SOLTO NO AR, e nao e caso de excecao: a chuva
+        de cortes do dominio nao tem dono nenhum. O `&& corpo` que havia aqui
+        descartava silenciosamente os catorze cortes do dominio, que era a
+        razao de a tecnica mostrar so o nome e nada mais.
+      */
+      else if (e.tipo === "marcaDeCorte") itens.push(<Corte key={k} e={e} f={f} corpo={corpo} />);
     }
   });
   return (
@@ -836,5 +1227,59 @@ export const PoderesNaTela: React.FC<{
     const v = f < e.from ? (f - e.from + 6) / 6 : f <= e.to ? 1 : 1 - (f - e.to) / 20;
     branco = Math.max(branco, clamp01(v) * (e.forca ?? 1));
   }
-  return branco > 0 ? <rect width={largura} height={altura} fill="#ffffff" opacity={branco} /> : null;
+
+  /*
+    LUZ DO PODER SOBRE A CENA.
+
+    Ate aqui o feixe brilhava e nada em volta sabia disso: o chao, os
+    predios e os dois corpos seguiam com a mesma iluminacao de antes. E o
+    que mais denuncia efeito colado por cima -- uma fonte de luz enorme
+    aparece no meio da rua e a rua nao responde.
+
+    Cada poder luminoso ativo contribui com uma lamina da cor dele sobre o
+    quadro inteiro. A contribuicao ACOMPANHA A VIDA do efeito: nasce junto,
+    segura enquanto ele esta no auge e cai com ele. Piscar antes ou depois
+    acusaria o truque na hora.
+
+    Fraca de proposito. Luz ambiente forte lava a cena e some com o
+    contraste que o cenario gastou tanto para ter; o que ela precisa fazer e
+    tingir, nao iluminar.
+  */
+  const LUMINOSOS: Partial<Record<TipoPoder, number>> = {
+    esferaInferno: 0.1,
+    feixeFogo: 0.16,
+    raioGelo: 0.14,
+    explosaoFogo: 0.2,
+    bolaDeFogo: 0.08,
+  };
+  let luz: { cor: string; forca: number } | null = null;
+  for (const e of timeline.poderes) {
+    const pico = LUMINOSOS[e.tipo];
+    if (pico === undefined || f < e.from || f > e.to + 12) continue;
+    // entra em 6 quadros, segura, e desaparece nos 12 seguintes ao fim
+    const entra = clamp01((f - e.from) / 6);
+    const sai = f <= e.to ? 1 : 1 - (f - e.to) / 12;
+    const forca = pico * entra * clamp01(sai);
+    if (forca > (luz?.forca ?? 0)) {
+      luz = { cor: paletaDe(e, FOGO).medio, forca };
+    }
+  }
+
+  if (branco <= 0 && !luz) return null;
+  return (
+    <>
+      {luz && luz.forca > 0.002 && (
+        <rect
+          width={largura}
+          height={altura}
+          fill={luz.cor}
+          opacity={luz.forca}
+          style={{ mixBlendMode: "screen" }}
+        />
+      )}
+      {branco > 0 && (
+        <rect width={largura} height={altura} fill="#ffffff" opacity={branco} />
+      )}
+    </>
+  );
 };

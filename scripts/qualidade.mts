@@ -175,21 +175,59 @@ for (const imp of t.impacts) {
 /**
  * Cada lutador tem a cor dele. Trocar no meio da luta quebra a associacao que
  * o espectador levou a luta inteira para construir.
+ *
+ * MAS o que conta e a cor do MOMENTO, nao o total de cores no arquivo.
+ *
+ * A primeira versao somava todas as paletas que apareciam com o `quem` do
+ * lutador, e reprovava a partir de tres. Isso confundia duas coisas
+ * diferentes:
+ *
+ *   TROCA     ele lancava fogo no primeiro round e gelo no terceiro. O
+ *             espectador perde a referencia. E o defeito que a regra existe
+ *             para pegar.
+ *   COMBINACAO  ele junta azul e vermelho e o resultado sai roxo, tudo dentro
+ *             de tres segundos. Nao ha nada a perder aqui -- a fusao e a
+ *             tecnica, e ver as tres cores e o ponto dela.
+ *
+ * Separar as duas e so olhar o TEMPO: eventos agrupados por proximidade
+ * formam um momento, e dentro de um momento quantas cores houver e escolha.
+ * O que precisa ser estavel e a cor DOMINANTE de um momento para o seguinte.
+ *
+ * A distincao passou a importar quando os poderes ganharam ancoragem
+ * (core/types, AncoraDePoder): a partir dali `quem` passou a marcar tambem
+ * "sai do corpo deste", e a esfera de fusao, que antes flutuava sem dono,
+ * passou a ser atribuida a quem a segura.
  */
-const paletasPorLutador = new Map<FighterId, Set<NomeDePaleta>>();
+const INTERVALO_DE_MOMENTO = 150;
+const eventosPorLutador = new Map<FighterId, { f: number; p: NomeDePaleta }[]>();
 for (const e of t.poderes) {
   if (!e.quem || !e.paleta) continue;
-  if (!paletasPorLutador.has(e.quem)) paletasPorLutador.set(e.quem, new Set());
-  paletasPorLutador.get(e.quem)!.add(e.paleta);
+  if (!eventosPorLutador.has(e.quem)) eventosPorLutador.set(e.quem, []);
+  eventosPorLutador.get(e.quem)!.push({ f: e.from, p: e.paleta });
 }
-for (const [id, cores] of paletasPorLutador) {
-  if (cores.size > 2) {
+for (const [id, eventos] of eventosPorLutador) {
+  eventos.sort((a, b) => a.f - b.f);
+  // agrupa em momentos: corte onde o silencio entre poderes passa do limite
+  const momentos: { f: number; p: NomeDePaleta }[][] = [];
+  for (const ev of eventos) {
+    const ultimo = momentos[momentos.length - 1];
+    if (!ultimo || ev.f - ultimo[ultimo.length - 1].f > INTERVALO_DE_MOMENTO) momentos.push([ev]);
+    else ultimo.push(ev);
+  }
+  // a cor de um momento e a que mais aparece nele
+  const dominantes = momentos.map((mo) => {
+    const conta = new Map<NomeDePaleta, number>();
+    for (const ev of mo) conta.set(ev.p, (conta.get(ev.p) ?? 0) + 1);
+    return [...conta.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  });
+  const assinaturas = new Set(dominantes);
+  if (assinaturas.size > 2) {
     falhas.push({
       regra: "paleta consistente",
-      detalhe: `${id} usa ${cores.size} paletas diferentes: ${[...cores].join(", ")}`,
+      detalhe: `${id} troca de cor entre momentos: ${dominantes.join(" -> ")}`,
     });
   } else {
-    notas.push(`${id}: ${[...cores].join(", ") || "sem poder com paleta"}`);
+    notas.push(`${id}: ${[...assinaturas].join(", ")} em ${momentos.length} momento(s)`);
   }
 }
 

@@ -627,6 +627,7 @@ export type TipoPoder =
   | "quebraLaminas"
   | "rachadura"
   | "chuvaCongelada"
+  | "dominio"
   | "nomeDaTecnica";
 
 /**
@@ -660,7 +661,36 @@ export type PoderEvent = {
    * custa menos que escrever um efeito novo para cada cor.
    */
   paleta?: NomeDePaleta;
+  /**
+   * ANCORA: de qual parte do corpo de `quem` o efeito sai.
+   *
+   * Existe por um defeito que aparecia em todo poder lancado da mao. O
+   * compilador gravava a origem como um ponto fixo ("300 unidades a frente de
+   * onde ele estava"), mas ate o efeito acontecer o lutador havia respirado,
+   * mudado de pose e se deslocado -- e a esfera nascia no ar, a duzentas
+   * unidades da mao que devia estar segurando ela. O espectador le isso na
+   * hora: a energia nao parece vir do personagem.
+   *
+   * Com ancora, `a` deixa de ser posicao e passa a ser DESLOCAMENTO em
+   * relacao aquela junta, lido do corpo VIVO no quadro (facing incluido, para
+   * o offset acompanhar quem virou de lado). O ponto fixo continua valendo
+   * para o que nao sai de ninguem: rachadura no chao, explosao onde o corpo
+   * caiu, gelo na rua.
+   */
+  ancora?: AncoraDePoder;
 };
+
+/**
+ * De onde um efeito ancorado sai. `entreMaos` e o meio das duas maos: e como
+ * um poder segurado com as duas fica preso a elas mesmo enquanto os bracos se
+ * movem.
+ */
+export type AncoraDePoder =
+  | "maoFrente"
+  | "maoTras"
+  | "entreMaos"
+  | "peito"
+  | "cabeca";
 
 /** Paletas de poder. Cada uma tem tres tons mais um de fundo. */
 export type NomeDePaleta =
