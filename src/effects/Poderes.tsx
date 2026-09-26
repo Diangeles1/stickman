@@ -311,6 +311,86 @@ const TrilhaGelo: React.FC<{ e: PoderEvent; f: number; xs: (q: number) => number
 };
 
 /** rachadura no chao que cresce para os dois lados */
+/**
+ * PEDRAS ARRANCADAS DO CHAO, subindo em volta de quem libera poder.
+ *
+ * O que uma aura sozinha nao consegue dizer: que a forca esta agindo sobre o
+ * MUNDO e nao so sobre o corpo. Aura e luz em volta do personagem, e luz nao
+ * tem peso; pedra tem. Quando o chao comeca a soltar pedaco, o espectador
+ * entende a escala sem que nada precise explicar.
+ *
+ * Cada pedra sobe, gira e fica FLUTUANDO -- ela nao cai de volta enquanto o
+ * poder durar. E a parte que mais importa: pedra que sobe e desce e detrito
+ * de explosao, pedra que sobe e FICA parada no ar e gravidade sendo vencida.
+ *
+ * A subida usa uma exponencial que satura: rapida no arranque, quase imovel
+ * depois. Sem isso as pedras continuariam subindo para fora do quadro, e o
+ * que se leria seria vento, nao suspensao.
+ */
+const PedrasFlutuantes: React.FC<{ e: PoderEvent; f: number }> = ({ e, f }) => {
+  const idade = f - e.from;
+  if (idade < 0) return null;
+  const a = e.a ?? { x: 0, y: 0 };
+  const cor = paletaDe(e, PALETAS.sombra);
+  const alcance = e.forca ?? 420;
+  const saindo = f > e.to ? clamp01(1 - (f - e.to) / 20) : 1;
+  if (saindo <= 0) return null;
+
+  return (
+    <g data-poder="pedras-flutuantes" opacity={saindo}>
+      {Array.from({ length: 26 }, (_, i) => {
+        // cada pedra tem o seu atraso: o chao nao se desfaz todo de uma vez
+        const atraso = i * 2.5 + ruido(i * 7) * 22;
+        const t = (idade - atraso) / 46;
+        if (t <= 0) return null;
+        const sobe = 1 - Math.exp(-3.1 * Math.min(1, t));
+        const lado = ruido(i * 3) < 0.5 ? -1 : 1;
+        const dist = (0.12 + 0.88 * ruido(i * 11)) * alcance;
+        const x = a.x + lado * dist;
+        // pedra longe sobe menos: a forca cai com a distancia de quem a solta
+        const forcaLocal = 1 - (dist / alcance) * 0.55;
+        const alturaMax = (70 + 260 * ruido(i * 13)) * forcaLocal;
+        const y = -alturaMax * sobe;
+        /*
+          TAMANHO DA PEDRA, medido contra o corpo e nao escolhido.
+
+          Primeira versao: 7 a 26 unidades. Um membro deste boneco tem 66 de
+          espessura e o corpo tem ~400 de altura -- naquela escala a pedra
+          lia como poeira, e o que a cena precisa dizer e que o CHAO esta se
+          partindo. De 20 a 68 a pedra tem o porte de um membro, que e o
+          menor tamanho que ainda se le como pedaco de chao.
+        */
+        const tam = (20 + 48 * ruido(i * 5)) * forcaLocal;
+        const gira = (ruido(i * 17) - 0.5) * 300 * Math.min(1, t) + idade * (0.5 + ruido(i * 19));
+        // silhueta irregular: quatro cantos sorteados, nunca um quadrado
+        const pts = [0, 1, 2, 3]
+          .map((k) => {
+            const ang = (k / 4) * Math.PI * 2 + ruido(i * 23 + k) * 0.9;
+            const r = tam * (0.6 + 0.6 * ruido(i * 29 + k));
+            return `${(Math.cos(ang) * r).toFixed(1)},${(Math.sin(ang) * r).toFixed(1)}`;
+          })
+          .join(" ");
+        return (
+          <g key={i} transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${gira.toFixed(1)})`}>
+            {/*
+              A PEDRA PRECISA GANHAR DO CEU. Em #20242e ela ficava mais
+              escura que o proprio ceu noturno e sumia nele -- o mesmo erro de
+              contraste que o cenario e os lutadores ja tiveram neste motor.
+              Cinza medio com contorno preto: o contorno separa a pedra do
+              fundo e o preenchimento garante que ela exista.
+            */}
+            <polygon points={pts} fill="#6b7386" stroke="#0a0c11" strokeWidth={3} />
+            {/* face de cima mais clara: da volume sem precisar de degrade */}
+            <polygon points={pts} fill="#8c96ad" opacity={0.55} transform={`translate(0 ${(-tam * 0.18).toFixed(1)})`} />
+            {/* o gume pega a cor da aura: e o que liga a pedra ao poder */}
+            <polygon points={pts} fill="none" stroke={cor.medio} strokeWidth={2.4} opacity={0.65 * Math.min(1, t * 2)} />
+          </g>
+        );
+      })}
+    </g>
+  );
+};
+
 const Rachadura: React.FC<{ e: PoderEvent; f: number }> = ({ e, f }) => {
   if (f < e.from) return null;
   const x0 = e.a?.x ?? 0;
@@ -1161,6 +1241,47 @@ const Feixe: React.FC<{ e: PoderEvent; f: number; fogo: boolean }> = ({ e, f, fo
       <polygon points={pts(1.5)} fill={cor.forte} opacity={0.35} />
       <polygon points={pts(1)} fill={cor.medio} opacity={0.85} />
       <polygon points={pts(0.45)} fill={cor.claro} />
+      {/*
+        A BOCA DE DISPARO: onde o feixe encontra a mao.
+
+        Sem ela o feixe e uma barra que simplesmente PARA perto da mao, e o
+        olho nao liga uma coisa a outra -- foi a leitura do defeito ("melhora
+        os encaixes de onde os ataques saem"). A geometria ja estava certa: a
+        origem vinha da junta, o feixe apontava para onde o corpo olhava. O
+        que faltava era a JUNCAO existir como desenho.
+
+        Tres peças, e cada uma resolve um pedaço:
+          o NUCLEO branco cobre a emenda, entao nao ha borda visivel onde o
+          poligono do feixe comeca;
+          o HALO derrama luz sobre a mao, que e o que amarra o efeito ao
+          corpo em vez de deixa-lo encostado nele;
+          as LANCAS apontam para tras, contra o sentido do tiro -- e o recuo,
+          e e ele que diz que a energia esta SAINDO dali.
+      */}
+      <g data-parte="boca">
+        <g filter="url(#pw-glow-forte)">
+          <circle cx={a.x} cy={a.y} r={larg * 0.62} fill={cor.forte} opacity={0.55} />
+        </g>
+        {Array.from({ length: 7 }, (_, i) => {
+          // a lanca treme de quadro a quadro: boca de disparo nao fica parada
+          const ang = (i / 7) * Math.PI * 2 + f * 0.24;
+          const comp = larg * (0.5 + 0.5 * ruido(i + Math.floor(f / 2)));
+          const dx = Math.cos(ang) * comp;
+          const dy = Math.sin(ang) * comp;
+          const px = -Math.sin(ang) * larg * 0.1;
+          const py = Math.cos(ang) * larg * 0.1;
+          return (
+            <polygon
+              key={i}
+              points={`${(a.x + px).toFixed(1)},${(a.y + py).toFixed(1)} ${(a.x + dx).toFixed(1)},${(a.y + dy).toFixed(1)} ${(a.x - px).toFixed(1)},${(a.y - py).toFixed(1)}`}
+              fill={cor.medio}
+              opacity={0.75}
+            />
+          );
+        })}
+        <circle cx={a.x} cy={a.y} r={larg * 0.34} fill={cor.claro} />
+        <circle cx={a.x} cy={a.y} r={larg * 0.2 * (1 + 0.12 * Math.sin(f * 0.8))} fill="#ffffff" />
+      </g>
       {/* a ponta cospe faisca para tras enquanto avanca */}
       <Faiscas a={ponta} idade={(f - e.from) % 9} forca={larg * 2.2} cor={cor} semente={e.from + Math.floor((f - e.from) / 9) * 13} quantidade={10} />
     </g>
@@ -1426,6 +1547,7 @@ export const CamadaDePoderes: React.FC<{
         const quem = e.quem;
         itens.push(<TrilhaGelo key={k} e={e} f={f} xs={(q) => xDe(quem, q)} />);
       } else if (e.tipo === "rachadura") itens.push(<Rachadura key={k} e={e} f={f} />);
+      else if (e.tipo === "pedrasFlutuantes") itens.push(<PedrasFlutuantes key={k} e={e} f={f} />);
     } else if (parte === "atras") {
       /*
         O dominio vem ANTES da exigencia de corpo: ele e um lugar, nao uma aura

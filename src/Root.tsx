@@ -24,6 +24,7 @@ import { trocarVencedor } from "./data/trocar";
 import { TESTE_KATANA } from "./data/fights/teste-katana";
 import { GELO_VS_FOGO } from "./data/fights/gelo-vs-fogo";
 import { DOMINIO } from "./data/fights/dominio";
+import { NINJAS } from "./data/fights/ninjas";
 import { DUELO } from "./data/fights/duelo";
 import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
@@ -223,6 +224,24 @@ export const RemotionRoot: React.FC = () => {
       />
 
       {/* DOMINIO: o de branco contra o de marcas */}
+      <Composition
+        id="Ninjas"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(NINJAS)}
+        fps={NINJAS.fps}
+        width={NINJAS.width}
+        height={NINJAS.height}
+        defaultProps={{ spec: NINJAS }}
+      />
+      <Composition
+        id="Ninjas-Escolha"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(NINJAS, { escolha: true })}
+        fps={NINJAS.fps}
+        width={NINJAS.width}
+        height={NINJAS.height}
+        defaultProps={{ spec: NINJAS, escolha: true }}
+      />
       <Composition
         id="Dominio"
         component={Prototype}

@@ -439,7 +439,18 @@ export type Beat =
         // o dominio do outro lado: nao corta, PARA quem esta dentro
         | "dominioVazio"
         // o choque final: cruzam correndo e um deles e partido ao meio
-        | "choqueDivisor";
+        | "choqueDivisor"
+        /*
+         * CENAS DE NINJA (ver data/fights/ninjas). `gelo` e o azul e `fogo`
+         * e o vermelho -- papeis, nao elementos, como nas outras.
+         */
+        // abertura: se encaram, somem de tao rapido e colidem no centro
+        | "sumirEColidir"
+        // aura total: o chao racha e as pedras sobem e ficam no ar
+        | "liberarAzul"
+        | "liberarVermelho"
+        // o climax: as duas rajadas maximas se encontram no meio
+        | "choqueDeRajadas";
       gelo: FighterId;
       fogo: FighterId;
     }
@@ -649,6 +660,8 @@ export type TipoPoder =
   | "dominio"
   /** o corpo se separa em duas metades (ver effects/Divisao) */
   | "divisao"
+  /** pedras arrancadas do chao subindo em volta de quem libera poder */
+  | "pedrasFlutuantes"
   | "nomeDaTecnica";
 
 /**

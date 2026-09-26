@@ -103,12 +103,21 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
   },
   blue: {
     id: "blue",
-    stroke: "#3f7fd6",
+    // clareado de #3f7fd6: naquele tom a razao de contraste contra o ceu
+    // noturno ficava abaixo do minimo de 3.0 que uma forma precisa para se
+    // ler (mesma conta dos outros presets, ver o bloco do preto acima)
+    stroke: "#5b9bf0",
     auraColor: "#4aa8ff",
-    limbWidth: 98,
-    headRadius: 85,
+    // 98 deixava dois corpos encostados virando uma mancha so; na espessura
+    // do preto e do vermelho a silhueta le as articulacoes
+    limbWidth: 66,
+    headRadius: 86,
     scale: 1,
-    profile: { speed: 0.7, power: 0.65 },
+    tracos: {
+      volume: true,
+      luzDeContorno: "#a8cfff",
+    },
+    profile: { speed: 0.78, power: 0.6 },
   },
   gold: {
     id: "gold",

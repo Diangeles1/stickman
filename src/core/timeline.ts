@@ -26,6 +26,9 @@ import { vazioRoxo } from "./tecnicas/vazio-roxo";
 import { dominio } from "./tecnicas/dominio";
 import { dominioVazio } from "./tecnicas/dominio-vazio";
 import { choqueDivisor } from "./tecnicas/choque-divisor";
+import { sumirEColidir } from "./tecnicas/sumir-e-colidir";
+import { liberarPoder } from "./tecnicas/liberar-poder";
+import { choqueDeRajadas } from "./tecnicas/choque-de-rajadas";
 import {
   ALVO_PADRAO,
   POSE_DA_REACAO,
@@ -1091,6 +1094,14 @@ export const compilar = (spec: FightSpec): Timeline => {
         return dominioVazio(ctx);
       case "choqueDivisor":
         return choqueDivisor(ctx);
+      case "sumirEColidir":
+        return sumirEColidir(ctx);
+      case "liberarAzul":
+        return liberarPoder(ctx, ctx.G, "azul");
+      case "liberarVermelho":
+        return liberarPoder(ctx, ctx.F, "vermelho");
+      case "choqueDeRajadas":
+        return choqueDeRajadas(ctx);
       case "encontro": {
         // os dois parados, cada um no seu elemento; a camera passa entre eles
         // e alterna closes. Silencio antes da luta.
