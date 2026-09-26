@@ -1507,11 +1507,11 @@ export const PoderesNaTela: React.FC<{
     tingir, nao iluminar.
   */
   const LUMINOSOS: Partial<Record<TipoPoder, number>> = {
-    esferaInferno: 0.1,
-    feixeFogo: 0.16,
-    raioGelo: 0.14,
-    explosaoFogo: 0.2,
-    bolaDeFogo: 0.08,
+    esferaInferno: 0.14,
+    feixeFogo: 0.22,
+    raioGelo: 0.19,
+    explosaoFogo: 0.28,
+    bolaDeFogo: 0.11,
   };
   let luz: { cor: string; forca: number } | null = null;
   for (const e of timeline.poderes) {

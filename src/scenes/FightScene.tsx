@@ -63,8 +63,25 @@ const CAMERA_PADRAO = {
   zoom: 0.95,
 };
 
-/** Acima desta velocidade (unidades por quadro) aparecem linhas de velocidade. */
-const LIMITE_LINHAS = 26;
+/**
+ * Acima desta velocidade (unidades por quadro) aparecem linhas de velocidade.
+ *
+ * Medida a distribuicao de velocidade dos dois corpos nos 3026 quadros do
+ * episodio (cada corpo, cada quadro):
+ *
+ *   p50  0.0     p90   6.4     p97  18.7
+ *   p80  2.5     p95  14.4     p99  28.1
+ *
+ * E a fracao de quadros que cada limiar acende:
+ *
+ *   26 -> 1.3%    22 -> 1.8%    18 -> 3.5%    14 -> 5.2%
+ *
+ * A 26 as linhas apareciam em um quadro e meio a cada cem: o recurso existia
+ * no motor e praticamente nao acontecia no video. A 14 elas acendem em 5% dos
+ * quadros -- os picos de acao, nao o andar (p80 = 2.5, muito abaixo). O medo
+ * de "borrao permanente" so valeria se o limiar caisse perto da mediana.
+ */
+const LIMITE_LINHAS = 14;
 
 /**
  * RASTRO FANTASMA: copias esmaecidas dos quadros anteriores.
@@ -74,10 +91,20 @@ const LIMITE_LINHAS = 26;
  * corpo rapido deixa um traco do caminho que percorreu.
  *
  * Aparece so acima de uma velocidade alta, senao vira borrao permanente.
+ *
+ * A 34 ele acendia em 0.4% dos quadros: 12 de 3026 no episodio inteiro. A
+ * assinatura do estilo estava efetivamente desligada -- o codigo existia e o
+ * espectador nunca via. A 18 acende em 3.5%, que sao os deslocamentos de
+ * verdade (knockback, arremesso, corrida), e continua bem acima do p90 (6.4),
+ * entao andar e trocar golpe parado seguem sem rastro.
  */
-const LIMITE_RASTRO = 34;
-/** quantos quadros atras entram no rastro */
-const QUADROS_DO_RASTRO = 4;
+const LIMITE_RASTRO = 18;
+/**
+ * Quantos quadros atras entram no rastro. Seis em vez de quatro: com o passo
+ * de 2 quadros, o rastro cobre 12 quadros de caminho em vez de 8, e um corpo
+ * atravessando a arena deixa um traco que chega a ter comprimento.
+ */
+const QUADROS_DO_RASTRO = 6;
 /** de quantos em quantos quadros, para o rastro ter espacamento visivel */
 const PASSO_DO_RASTRO = 2;
 

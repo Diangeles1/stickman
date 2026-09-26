@@ -19,8 +19,12 @@ Config.setVideoImageFormat("png");
 
 // H.264 com CRF baixo: o alvo e Shorts/TikTok, que re-comprimem o video.
 // Entregar ja comprimido empilha perda sobre perda.
+//
+// 12 e praticamente sem perda visivel para este conteudo. Vale o arquivo
+// maior justamente porque ele NAO e o que o espectador ve: o YouTube e o
+// TikTok reencodam por cima, e tudo que se perde aqui se perde de novo la.
 Config.setCodec("h264");
-Config.setCrf(16);
+Config.setCrf(12);
 
 Config.setOverwriteOutput(true);
 
