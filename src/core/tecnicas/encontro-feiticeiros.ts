@@ -50,12 +50,25 @@ export const encontroFeiticeiros: Tecnica = (ctx) => {
       poder({ tipo: "auraFogo", quem: F, from: c + 24, to: PARA_SEMPRE, forca: 0.85, paleta: "sombra" });
       // o chao queima do lado do marcado, e so dele
       poder({ tipo: "chaoQueimado", a: { x: 380, y: 0 }, from: c + 26, to: PARA_SEMPRE, forca: 150 });
-      const perto = (x: number, quadro: number, y = ALTURA_QUADRIL - 260) =>
-        cameraKeys.push({ frame: quadro, center: { x, y }, zoom: 2.1, ease: 4, cena: true });
-      // abre no de branco, corta para o marcado, e abre nos dois
-      cameraKeys.push({ frame: c, center: { x: -380, y: ALTURA_QUADRIL - 120 }, zoom: 1.1, ease: 1, cena: true });
-      perto(-380, c + s(0.45));
-      perto(380, c + s(1.05));
+      /*
+        CAMERA: UMA APROXIMACAO CONTINUA, e nao mais um par de closes.
+
+        Esta cena vem logo depois de `chegada`, que termina com close num,
+        close no outro e abre. A versao anterior daqui abria, dava close num,
+        close no outro e abria de novo -- a mesma frase de camera duas vezes
+        seguidas, com poucos segundos entre elas. A leitura foi essa: "ai do
+        nada da zoom em um dnv e zoom no outro dnv, qual sentido repetir?".
+        Nenhum: `chegada` ja apresentou os dois, e apresentar de novo nao
+        acrescenta informacao.
+
+        O que esta cena tem de proprio e as auras subindo. Entao a camera faz
+        o oposto do corte: um plano de dois que FECHA devagar enquanto elas
+        acendem. Corte cria tensao por ruptura; aproximacao continua cria por
+        acumulo, e como as duas cenas sao vizinhas, usar gramaticas opostas e
+        o que faz cada uma ter funcao.
+      */
+      cameraKeys.push({ frame: c, center: { x: 0, y: ALTURA_QUADRIL - 120 }, zoom: 0.8, ease: 1, fit: true, cena: true });
+      cameraKeys.push({ frame: c + s(0.3), center: { x: 0, y: ALTURA_QUADRIL - 150 }, zoom: 1.05, ease: s(1.2), cena: true });
       cameraKeys.push({ frame: c + s(1.6), center: { x: 0, y: ALTURA_QUADRIL - 140 }, zoom: 0.85, ease: s(0.5), fit: true, cena: true });
       return c + dur;
 };

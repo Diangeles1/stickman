@@ -76,8 +76,11 @@ export const DOMINIO: FightSpec = {
     { type: "tecnica", tecnica: "azulVermelho", gelo: "black", fogo: "red" },
     // 4. o marcado abre o dominio e cobre a tela de cortes
     { type: "tecnica", tecnica: "dominio", gelo: "black", fogo: "red" },
-    // 5. o ultimo golpe: as duas esferas viram uma so
+    // 5. a RESPOSTA: o outro abre o dominio dele, que nao corta -- prende
+    { type: "tecnica", tecnica: "dominioVazio", gelo: "black", fogo: "red" },
+    // 6. o ultimo golpe a distancia: as duas esferas viram uma so
     { type: "tecnica", tecnica: "vazioRoxo", gelo: "black", fogo: "red" },
-    { type: "tecnica", tecnica: "encarar", gelo: "black", fogo: "red" },
+    // 7. cruzam correndo, e so depois se sabe quem acertou
+    { type: "tecnica", tecnica: "choqueDivisor", gelo: "black", fogo: "red" },
   ],
 };

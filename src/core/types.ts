@@ -422,7 +422,11 @@ export type Beat =
         // as duas se juntam: o feixe do vazio atravessa a arena
         | "vazioRoxo"
         // dominio: a arena vira outra coisa e a tela se enche de cortes
-        | "dominio";
+        | "dominio"
+        // o dominio do outro lado: nao corta, PARA quem esta dentro
+        | "dominioVazio"
+        // o choque final: cruzam correndo e um deles e partido ao meio
+        | "choqueDivisor";
       gelo: FighterId;
       fogo: FighterId;
     }
@@ -630,6 +634,8 @@ export type TipoPoder =
   | "rachadura"
   | "chuvaCongelada"
   | "dominio"
+  /** o corpo se separa em duas metades (ver effects/Divisao) */
+  | "divisao"
   | "nomeDaTecnica";
 
 /**

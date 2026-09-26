@@ -11,7 +11,7 @@
 
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
-import { corpoNoQuadro } from "../animation/corpo";
+import { corpoNoQuadro, juntasDoCorpo } from "../animation/corpo";
 import {
   poseDeContato,
   quadroEfetivo,
@@ -25,7 +25,7 @@ import {
   transformDaCamera,
 } from "../camera/camera";
 import { PRESETS } from "../characters/presets";
-import { ALTURA_QUADRIL } from "../characters/skeleton";
+import { ALTURA_QUADRIL, OSSOS } from "../characters/skeleton";
 import { Stickman, StickmanTrail } from "../characters/Stickman";
 import {
   Aura,
@@ -40,6 +40,7 @@ import { espetaculoDe } from "../effects/espetaculo";
 import { EstrelaDeImpacto, PoeiraDaQueda } from "../effects/Queda";
 import { Placa } from "../effects/Placa";
 import { ArcoDaKatana, Katana } from "../characters/Katana";
+import { CorpoDividido } from "../effects/Divisao";
 import { CamadaDePoderes, laminaInteira, PoderesNaTela } from "../effects/Poderes";
 import { CeuNoturno, Chuva } from "../backgrounds/Noite";
 import { CeuDeMetropole, RuaMolhada } from "../backgrounds/Metropole";
@@ -419,22 +420,98 @@ export const FightScene: React.FC<FightSceneProps> = ({
             ) : null;
           })}
 
-        {lutadores.map(({ id, corpo, preset, tremor }) => (
-          <Stickman
-            key={id}
-            preset={preset}
-            pose={corpo.pose}
-            baseX={corpo.x + (fx ? tremor : 0)}
-            baseY={corpo.baseY}
-            facing={corpo.facing}
-            scaleExtra={corpo.scale / preset.scale}
-            spin={corpo.spin}
-            giro={corpo.giro}
-            // secondary action: o cabelo atrasa em relacao a cabeca
-            velocidade={corpo.velocidade}
-            contorno={!limpo}
-          />
-        ))}
+        {lutadores.map(({ id, corpo, preset, tremor }) => {
+          const desenhar = () => (
+            <Stickman
+              preset={preset}
+              pose={corpo.pose}
+              baseX={corpo.x + (fx ? tremor : 0)}
+              baseY={corpo.baseY}
+              facing={corpo.facing}
+              scaleExtra={corpo.scale / preset.scale}
+              spin={corpo.spin}
+              giro={corpo.giro}
+              // secondary action: o cabelo atrasa em relacao a cabeca
+              velocidade={corpo.velocidade}
+              contorno={!limpo}
+            />
+          );
+          /*
+            CORTADO AO MEIO. O corpo continua sendo o mesmo desenho; o que
+            muda e que ele passa a ser recortado em duas metades que se
+            afastam (ver effects/Divisao). Por isso isto e um envelope e nao
+            um caminho separado de render: nada aqui sabe desenhar um corpo.
+          */
+          const corte = fx
+            ? timeline.poderes.find(
+                (e) => e.tipo === "divisao" && e.quem === id && frame >= e.from,
+              )
+            : undefined;
+          if (!corte) return <g key={id}>{desenhar()}</g>;
+          const ponto = {
+            x: corpo.x,
+            y: corpo.baseY + (corte.a?.y ?? ALTURA_QUADRIL * 0.55),
+          };
+          const angulo = corte.dir ?? 68;
+          /*
+            ATE ONDE VAI A FAIXA DO CORTE. Cada junta e projetada na direcao
+            do corte; o maior valor absoluto diz onde o corpo acaba naquele
+            eixo. Mais meia espessura de membro, porque a junta e o EIXO do
+            osso e o desenho tem largura em volta dele.
+
+            Medir em vez de estimar importa aqui: faixa curta deixa o corpo
+            aberto sem ferida nas pontas, e faixa longa aparece como um risco
+            vermelho saindo da cabeca e do chao.
+          */
+          const rad = (angulo * Math.PI) / 180;
+          const juntas = juntasDoCorpo(corpo);
+          let extensao = 0;
+          for (const j of Object.values(juntas)) {
+            const proj = Math.abs(
+              (j.x - ponto.x) * Math.cos(rad) + (j.y - ponto.y) * Math.sin(rad),
+            );
+            if (proj > extensao) extensao = proj;
+          }
+          extensao += (preset.limbWidth * preset.scale) / 2;
+          /*
+            A SILHUETA CHAPADA: os mesmos ossos, em branco, sem nada dentro.
+            E so ela que a faixa do corte precisa como mascara, e por ser
+            simples ela nao esbarra no limite de mascara aninhada.
+          */
+          const larguraOsso = preset.limbWidth * preset.scale * (corpo.scale / preset.scale);
+          const silhueta = () => (
+            <g stroke="#ffffff" fill="#ffffff" strokeLinecap="round">
+              {OSSOS.map(([de, para]) => (
+                <line
+                  key={`${de}-${para}`}
+                  x1={juntas[de].x}
+                  y1={juntas[de].y}
+                  x2={juntas[para].x}
+                  y2={juntas[para].y}
+                  strokeWidth={larguraOsso}
+                />
+              ))}
+              <circle
+                cx={juntas.head.x}
+                cy={juntas.head.y}
+                r={preset.headRadius * corpo.scale}
+              />
+            </g>
+          );
+          return (
+            <CorpoDividido
+              key={id}
+              id={id}
+              corte={ponto}
+              angulo={angulo}
+              progresso={(frame - corte.from) / Math.max(1, corte.to - corte.from)}
+              afastamento={corte.forca ?? 130}
+              extensao={extensao}
+              desenhar={desenhar}
+              silhueta={silhueta}
+            />
+          );
+        })}
 
         {/* katanas: na frente do corpo, presas a mao da frente */}
         {lutadores.map(({ id, corpo, tremor }) => {
