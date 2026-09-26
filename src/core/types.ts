@@ -7,6 +7,7 @@
  */
 
 import type { PontoAlvo } from "./contact";
+import type { EstiloDeAnimacao, NomeDeEstilo } from "../animation/estilo";
 
 export type Vec2 = { x: number; y: number };
 
@@ -120,6 +121,93 @@ export type FighterPreset = {
   headRadius: number;
   /** 1 = altura padrao; muda o porte sem mexer nas poses */
   scale: number;
+  /**
+   * TRACOS DE ROSTO E CABELO. Opcional: sem isto o stickman e liso, que e o
+   * padrao do motor e o que os episodios de gelo vs fogo usam.
+   *
+   * Existe para o personagem ter identidade sem sair do estilo palito: o
+   * cabelo e uma silhueta colada na cabeca, nao um desenho. Tudo aqui some
+   * quando o lutador esta de costas, porque rosto de costas denuncia que o
+   * traco e adesivo e nao parte do corpo.
+   */
+  tracos?: {
+    /** silhueta de cabelo por cima da cabeca */
+    cabelo?: "espetado";
+    corCabelo?: string;
+    /** cor dos olhos; ausente = sem olhos */
+    olhos?: string;
+    /** brilho ao redor dos olhos, em unidades de mundo */
+    brilhoOlhos?: number;
+    /** segundo par de olhos, acima do primeiro */
+    olhosExtras?: boolean;
+    /** cor das marcas faciais; ausente = sem marcas */
+    marcas?: string;
+    /**
+     * Faixas nos bracos e pernas, na cor das marcas. Desenhadas como
+     * travessoes perpendiculares ao osso, entao acompanham a pose sozinhas.
+     */
+    faixasMembros?: boolean;
+    /** pares de faixas em vez de faixas soltas: le como padrao, nao como risco */
+    faixasDuplas?: boolean;
+    /** marcas no tronco, seguindo o osso do pescoco ate o quadril */
+    marcasTronco?: boolean;
+    /** gola alta: cor do colarinho que sobe do pescoco ate o queixo */
+    gola?: string;
+    /**
+     * SOMBRA DE VOLUME. Uma faixa mais escura ao longo do lado de baixo de
+     * cada osso, como anime faz: sombra CHAPADA em dois tons, nao degrade.
+     *
+     * E o que transforma o membro de fita plana em cilindro. Sem isso o corpo
+     * e uma silhueta de cor unica, e nenhuma quantidade de efeito em volta
+     * conserta isso.
+     */
+    volume?: boolean;
+    /**
+     * LUZ DE CONTORNO (rim light): um fio de luz na borda de cima do corpo,
+     * na cor do ambiente.
+     *
+     * E o que mais aproxima o desenho chapado de um render cinematografico.
+     * A logica e simples: num cenario com fonte de luz forte atras ou acima
+     * -- neon de rua, lua, o proprio poder do outro lutador -- a borda do
+     * corpo voltada para ela acende, enquanto o resto fica na sombra. Sem
+     * isso o personagem parece recortado e colado sobre o fundo, porque nada
+     * no corpo responde ao que esta em volta.
+     *
+     * Trabalha junto com `volume`, e em oposicao a ele: o volume escurece a
+     * parte de baixo do membro, a luz de contorno acende a de cima. Os dois
+     * juntos fecham o cilindro.
+     */
+    luzDeContorno?: string;
+    /**
+     * ROUPA. Peças desenhadas por cima dos ossos, cada uma ancorada numa
+     * junta: o tronco cobre pescoco-quadril, os punhos ficam antes das maos,
+     * a faixa na cintura. Tudo deriva da pose, entao nada aqui precisa saber
+     * qual golpe esta acontecendo.
+     */
+    roupa?: {
+      /**
+       * Casaco sobre o tronco. Nao e um retangulo colado: a forma se alarga
+       * nos ombros e afunila na cintura, que e o que faz o pano parecer
+       * vestido em cima de um corpo em vez de desenhado ao lado dele.
+       */
+      tronco?: string;
+      /** sombra propria do pano, um tom abaixo do tronco */
+      dobra?: string;
+      /**
+       * Ombreiras. Massa que passa da linha do ombro para fora -- e o
+       * elemento que mais muda a silhueta, e silhueta e o que se le quando o
+       * personagem e pequeno na tela ou esta em movimento rapido.
+       */
+      ombreiras?: string;
+      /**
+       * Fraldas: abas que caem do quadril e balancam. Dao verticalidade e
+       * fazem o personagem ocupar mais quadro sem engordar o corpo.
+       */
+      fraldas?: string;
+      /** faixa larga na cintura, amarrada; com ponta caindo de um lado */
+      faixa?: string;
+    };
+  };
   /**
    * Perfil de luta. Nao e enfeite: o compilador de timeline usa isto para
    * escolher duracao de golpe e intensidade, o que da personalidade sem
@@ -309,7 +397,30 @@ export type Beat =
         | "bolasDeFogo"
         | "infernoVsZero"
         | "choqueFinal"
-        | "encarar";
+        | "encarar"
+        /*
+         * CENAS DE FEITICEIRO (ver data/fights/dominio). Usam os mesmos
+         * papeis "gelo"/"fogo" das outras -- aqui `gelo` e quem luta com
+         * energia a distancia e `fogo` e quem corta e queima.
+         */
+        // arremesso longo: o alvo atravessa a arena e bate no fim dela
+        | "arremessoLongo"
+        // perseguicao: os dois cruzam o cenario correndo, trocando no caminho
+        | "perseguicao"
+        // abertura narrativa: rua vazia, um entra, o outro ja estava la
+        | "chegada"
+        // encontro proprio: sem gelo no chao, auras nas cores dos dois
+        | "encontroFeiticeiros"
+        // corte a distancia: a mao varre o ar e o outro e cortado sem contato
+        | "corteADistancia"
+        // barreira: o golpe chega e para sozinho a um palmo do corpo
+        | "barreira"
+        // esfera azul que puxa, seguida da repulsao vermelha
+        | "azulVermelho"
+        // as duas se juntam: o feixe do vazio atravessa a arena
+        | "vazioRoxo"
+        // dominio: a arena vira outra coisa e a tela se enche de cortes
+        | "dominio";
       gelo: FighterId;
       fogo: FighterId;
     }
@@ -334,7 +445,14 @@ export type FightSpec = {
    * "vilarejo" e "cidade" sao o limpo com um cenario de rabisco no fundo
    * (ver backgrounds/Rabisco.tsx): traco cinza claro que ferve e se mexe.
    */
-  scenario: "arena" | "limpo" | "vilarejo" | "cidade" | "noite";
+  scenario: "arena" | "limpo" | "vilarejo" | "cidade" | "noite" | "metropole";
+  /**
+   * ESTILO de animacao. Ausente = o da casa (stickFight), que reproduz
+   * exatamente o comportamento que o motor sempre teve -- por isso os
+   * episodios antigos nao mudam um quadro ao ganharem este campo.
+   * Ver animation/estilo.ts.
+   */
+  estilo?: NomeDeEstilo;
   /**
    * ARMAS: quem luta armado e com qual elemento. Lutador armado troca as
    * poses de guarda, defesa e carga pelas de katana (ver POSES_ARMADAS em
@@ -434,6 +552,14 @@ export type AimEvent = {
 /** Onde cada lutador esta e o que faz, num beat. */
 export type FighterTrack = {
   id: FighterId;
+  /**
+   * Estilo ja resolvido, copiado do spec pelo compilador.
+   *
+   * Vive no track e nao num modulo global porque o sampler e uma funcao PURA:
+   * mesmo quadro, mesmo resultado, sempre. Estado global de estilo quebraria
+   * isso e faria duas composicoes na mesma sessao interferirem uma na outra.
+   */
+  estilo: EstiloDeAnimacao;
   /** posicao base no eixo x, por quadro-chave */
   keys: {
     frame: number;
@@ -527,7 +653,23 @@ export type PoderEvent = {
   vetor?: Vec2;
   /** texto (nome da tecnica) */
   texto?: string;
+  /**
+   * PALETA do efeito. Ausente = a cor natural do tipo (feixeFogo sai laranja,
+   * raioGelo sai azul). Existe porque os efeitos sao FORMAS, nao elementos: o
+   * mesmo feixe serve a fogo, a energia roxa ou a um raio dourado, e recolorir
+   * custa menos que escrever um efeito novo para cada cor.
+   */
+  paleta?: NomeDePaleta;
 };
+
+/** Paletas de poder. Cada uma tem tres tons mais um de fundo. */
+export type NomeDePaleta =
+  | "fogo"
+  | "gelo"
+  | "vazio"
+  | "azul"
+  | "vermelho"
+  | "sombra";
 
 export type CameraKey = {
   frame: number;

@@ -29,7 +29,7 @@ import { Stickman } from "../characters/Stickman";
 import type { FighterId, FightSpec, Pose } from "../core/types";
 import { FALAS } from "../audio/falas";
 import { NARRADOR } from "../audio/registry";
-import { FONTE } from "./Espetaculo";
+import { FONTE } from "./EspetaculoNaTela";
 import { MarcaDagua } from "./MarcaDagua";
 import { NOMES } from "./espetaculo";
 

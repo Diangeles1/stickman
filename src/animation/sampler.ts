@@ -15,10 +15,12 @@
 import { logicoParaReal, realParaLogico } from "../core/tempo";
 import { interpolate } from "remotion";
 import { POSES } from "../characters/poses";
+import { STICK_FIGHT, estiloDe } from "./estilo";
 import {
   ATRASO_DA_REACAO,
   ATRASO_DO_ATAQUE,
   ATRASO_DO_CHUTE,
+  ATRASO_DO_PODER,
   ATRASO_DO_CORTE,
   ATRASO_DO_UPPERCUT,
   ATRASO_REACAO_CABECA,
@@ -202,6 +204,11 @@ const atrasoPara = (destino: PoseName): PerfilDeAtraso | undefined => {
       return ATRASO_DA_REACAO;
     case "uppercut":
       return ATRASO_DO_UPPERCUT;
+    // poder lancado: as duas maos chegam juntas e o tronco empurra
+    case "bracosFrente":
+    case "lancar":
+    case "maoNoChao":
+      return ATRASO_DO_PODER;
     // chute: a mesma corrente, terminando no pe
     case "kick":
     case "kickLow":
@@ -268,6 +275,11 @@ const curvaPara = (destino: PoseName): ((t: number) => number) => {
     case "elbow":
     case "charge":
       return disparo;
+    // lancamento de poder: o corpo empurra e a energia sai; com a curva suave
+    // o gesto chegava ja desacelerando, sem forca nenhuma no fim
+    case "bracosFrente":
+    case "lancar":
+      return disparo;
     default:
       return suave;
   }
@@ -305,10 +317,36 @@ const poseDaChave = (
   k: FighterTrack["keys"][number],
 ): Pose => {
   if (CICLOS[k.pose]) {
-    return poseDoCiclo(k.pose, distanciaPercorrida(track, k.frame)).pose;
+    const doCiclo = poseDoCiclo(k.pose, distanciaPercorrida(track, k.frame)).pose;
+    /*
+      EXAGERO DA PASSADA. Empurra a pose do ciclo para longe da parada: tronco
+      mais baixo, perna de tras mais estendida, passada mais longa.
+
+      A base e "idle" porque e a pose neutra do motor -- exagerar contra ela
+      afasta o corpo do repouso, que e exatamente a direcao em que corrida
+      quer ir. Com fator 1 a conta devolve a propria pose do ciclo, entao o
+      estilo da casa nao muda nada.
+
+      Locomocao aguenta exagero que ataque nao aguenta: aqui nao ha ponto
+      mirado para errar.
+    */
+    const ex = (track.estilo ?? STICK_FIGHT).exageroLocomocao;
+    return ex !== 1 ? exagerar(POSES.idle, doCiclo, ex) : doCiclo;
   }
-  if (k.exagero !== undefined && k.exagero !== 1) {
-    return exagerar(POSES.guard, POSES[k.pose], k.exagero);
+  /*
+    EXAGERO: o da chave multiplicado pelo do ESTILO.
+
+    A chave diz quanto aquele momento especifico passa da pose escrita; o
+    estilo diz quanto ESTE episodio passa em geral. Multiplicar compoe os dois
+    sem que um anule o outro -- uma chave em 1.2 num estilo 1.25 vai a 1.5, e
+    a mesma chave em estilo realista (0.85) recua para 1.02.
+
+    Com o estilo da casa (exagero 1) a conta devolve exatamente o fator da
+    chave, entao nada muda em quem nao declara estilo.
+  */
+  const fator = (k.exagero ?? 1) * (track.estilo ?? STICK_FIGHT).exagero;
+  if (fator !== 1) {
+    return exagerar(POSES.guard, POSES[k.pose], fator);
   }
   return POSES[k.pose];
 };
@@ -609,14 +647,21 @@ const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
  * assim o pescoco nao estica em nenhuma pose nem em nenhuma mistura. Custa uma
  * amostragem a mais e vale para todas as poses do motor de uma vez.
  */
-const ATRASO_DA_CABECA = 3;
-/** Quanto do atraso aparece. 1 deixaria a cabeca solta do corpo. */
-const PESO_DO_ATRASO = 0.55;
+/*
+  Os dois numeros do chicote do pescoco agora vem do ESTILO (ver
+  animation/estilo.ts), nao de constantes deste modulo. O estilo viaja no
+  track porque esta funcao e pura: mesmo quadro, mesmo resultado, sempre.
+  Um modulo global de estilo quebraria isso.
+
+  Os valores da casa continuam 3 e 0.55 -- STICK_FIGHT existe exatamente para
+  que nada mude nos episodios que nao declaram estilo.
+*/
 
 /** Estado de um lutador no quadro pedido, com movimento secundario. */
 export const amostrar = (track: FighterTrack, frame: number): Amostra => {
+  const estilo = track.estilo ?? STICK_FIGHT;
   const agora = amostrarCru(track, frame);
-  const antes = amostrarCru(track, frame - ATRASO_DA_CABECA);
+  const antes = amostrarCru(track, frame - estilo.atrasoDaCabeca);
 
   const c = completar(agora.pose);
   const p = completar(antes.pose);
@@ -628,8 +673,8 @@ export const amostrar = (track: FighterTrack, frame: number): Amostra => {
   const ay = p.head.y - p.neck.y;
 
   // direcao misturada, comprimento preservado: rotaciona, nao estica
-  const mx = vx + (ax - vx) * PESO_DO_ATRASO;
-  const my = vy + (ay - vy) * PESO_DO_ATRASO;
+  const mx = vx + (ax - vx) * estilo.pesoDoAtraso;
+  const my = vy + (ay - vy) * estilo.pesoDoAtraso;
   const norma = Math.hypot(mx, my);
   if (norma < 0.001) return agora;
   const comprimento = Math.hypot(vx, vy);
@@ -724,13 +769,20 @@ export const alturaDoVoo = (
     // subia tanto quanto um arremesso, e o corpo ainda ficava parado no chao
     // nos ultimos 10% do trecho. Com gravidade constante, voo curto e baixo e
     // voo longo e alto, que e o que o olho espera.
-    const altura = Math.min(alturaMaxima, (GRAVIDADE * dur * dur) / 8);
+    const g = (track.estilo ?? STICK_FIGHT).gravidade;
+    const altura = Math.min(alturaMaxima, (g * dur * dur) / 8);
     return 4 * altura * p * (1 - p);
   }
   return 0;
 };
 
-/** Gravidade do mundo, em unidades de mundo por quadro ao quadrado. */
+/**
+ * Gravidade do mundo, em unidades por quadro ao quadrado.
+ *
+ * Mantida exportada por compatibilidade com quem ja importava. O voo usa a do
+ * ESTILO (animation/estilo.ts); este valor e o do estilo da casa e existe
+ * como referencia de qual era a constante antiga.
+ */
 export const GRAVIDADE = 1.0;
 
 export const alturaNoAr = (
@@ -817,7 +869,13 @@ export const tremorDoHitStop = (
     const base =
       imp.tier === "extreme" ? 18 : imp.tier === "medium" ? 11 : 6;
     const vitima = imp.victim === id;
-    const amplitude = base * (vitima ? 1 : 0.35) * (1 - k / imp.hitStop);
+    const amplitude =
+      base *
+      (vitima ? 1 : 0.35) *
+      (1 - k / imp.hitStop) *
+      // tremor tambem e estilo: constante demais cansa e faz o golpe forte
+      // deixar de significar
+      estiloDe(timeline.spec.estilo).tremor;
     return (k % 2 === 0 ? 1 : -1) * amplitude;
   }
   return 0;

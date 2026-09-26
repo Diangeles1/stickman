@@ -579,6 +579,31 @@ const corpoBase = (
   }
   const voo = alturaDoVoo(timeline.tracks[id], frame);
 
+  /*
+    CABECA ESTAVEL NA CORRIDA.
+
+    Andando e correndo, o quadril sobe e desce a cada passada -- a perna que
+    dobra baixa o corpo, e isso e emergente da cinematica, nao um seno colado
+    por cima. Mas um corpo humano NAO deixa a cabeca acompanhar essa oscilacao
+    inteira: o pescoco e o tronco absorvem parte dela, e o olhar fica mais
+    estavel que o quadril. E por isso que corredor filmado de lado tem a
+    cabeca quase em linha reta enquanto o quadril sobe e desce visivelmente.
+
+    Sem essa compensacao o boneco inteiro quica como bloco, que e uma das
+    coisas que mais denunciam ciclo de caminhada amador.
+
+    A compensacao e PARCIAL de proposito. Zerar a oscilacao da cabeca deixaria
+    o pescoco esticando e encolhendo a cada passo, que e pior: o defeito
+    trocaria de lugar em vez de sumir.
+  */
+  const oscilacao = apoio - PE_NO_CHAO * escala;
+  if (POSES_DE_LOCOMOCAO.has(a.poseNome) && Math.abs(oscilacao) > 0.5) {
+    const cabeca = pose.head;
+    const pescoco = pose.neck;
+    if (cabeca) pose.head = { x: cabeca.x, y: cabeca.y + oscilacao * 0.45 };
+    if (pescoco) pose.neck = { x: pescoco.x, y: pescoco.y + oscilacao * 0.2 };
+  }
+
   return {
     x: a.x + pivo + rebolado,
     baseY: (-apoio - voo) * compressao,

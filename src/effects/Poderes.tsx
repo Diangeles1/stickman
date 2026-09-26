@@ -23,7 +23,7 @@
 import React from "react";
 import type { Corpo } from "../animation/corpo";
 import { juntasDoCorpo } from "../animation/corpo";
-import type { FighterId, PoderEvent, Timeline, Vec2 } from "../core/types";
+import type { FighterId, NomeDePaleta, PoderEvent, Timeline, Vec2 } from "../core/types";
 
 // ---- utilidades --------------------------------------------------------------
 
@@ -39,6 +39,138 @@ const ativo = (e: PoderEvent, f: number, antes = 0, depois = 0) => f >= e.from -
 const GELO = { claro: "#e9fbff", medio: "#8fe3ff", forte: "#38b8ff", fundo: "#1d6fb8" };
 const FOGO = { claro: "#fff3b0", medio: "#ffb02e", forte: "#ff5a14", fundo: "#b3200e" };
 const SANGUE = "#d4141f";
+
+/**
+ * PALETAS. Um efeito e uma forma; a cor decide de quem ele e. Manter as cores
+ * aqui, e nao dentro de cada componente, e o que permite o mesmo feixe servir
+ * ao fogo e a energia sem duplicar o desenho.
+ */
+const PALETAS: Record<NomeDePaleta, { claro: string; medio: string; forte: string; fundo: string }> = {
+  fogo: FOGO,
+  gelo: GELO,
+  // energia do vazio: violeta com nucleo quase branco, o mais brilhante de
+  // todas -- e o golpe que encerra a troca
+  vazio: { claro: "#f6e9ff", medio: "#c77dff", forte: "#8b2fd6", fundo: "#4a108a" },
+  azul: { claro: "#e6f4ff", medio: "#6fb7ff", forte: "#1f6bff", fundo: "#0b2f8a" },
+  vermelho: { claro: "#ffe6e6", medio: "#ff7a6b", forte: "#e01f1f", fundo: "#7a0a0a" },
+  // corte e chama do marcado: carmesim escuro puxando para o preto
+  sombra: { claro: "#ffd9cf", medio: "#ff6b4a", forte: "#c2181b", fundo: "#3d0710" },
+};
+
+/** Paleta de um efeito: a declarada, ou a natural do tipo. */
+const paletaDe = (e: PoderEvent, padrao: typeof FOGO) =>
+  e.paleta ? PALETAS[e.paleta] : padrao;
+
+/**
+ * BRILHO. Energia sem glow le como adesivo recortado e colado na cena: a
+ * forma esta certa mas nao EMITE luz, e o olho cobra isso. Dois desfoques
+ * somados sob o desenho original dao halo largo e nucleo quente ao mesmo
+ * tempo, que e como fonte de luz se comporta.
+ *
+ * Os ids sao globais no documento; os defs entram em toda camada porque
+ * qualquer uma pode ser a primeira a desenhar.
+ */
+const DefsDePoder: React.FC = () => (
+  <defs>
+    <filter id="pw-glow-forte" x="-90%" y="-90%" width="280%" height="280%">
+      <feGaussianBlur stdDeviation="30" result="largo" />
+      <feGaussianBlur stdDeviation="10" result="perto" />
+      <feMerge>
+        <feMergeNode in="largo" />
+        <feMergeNode in="perto" />
+        <feMergeNode in="perto" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="pw-glow-medio" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="14" result="largo" />
+      <feGaussianBlur stdDeviation="5" result="perto" />
+      <feMerge>
+        <feMergeNode in="largo" />
+        <feMergeNode in="perto" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+);
+
+/**
+ * FAISCAS com fisica. Cada uma sai numa direcao propria, desacelera no ar e
+ * CAI -- a gravidade e o que separa faisca de confete. Determinista pela
+ * semente, entao o mesmo quadro sempre da o mesmo desenho.
+ */
+const Faiscas: React.FC<{
+  a: Vec2;
+  idade: number;
+  forca: number;
+  cor: { claro: string; medio: string; forte: string; fundo: string };
+  semente: number;
+  quantidade?: number;
+  espalha?: number;
+}> = ({ a, idade, forca, cor, semente, quantidade = 22, espalha = Math.PI * 2 }) => {
+  if (idade < 0) return null;
+  const t = idade / 60;
+  return (
+    <g data-poder="faiscas">
+      {Array.from({ length: quantidade }, (_, i) => {
+        const r1 = ruido(semente + i * 7.3);
+        const r2 = ruido(semente + i * 3.1 + 11);
+        const r3 = ruido(semente + i * 5.7 + 23);
+        // vida propria: faisca que morre toda junta denuncia o laco
+        const vida = 0.35 + r3 * 0.75;
+        const k = t / vida;
+        if (k >= 1) return null;
+        const ang = (r1 - 0.5) * espalha - Math.PI / 2;
+        const vel = forca * (0.5 + r2 * 1.5);
+        // arrasto: a faisca perde velocidade em vez de seguir reta
+        const arrasto = 1 - Math.exp(-t * 3.2);
+        const x = a.x + Math.cos(ang) * vel * arrasto;
+        const y = a.y + Math.sin(ang) * vel * arrasto + 900 * t * t;
+        const some = 1 - k * k;
+        const comp = 6 + r2 * 16;
+        return (
+          <line
+            key={i}
+            x1={x}
+            y1={y}
+            x2={x - Math.cos(ang) * comp * arrasto}
+            y2={y - Math.sin(ang) * comp * arrasto - 60 * t * t}
+            stroke={r1 > 0.6 ? cor.claro : cor.medio}
+            strokeWidth={1.5 + r3 * 2.5}
+            strokeLinecap="round"
+            opacity={some}
+          />
+        );
+      })}
+    </g>
+  );
+};
+
+/**
+ * ONDA DE CHOQUE: anel fino que abre rapido e some. O ar deslocado e o que
+ * vende o tamanho do golpe -- sem ele a explosao fica do tamanho do desenho,
+ * com ele fica do tamanho do espaco que ela empurrou.
+ *
+ * Achatado na vertical de proposito: onda no chao abre mais na horizontal.
+ */
+const OndaDeChoque: React.FC<{
+  a: Vec2;
+  idade: number;
+  forca: number;
+  cor: { claro: string; medio: string; forte: string; fundo: string };
+  duracao?: number;
+}> = ({ a, idade, forca, cor, duracao = 22 }) => {
+  if (idade < 0 || idade > duracao) return null;
+  const t = idade / duracao;
+  const r = forca * saiRapido(t) * 1.6;
+  const some = (1 - t) ** 1.6;
+  return (
+    <g data-poder="onda-de-choque" opacity={some}>
+      <ellipse cx={a.x} cy={a.y} rx={r} ry={r * 0.72} fill="none" stroke={cor.claro} strokeWidth={9 * (1 - t) + 1} />
+      <ellipse cx={a.x} cy={a.y} rx={r * 0.82} ry={r * 0.58} fill="none" stroke={cor.medio} strokeWidth={5 * (1 - t) + 1} opacity={0.7} />
+    </g>
+  );
+};
 
 // ---- efeitos no chao ---------------------------------------------------------
 
@@ -174,9 +306,10 @@ const AuraGelo: React.FC<{ e: PoderEvent; f: number; corpo: Corpo }> = ({ e, f, 
   const entra = clamp01((f - e.from) / 20) * forca;
   if (entra <= 0) return null;
   const j = juntasDoCorpo(corpo);
+  const cor = paletaDe(e, GELO);
   return (
     <g data-poder="aura-gelo" opacity={entra}>
-      <ellipse cx={corpo.x} cy={-6} rx={150} ry={22} fill={GELO.medio} opacity={0.35} />
+      <ellipse cx={corpo.x} cy={-6} rx={150} ry={22} fill={cor.medio} opacity={0.35} />
       {Array.from({ length: 12 }, (_, i) => {
         const ciclo = 70;
         const t = ((f + i * 23) % ciclo) / ciclo;
@@ -203,9 +336,10 @@ const AuraFogo: React.FC<{ e: PoderEvent; f: number; corpo: Corpo }> = ({ e, f, 
   const entra = clamp01((f - e.from) / 20) * forca;
   if (entra <= 0) return null;
   const j = juntasDoCorpo(corpo);
+  const cor = paletaDe(e, FOGO);
   return (
     <g data-poder="aura-fogo" opacity={entra}>
-      <ellipse cx={corpo.x} cy={-4} rx={140 + 10 * Math.sin(f * 0.3)} ry={20} fill={FOGO.forte} opacity={0.3} />
+      <ellipse cx={corpo.x} cy={-4} rx={140 + 10 * Math.sin(f * 0.3)} ry={20} fill={cor.forte} opacity={0.3} />
       {Array.from({ length: 16 }, (_, i) => {
         const ciclo = 50;
         const t = ((f + i * 17) % ciclo) / ciclo;
@@ -248,13 +382,24 @@ const Chama: React.FC<{ x: number; y: number; tamanho: number; f: number; sement
 
 // ---- explosoes e estilhacos --------------------------------------------------
 
-const ExplosaoFogo: React.FC<{ a: Vec2; idade: number; forca: number; semente: number }> = ({ a, idade, forca, semente }) => {
+const ExplosaoFogo: React.FC<{ a: Vec2; idade: number; forca: number; semente: number; paleta?: NomeDePaleta }> = ({ a, idade, forca, semente, paleta }) => {
   const dur = 34;
   if (idade < 0 || idade > dur + 30) return null;
   const k = clamp01(idade / dur);
   const r = forca * (0.3 + 0.9 * saiRapido(k));
+  const cor = paleta ? PALETAS[paleta] : FOGO;
   return (
     <g data-poder="explosao">
+      {/* o ar empurrado: abre antes do fogo e vende o tamanho do golpe */}
+      <OndaDeChoque a={a} idade={idade} forca={forca} cor={cor} />
+      {/*
+        Estilhacos com gravidade. Poucos e LONGE: com 30 particulas saindo do
+        mesmo ponto e alcance curto, elas se sobrepoem e viram um tufo solido
+        que cobre quem levou o golpe -- o oposto de faisca, que e rala e deixa
+        ver atraves. O alcance maior tambem espalha as vidas, entao elas nao
+        morrem todas no mesmo quadro.
+      */}
+      <Faiscas a={a} idade={idade} forca={forca * 4.2} cor={cor} semente={semente} quantidade={14} />
       {/* fumaca que fica depois */}
       {Array.from({ length: 7 }, (_, i) => {
         const ang = (i / 7) * Math.PI * 2 + ruido(semente + i);
@@ -487,7 +632,7 @@ const Feixe: React.FC<{ e: PoderEvent; f: number; fogo: boolean }> = ({ e, f, fo
   const b = e.b ?? a;
   const entra = saiRapido((f - e.from) / 8);
   const pontaX = a.x + (b.x - a.x) * entra;
-  const cor = fogo ? FOGO : GELO;
+  const cor = paletaDe(e, fogo ? FOGO : GELO);
   const larg = (e.forca ?? 90) * (0.85 + 0.15 * Math.sin(f * 0.9));
   const onda = (i: number) => Math.sin(f * 0.7 + i) * (fogo ? 14 : 5);
   const pts = (k: number) => {
@@ -503,11 +648,18 @@ const Feixe: React.FC<{ e: PoderEvent; f: number; fogo: boolean }> = ({ e, f, fo
     }
     return [...cima, ...baixo.reverse()].join(" ");
   };
+  const ponta = { x: pontaX, y: a.y + (b.y - a.y) * entra };
   return (
     <g data-poder={fogo ? "feixe-fogo" : "raio-gelo"}>
+      {/* halo largo por baixo: e ele que faz o feixe iluminar em vez de so ocupar espaco */}
+      <g filter="url(#pw-glow-forte)" opacity={0.9}>
+        <polygon points={pts(1.15)} fill={cor.forte} opacity={0.55} />
+      </g>
       <polygon points={pts(1.5)} fill={cor.forte} opacity={0.35} />
       <polygon points={pts(1)} fill={cor.medio} opacity={0.85} />
       <polygon points={pts(0.45)} fill={cor.claro} />
+      {/* a ponta cospe faisca para tras enquanto avanca */}
+      <Faiscas a={ponta} idade={(f - e.from) % 9} forca={larg * 2.2} cor={cor} semente={e.from + Math.floor((f - e.from) / 9) * 13} quantidade={10} />
     </g>
   );
 };
@@ -518,16 +670,33 @@ const EsferaInferno: React.FC<{ e: PoderEvent; f: number }> = ({ e, f }) => {
   const a = e.a ?? { x: 0, y: -800 };
   const t = progresso(e, f);
   const r = 30 + (e.forca ?? 300) * saiRapido(t);
+  const cor = paletaDe(e, FOGO);
+  // so as paletas quentes ganham labareda em volta; as outras sao energia
+  // lisa, com haleis pulsando no lugar das chamas
+  const comChama = !e.paleta || e.paleta === "fogo" || e.paleta === "sombra";
   return (
     <g data-poder="esfera-inferno">
-      <circle cx={a.x} cy={a.y} r={r * 1.35} fill={FOGO.forte} opacity={0.25} />
-      {Array.from({ length: 14 }, (_, i) => {
-        const ang = (i / 14) * Math.PI * 2 + f * 0.05;
-        return <Chama key={i} x={a.x + Math.cos(ang) * r * 0.9} y={a.y + Math.sin(ang) * r * 0.9} tamanho={r * 0.28} f={f} semente={i * 5} />;
-      })}
-      <circle cx={a.x} cy={a.y} r={r} fill={FOGO.forte} />
-      <circle cx={a.x} cy={a.y} r={r * 0.75} fill={FOGO.medio} />
-      <circle cx={a.x} cy={a.y} r={r * 0.45} fill={FOGO.claro} />
+      {/* halo contido: em 1.35 do raio ele engolia o lutador junto com a esfera */}
+      <circle cx={a.x} cy={a.y} r={r * 1.1} fill={cor.forte} opacity={0.18} />
+      {comChama ? (
+        Array.from({ length: 14 }, (_, i) => {
+          const ang = (i / 14) * Math.PI * 2 + f * 0.05;
+          return <Chama key={i} x={a.x + Math.cos(ang) * r * 0.9} y={a.y + Math.sin(ang) * r * 0.9} tamanho={r * 0.28} f={f} semente={i * 5} />;
+        })
+      ) : (
+        <>
+          <circle cx={a.x} cy={a.y} r={r * (1.12 + 0.06 * Math.sin(f * 0.35))} fill="none" stroke={cor.medio} strokeWidth={r * 0.06} opacity={0.55} />
+          <circle cx={a.x} cy={a.y} r={r * (1.3 + 0.1 * Math.sin(f * 0.22 + 1))} fill="none" stroke={cor.claro} strokeWidth={r * 0.02} opacity={0.35} />
+        </>
+      )}
+      <g filter="url(#pw-glow-medio)">
+        <circle cx={a.x} cy={a.y} r={r * 0.78} fill={cor.forte} opacity={0.8} />
+      </g>
+      <circle cx={a.x} cy={a.y} r={r} fill={cor.forte} />
+      <circle cx={a.x} cy={a.y} r={r * 0.75} fill={cor.medio} />
+      <circle cx={a.x} cy={a.y} r={r * 0.45} fill={cor.claro} />
+      {/* energia sendo sugada para dentro da esfera enquanto ela carrega */}
+      <Faiscas a={a} idade={(f - e.from) % 14} forca={-r * 1.5} cor={cor} semente={e.from + Math.floor((f - e.from) / 14) * 7} quantidade={12} />
     </g>
   );
 };
@@ -626,7 +795,7 @@ export const CamadaDePoderes: React.FC<{
       else if (e.tipo === "auraFogo") itens.push(<AuraFogo key={k} e={e} f={f} corpo={corpo} />);
       else if (e.tipo === "zeroAbsoluto") itens.push(<ZeroAbsoluto key={k} e={e} f={f} corpo={corpo} />);
     } else {
-      if (e.tipo === "explosaoFogo" && e.a) itens.push(<ExplosaoFogo key={k} a={e.a} idade={f - e.from} forca={e.forca ?? 160} semente={e.from} />);
+      if (e.tipo === "explosaoFogo" && e.a) itens.push(<ExplosaoFogo key={k} a={e.a} idade={f - e.from} forca={e.forca ?? 160} semente={e.from} paleta={e.paleta} />);
       else if (e.tipo === "estilhacosGelo" && e.a) itens.push(<EstilhacosGelo key={k} a={e.a} idade={f - e.from} forca={e.forca ?? 160} semente={e.from} dir={e.dir} />);
       else if (e.tipo === "choque") itens.push(<Choque key={k} e={e} f={f} />);
       else if (e.tipo === "sangue") itens.push(<Sangue key={k} e={e} f={f} />);
@@ -639,7 +808,12 @@ export const CamadaDePoderes: React.FC<{
       else if (e.tipo === "marcaDeCorte" && corpo) itens.push(<MarcaDeCorte key={k} e={e} f={f} corpo={corpo} />);
     }
   });
-  return <g data-layer={`poderes-${parte}`}>{itens}</g>;
+  return (
+    <g data-layer={`poderes-${parte}`}>
+      <DefsDePoder />
+      {itens}
+    </g>
+  );
 };
 
 /** quanto da lamina de um lutador sobrou no quadro (quebra no fim da luta) */

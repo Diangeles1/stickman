@@ -23,6 +23,7 @@ import { gerarLuta } from "./data/gerador";
 import { trocarVencedor } from "./data/trocar";
 import { TESTE_KATANA } from "./data/fights/teste-katana";
 import { GELO_VS_FOGO } from "./data/fights/gelo-vs-fogo";
+import { DOMINIO } from "./data/fights/dominio";
 import { DUELO } from "./data/fights/duelo";
 import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
@@ -212,6 +213,48 @@ export const RemotionRoot: React.FC = () => {
         width={DUELO.width}
         height={DUELO.height}
         defaultProps={{ spec: DUELO }}
+      />
+
+      {/* DOMINIO: o de branco contra o de marcas */}
+      <Composition
+        id="Dominio"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(DOMINIO)}
+        fps={DOMINIO.fps}
+        width={DOMINIO.width}
+        height={DOMINIO.height}
+        defaultProps={{ spec: DOMINIO }}
+      />
+      {/*
+        MESMA luta, estilo diferente. Existe para comparar: os dados sao
+        identicos, so o preset de animacao muda (ver animation/estilo.ts).
+      */}
+      <Composition
+        id="Dominio-Anime"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(DOMINIO)}
+        fps={DOMINIO.fps}
+        width={DOMINIO.width}
+        height={DOMINIO.height}
+        defaultProps={{ spec: { ...DOMINIO, estilo: "anime" as const } }}
+      />
+      <Composition
+        id="Dominio-Pesado"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(DOMINIO)}
+        fps={DOMINIO.fps}
+        width={DOMINIO.width}
+        height={DOMINIO.height}
+        defaultProps={{ spec: { ...DOMINIO, estilo: "combatePesado" as const } }}
+      />
+      <Composition
+        id="Dominio-Escolha"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(DOMINIO, { escolha: true })}
+        fps={DOMINIO.fps}
+        width={DOMINIO.width}
+        height={DOMINIO.height}
+        defaultProps={{ spec: DOMINIO, escolha: true }}
       />
 
       {/* PALITANOS: BLACK ICE vs RED FIRE */}
