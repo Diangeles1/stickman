@@ -118,16 +118,23 @@ export const RemotionRoot: React.FC = () => {
         width={VIDEO.width}
         height={VIDEO.height}
         durationInFrames={600}
-        defaultProps={{ seed: 1, segundos: 30, debug: false }}
+        defaultProps={{ seed: 1, segundos: 30, debug: false, escolha: true }}
         calculateMetadata={({ props }: { props: PrototypeProps }) => {
           // a luta e montada AQUI, fora do render, e entra nas props ja
           // pronta: assim o componente nunca gera nada por quadro
           const spec = gerarLuta(props.seed ?? 1, {
             segundos: props.segundos ?? 30,
           });
+          /*
+            A TELA DE ESCOLHA VEM LIGADA. Esta composicao e a que produz video
+            para publicar, e o gancho ("escolha um personagem") e o que faz o
+            espectador ficar ate o fim para saber se acertou. Quem quiser a
+            luta crua passa escolha: false nas props.
+          */
+          const escolha = props.escolha ?? true;
           return {
-            durationInFrames: duracaoDoPrototipo(spec),
-            props: { ...props, spec },
+            durationInFrames: duracaoDoPrototipo(spec, { escolha }),
+            props: { ...props, spec, escolha },
           };
         }}
       />

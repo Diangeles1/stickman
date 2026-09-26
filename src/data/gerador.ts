@@ -118,15 +118,37 @@ export const gerarLuta = (
   };
 
   /** o desfecho custa tempo e precisa caber dentro do alvo */
-  const desfecho = (quem: FightSpec["fighterB"]): Beat[] => [
-    { type: "recover", who: quem, duration: s(0.9) },
-    { type: "hold", duration: s(0.5), label: "desfecho" },
+  /*
+    DESFECHO: tempo para o atingido cair, ficar caido e levantar -- e depois
+    para o fim acontecer.
+
+    Os 1.4s de antes cobriam so a queda. O fecho do video (K.O., o nome de
+    quem venceu, e o vencedor puxando a lona com o pedido de inscricao) leva
+    cerca de cinco segundos e nao cabia: o video cortava no meio dele.
+  */
+  /*
+    DESFECHO DO NOCAUTE: quem levou o golpe final FICA NO CHAO.
+
+    Antes o gerador usava o mesmo desfecho de uma troca qualquer, com um beat
+    de `recover` -- e o motor obedece: `recover` e justamente o beat que
+    levanta quem caiu. O resultado foi descrito assim: "o boneco quando e
+    derrotado cai no chao duro e ainda se move". Medido: ele ficava `downed`
+    por 21 quadros (0,35s) e ja estava de pe um segundo depois do nocaute.
+
+    Levantar logo apos o nocaute contradiz o nocaute -- e a unica coisa que a
+    luta inteira construiu era que aquele golpe encerrava.
+
+    Sem `recover`, o corpo permanece na ultima pose que o golpe deixou, que e
+    exatamente o que se quer: ele fica caido enquanto o fim acontece.
+  */
+  const desfechoDoNocaute = (): Beat[] => [
+    { type: "hold", duration: s(6.2), label: "nocaute" },
   ];
 
   /** teto de trocas, so para nao existir laco sem fim */
   const MAXIMO = 40;
 
-  while (troca < MAXIMO && duracaoCom(desfecho(alvo)) < segundos) {
+  while (troca < MAXIMO && duracaoCom(desfechoDoNocaute()) < segundos) {
     // a escalada e estimada pela fracao do tempo ja gasto, e nao pelo numero
     // de trocas: assim ela acompanha a duracao pedida
     const escalada = Math.min(
@@ -186,12 +208,14 @@ export const gerarLuta = (
     target: alvo,
     move: sorteia(FINALIZADORES),
     targetPoint: "chest",
+    // e daqui que sai o K.O., o nome do vencedor e o encerramento
+    finalizador: true,
   });
 
   // ---- DESFECHO ---------------------------------------------------------
   // Tempo para o atingido cair, ficar caido e levantar. Sem isso o video
   // termina no ar e o golpe final perde a consequencia.
-  beats.push(...desfecho(alvo));
+  beats.push(...desfechoDoNocaute());
 
   return {
     fighterA,

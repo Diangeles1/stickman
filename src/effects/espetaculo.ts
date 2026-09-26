@@ -266,8 +266,27 @@ const montar = (t: Timeline): Espetaculo => {
   }
   const fimReal = real(t.durationInFrames);
   const cenaDaPlaca = t.scheduled.find((b) => b.beat.type === "placa");
-  // o K.O. e o nome do vencedor saem quando a placa comeca: a tela e dela
-  const ateAPlaca = cenaDaPlaca ? real(cenaDaPlaca.from) + 20 : fimReal;
+  /*
+    O ENCERRAMENTO TAMBEM NA LUTA COMUM.
+
+    Ate aqui so a luta CINEMATICA tinha fecho (o vencedor correndo para a
+    camera e puxando a lona com o pedido de inscricao). A luta comum -- que e
+    o que o GERADOR produz -- terminava no K.O. com o nome do vencedor
+    segurando ate o ultimo quadro, sem pedir nada.
+
+    Como toda luta gerada e uma luta comum, isso significava que o caminho
+    que existe para fazer cem videos era justamente o que nao chamava para a
+    inscricao.
+
+    O fecho comeca depois do nome do vencedor ter sido lido, e os letreiros
+    saem quando ele entra: um de cada vez, nunca os dois. So existe quando ha
+    K.O. -- luta sem desfecho continua exatamente como era.
+  */
+  const inicioDoFecho =
+    ko && !cenaDaPlaca ? Math.min(ko.real + 190, fimReal - 300) : undefined;
+  const ateAPlaca = cenaDaPlaca
+    ? real(cenaDaPlaca.from) + 20
+    : (inicioDoFecho ?? fimReal);
   if (ko) {
     // o K.O. espera o voo abrir: no quadro do golpe a camera esta fechada
     // nos dois e o letreiro cobria justamente a cabeca que levou o chute
@@ -311,6 +330,12 @@ const montar = (t: Timeline): Espetaculo => {
     }
   }
 
+  const falas = narrar(t, rotulos, abertura.lute, real);
+  if (inicioDoFecho !== undefined) {
+    // o pedido entra junto com a lona, e depois do anuncio do vencedor
+    falas.push({ real: inicioDoFecho + ESPERA_DA_PERGUNTA + 40, fala: "like" });
+  }
+
   return {
     rotulos,
     golpes,
@@ -318,10 +343,11 @@ const montar = (t: Timeline): Espetaculo => {
     quedas,
     esquivas: esquivas.map((q) => real(q.logico)),
     ko,
+    final: inicioDoFecho,
     abertura,
     entradaDoPlacar: abertura.lute,
     saidaDoPlacar: ateAPlaca,
-    falas: narrar(t, rotulos, abertura.lute, real),
+    falas,
     efeitos: efeitosDe(rotulos, ko),
   };
 };

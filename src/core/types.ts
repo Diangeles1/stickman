@@ -323,6 +323,19 @@ export type Beat =
       move: AttackName;
       /** onde o golpe acerta; sem isso usa ALVO_PADRAO do golpe */
       targetPoint?: PontoAlvo;
+      /**
+       * O GOLPE QUE ENCERRA A LUTA.
+       *
+       * Carrega quase o dobro, fecha a camera no maximo e entra em camera
+       * lenta -- e, principalmente, marca o impacto como `finalizador`, que e
+       * de onde o resto do motor tira o K.O., o nome do vencedor, a narracao
+       * e o encerramento (ver effects/espetaculo).
+       *
+       * Faltava aqui: `golpear` ja sabia receber esta opcao, mas nenhum beat
+       * sabia declarar ela, entao toda luta GERADA terminava sem dizer quem
+       * ganhou.
+       */
+      finalizador?: boolean;
     }
   | {
       type: "blocked";

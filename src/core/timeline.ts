@@ -857,8 +857,18 @@ export const compilar = (spec: FightSpec): Timeline => {
 
         estado[alvo].pose = "downed"; // 2. desliza deitado, perdendo velocidade
         estado[alvo].x += direcao * empurrao * 0.14;
-        chave(alvo, fim + 2 + s(0.32));
-        fimDaReacao = fim + 2 + s(0.32);
+        /*
+          3. ASSENTA. Duas chaves na mesma pose, a primeira passando do ponto
+          e a segunda voltando: o corpo bate, afunda um pouco mais do que a
+          pose pede e entao relaxa.
+
+          Sem isto a queda terminava num quadro so -- a pose de caido era
+          alcancada e congelava ali. "Cai no chao duro" foi a leitura, e
+          estava certa: massa que para de uma vez nao tem peso.
+        */
+        chave(alvo, fim + 2 + s(0.32), 1.09);
+        chave(alvo, fim + 2 + s(0.52));
+        fimDaReacao = fim + 2 + s(0.52);
       }
 
       // ==== CAMERA DO GOLPE ================================================
@@ -1436,7 +1446,10 @@ export const compilar = (spec: FightSpec): Timeline => {
       }
 
       case "attack":
-        golpear(beat.attacker, beat.target, beat.move, { ponto: beat.targetPoint });
+        golpear(beat.attacker, beat.target, beat.move, {
+          ponto: beat.targetPoint,
+          finalizador: beat.finalizador,
+        });
         break;
 
       case "blocked":
