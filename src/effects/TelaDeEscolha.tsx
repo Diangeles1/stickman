@@ -308,8 +308,14 @@ export const TelaDeEscolha: React.FC<{
       {/* tique a cada segundo, com um grave de batida de coracao */}
       {Array.from({ length: SEGUNDOS_DE_ESCOLHA }, (_, k) => (
         <Sequence key={k} from={k * fps} layout="none">
-          <Audio src={staticFile("assets/audio/impacts/impact_light_01.wav")} volume={0.7} />
-          <Audio src={staticFile("assets/audio/heavy/low_boom_01.wav")} volume={0.25 + k * 0.08} />
+          {/*
+            O TIQUE FICA ABAIXO DA VOZ. Em 0.7 ele era mais alto que o
+            narrador (0.6) e caia a seis quadros do "Tres!", entao cobria a
+            palavra exatamente no momento em que ela importa. A contagem e
+            informacao; o tique e so o pulso por baixo dela.
+          */}
+          <Audio src={staticFile("assets/audio/impacts/impact_light_01.wav")} volume={0.42} />
+          <Audio src={staticFile("assets/audio/heavy/low_boom_01.wav")} volume={0.18 + k * 0.06} />
         </Sequence>
       ))}
       {/* narrador: chama para a escolha e conta os tres ultimos */}

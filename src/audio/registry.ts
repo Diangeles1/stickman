@@ -232,7 +232,19 @@ export const TRILHA = {
 };
 
 /** volume do narrador e quanto a trilha abaixa enquanto ele fala */
-export const NARRADOR = { volume: 0.6, trilhaSobFala: 0.45 };
+/*
+  O NARRADOR PRECISA GANHAR DE TUDO QUE TOCA JUNTO COM ELE.
+
+  Em 0.6 ele perdia: o tique da contagem toca a 0.7 e cai a seis quadros do
+  "Tres!", entao a batida cobria a palavra. O pedido foi "quero que narre a
+  contagem e o final" -- e as duas JA estavam no video; o que faltava era
+  serem ouvidas.
+
+  0.85 poe a voz acima do tique (que desceu para 0.42) e dos golpes. E a
+  trilha cai para 28% sob a fala, em vez de 45%: abafar pela metade nao basta
+  quando a musica tem a mesma faixa de frequencia da voz.
+*/
+export const NARRADOR = { volume: 0.85, trilhaSobFala: 0.28 };
 
 /**
  * Volume dos efeitos dos acontecimentos (ver effects/espetaculo.ts,
