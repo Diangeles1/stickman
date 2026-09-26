@@ -18,6 +18,7 @@
  * camadas (cena, som, placar).
  */
 
+import { estiloDe } from "../animation/estilo";
 import type { Timeline } from "./types";
 
 type Trecho = {
@@ -53,9 +54,15 @@ const montar = (t: Timeline): Mapa => {
   for (let k = 0; k < ordenados.length; k++) {
     const p = ordenados[k];
     // congelamento: todos os impactos que caem neste quadro logico
-    const parado = t.impacts
-      .filter((i) => i.hitStop > 0 && i.frame === p)
-      .reduce((soma, i) => soma + i.hitStop, 0);
+    // O hit stop do golpe, escalado pelo ESTILO. Anime congela mais que a
+    // vida real; realista quase nao congela. Multiplicador 1 (o da casa)
+    // devolve exatamente o valor que o golpe pediu.
+    const escala = estiloDe(t.spec.estilo).hitStop;
+    const parado = Math.round(
+      t.impacts
+        .filter((i) => i.hitStop > 0 && i.frame === p)
+        .reduce((soma, i) => soma + i.hitStop, 0) * escala,
+    );
     if (parado > 0) {
       trechos.push({ real, logico: p, taxa: 0, duracao: parado });
       real += parado;

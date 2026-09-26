@@ -636,6 +636,34 @@ export const ATRASO_DO_CORTE: PerfilDeAtraso = {
   handBack: [0.42, 1], handFront: [0.42, 1],
 };
 
+/**
+ * PODER LANCADO (bracosFrente, lancar, maoNoChao).
+ *
+ * Mesma origem do soco -- os pes plantam e a forca sobe -- mas o fim e
+ * diferente: energia sai das DUAS maos ao mesmo tempo, entao elas chegam
+ * juntas, e o tronco participa muito mais do que num soco, porque o corpo
+ * inteiro empurra em vez de um braco so disparar.
+ *
+ * Sem perfil nenhum (que era o caso destas poses ate agora), a mistura move
+ * todas as juntas no mesmo quadro: o corpo assume a pose de lancamento como
+ * um bloco, e o gesto le como bonequinho trocando de figura em vez de alguem
+ * empurrando alguma coisa para a frente.
+ */
+export const ATRASO_DO_PODER: PerfilDeAtraso = {
+  // os pes plantam primeiro e o mais rapido: e deles que vem o apoio
+  footBack: [0, 0.22], footFront: [0, 0.22],
+  kneeBack: [0.02, 0.3], kneeFront: [0.02, 0.3],
+  hip: [0.06, 0.4],
+  // o tronco e o protagonista aqui, entao tem janela LARGA: ele comeca cedo e
+  // continua empurrando depois que o quadril ja assentou
+  neck: [0.12, 0.72],
+  shoulderBack: [0.2, 0.8], shoulderFront: [0.2, 0.8],
+  head: [0.26, 0.84],
+  elbowBack: [0.34, 0.92], elbowFront: [0.34, 0.92],
+  // as duas maos juntas: o lancamento e simetrico
+  handBack: [0.46, 1], handFront: [0.46, 1],
+};
+
 export const ATRASO_DO_UPPERCUT: PerfilDeAtraso = {
   hip: [0, 0.28],
   kneeBack: [0, 0.28], kneeFront: [0, 0.28],
