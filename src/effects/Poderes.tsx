@@ -716,6 +716,266 @@ export const MarcaDeCorte: React.FC<{ e: PoderEvent; f: number; corpo: Corpo }> 
 );
 
 /**
+ * A ARQUITETURA DE UM DOMINIO.
+ *
+ * O veu sozinho troca a cor do fundo, e isso nao e um lugar -- e uma tinta.
+ * O que faz um dominio impressionar e ter CONSTRUCAO dentro: alguma coisa
+ * grande, parada e deliberada, que o espectador entende como feita. E ela que
+ * da escala aos dois bonecos no meio.
+ *
+ * Cada lutador tem a sua, e a paleta escolhe qual:
+ *
+ *   sombra   CATEDRAL DE LAMINAS. Laminas gigantes fincadas no chao subindo
+ *            em arco ate fechar uma abobada, com um halo atras. O espaco de
+ *            quem corta: tudo ali e gume, e o teto e feito do que machuca.
+ *   vazio    O FUNDO SEM FUNDO. Aneis afastando-se ate um ponto de fuga com
+ *            um nucleo claro. Nao ha construcao porque a regra deste dominio
+ *            e que nao existe fim: o olho cai para dentro e nao acha parede.
+ *
+ * As duas se montam junto com a expansao (`montagem`), em vez de ja estarem
+ * prontas: dominio que abre revelando um cenario pronto parece corte para
+ * outra cena, e nao um espaco sendo construido em volta de quem o abriu.
+ */
+const EstruturaDoDominio: React.FC<{ e: PoderEvent; f: number; r: number }> = ({ e, f, r }) => {
+  const cor = paletaDe(e, PALETAS.sombra);
+  const a = e.a ?? { x: 0, y: -300 };
+  const idade = f - e.from;
+  const montagem = clamp01(idade / 26);
+  const m = saiRapido(montagem);
+  if (m <= 0.01) return null;
+
+  if (e.paleta === "vazio" || e.paleta === "azul") {
+    /*
+      O FUNDO SEM FUNDO. Doze aneis em progressao geometrica na direcao do
+      nucleo: espacamento constante daria um alvo de tiro, e e o espacamento
+      encolhendo que o olho le como profundidade.
+    */
+    return (
+      <g data-dominio="vazio">
+        {Array.from({ length: 12 }, (_, i) => {
+          const k = (i + 1) / 12;
+          // gira devagar e em sentido alternado: o espaco nao esta parado
+          const raio = r * 0.92 * k ** 1.9 * m;
+          const achata = 0.55 + 0.4 * k;
+          return (
+            <ellipse
+              key={i}
+              cx={a.x}
+              cy={a.y}
+              rx={raio}
+              ry={raio * achata}
+              fill="none"
+              stroke={i % 3 === 0 ? cor.claro : cor.medio}
+              strokeWidth={r * 0.004 + raio * 0.006}
+              opacity={(0.1 + 0.42 * (1 - k)) * m}
+              transform={`rotate(${(f * 0.12 * (i % 2 ? 1 : -1)).toFixed(2)} ${a.x} ${a.y})`}
+            />
+          );
+        })}
+        <g filter="url(#pw-glow-forte)">
+          <circle cx={a.x} cy={a.y} r={r * 0.045 * m * (1 + 0.1 * Math.sin(f * 0.14))} fill={cor.claro} opacity={0.9 * m} />
+        </g>
+      </g>
+    );
+  }
+
+  /*
+    CAMPO DE LAMINAS. Laminas gigantes fincadas no chao, em quatro planos de
+    profundidade, com as maiores emoldurando a cena.
+
+    A primeira versao era uma abobada de nove pares finos e sumiu: elas eram
+    pintadas com `cor.fundo`, que e quase exatamente a cor do veu por dentro
+    do dominio. Contraste perto de zero -- o defeito que scripts/contraste.mts
+    existe para pegar, cometido de novo. Sobrava o fio do gume, e o resultado
+    lia como arame.
+
+    Agora a lamina e uma SILHUETA quase preta (bem abaixo do veu) com o gume
+    claro por cima: a mesma solucao que o cenario usa para os predios lerem
+    contra o ceu. E sao poucas e grandes, porque o que da escala aos dois
+    bonecos no meio e uma coisa enorme ao lado deles, nao dezoito pequenas.
+  */
+  const CHAO = 10;
+  const SILHUETA = "#0b0206";
+  /** planos: perto e grande e opaco, longe e menor e mais lavado pelo veu */
+  const planos = [
+    /*
+      COLOSSOS. O primeiro plano e o que da escala: sem nada maior que os
+      lutadores, o campo inteiro lia como cenario do tamanho deles. Estes
+      passam de quatro vezes a altura de um corpo e emolduram o quadro.
+    */
+    { escala: 2.4, quantidade: 3, opacidade: 0.98, espalha: 1.9 },
+    { escala: 1.0, quantidade: 4, opacidade: 0.92, espalha: 1.5 },
+    { escala: 0.55, quantidade: 5, opacidade: 0.75, espalha: 1.1 },
+    { escala: 0.3, quantidade: 6, opacidade: 0.55, espalha: 0.8 },
+  ];
+  /*
+    O SANTUARIO. A peca central do dominio, atras do campo de laminas.
+
+    Um campo de laminas sozinho e uma paisagem; o que transforma paisagem em
+    LUGAR e uma construcao deliberada no meio dela -- alguma coisa que so
+    existe porque alguem a ergueu. Telhado em tres beirais, pilares de osso, e
+    o cranio sob a cobertura, que e o que o olho encontra primeiro e o que da
+    ao espaco um dono.
+
+    Tudo em silhueta quase preta com o gume claro, pela mesma razao das
+    laminas: por dentro do dominio o veu ja e vermelho escuro, e qualquer
+    forma pintada na cor do veu desaparece nele.
+  */
+  /*
+    LAYOUT DO SANTUARIO, do chao para cima e em unidades de H.
+
+    A primeira versao empilhava os beirais com espacamento menor que a altura
+    deles e o telhado virou uma pilha de formas coladas; o cranio caia abaixo
+    da linha dos ombros e ficava escondido atras dos dois lutadores. As duas
+    coisas sao erro de LAYOUT, nao de desenho: sem as alturas escritas como
+    uma lista, cada peca era posicionada por uma conta propria e elas se
+    sobrepunham.
+
+        0      chao
+       -1H     topo da plataforma
+       -1.2H   base do cranio          }  o cranio ocupa a faixa que fica
+       -5.2H   topo do cranio          }  ACIMA da cabeca dos lutadores
+       -6H     topo dos pilares
+       -6H..-11H  tres beirais, de 1.7H cada, sem se tocarem
+
+    Onze H de altura, contra ~2.6H de um lutador: a construcao tem que
+    TORREAR sobre eles, senao o dominio tem o tamanho de quem esta dentro.
+  */
+  const H = r * 0.075;
+  const santuario = (() => {
+    const sobe = saiRapido(clamp01((montagem - 0.1) / 0.5));
+    if (sobe <= 0.01) return null;
+    const y = (k: number) => CHAO - k * H * sobe;
+    const larg = H * 4.6;
+    /** beiral: telhado com as pontas viradas para cima */
+    const beiral = (base: number, w: number, alt: number) =>
+      `M${(-w).toFixed(1)} ${base.toFixed(1)}` +
+      ` Q${(-w * 1.22).toFixed(1)} ${(base - alt * 0.62).toFixed(1)} ${(-w * 0.7).toFixed(1)} ${(base - alt * 0.8).toFixed(1)}` +
+      ` L${(w * 0.7).toFixed(1)} ${(base - alt * 0.8).toFixed(1)}` +
+      ` Q${(w * 1.22).toFixed(1)} ${(base - alt * 0.62).toFixed(1)} ${w.toFixed(1)} ${base.toFixed(1)}` +
+      ` L${(w * 0.46).toFixed(1)} ${(base - alt * 0.2).toFixed(1)}` +
+      ` L${(-w * 0.46).toFixed(1)} ${(base - alt * 0.2).toFixed(1)}Z`;
+    const alt = H * 1.7;
+    /*
+      ALTURA DO CRANIO. A 3.2H ele caia na faixa dos ombros e os dois corpos
+      no meio da arena cobriam ele -- a peca mais importante da construcao
+      ficava atras de quem estava lutando. Um lutador tem ~2.6H; a 4.8H o
+      cranio comeca onde as cabecas acabam e sobe dali. A 4.8 ainda restava o
+      maxilar atras da cabeca de quem abre o dominio; a 5.7 a construcao
+      inteira fica limpa acima dos dois.
+    */
+    const cy = y(5.7);
+    const cr = H * 2.3;
+    return (
+      <g transform={`translate(${a.x.toFixed(1)} 0)`} opacity={m}>
+        {/* plataforma */}
+        <path d={`M${(-larg * 1.3).toFixed(1)} ${CHAO} L${(-larg * 1.08).toFixed(1)} ${y(1).toFixed(1)} L${(larg * 1.08).toFixed(1)} ${y(1).toFixed(1)} L${(larg * 1.3).toFixed(1)} ${CHAO}Z`} fill={SILHUETA} opacity={0.97} />
+        {/* pilares, da plataforma ao primeiro beiral */}
+        {[-0.82, -0.32, 0.32, 0.82].map((k, i2) => (
+          <rect key={i2} x={larg * k - H * 0.17} y={y(7.8)} width={H * 0.34} height={Math.max(0, y(1) - y(7.8))} fill={SILHUETA} opacity={0.97} />
+        ))}
+        {/*
+          O CRANIO entre os pilares, ocupando a faixa acima dos ombros dos
+          lutadores. E o que o olho encontra primeiro e o que da um dono ao
+          espaco -- por isso ele vem ANTES dos telhados na ordem de desenho,
+          para os beirais recortarem sobre ele e nao o contrario.
+        */}
+        {/*
+          CONTORNO DO CRANIO. Uma silhueta preta sobre um veu vermelho escuro
+          vira um disco: o olho recebe a mancha e nao a forma. Com o fio claro
+          por cima, a calota, as macas e o maxilar aparecem -- e a mesma
+          solucao do gume das laminas, pela mesma razao.
+        */}
+        {(() => {
+          const d =
+            `M${(-cr).toFixed(1)} ${(cy + cr * 0.12).toFixed(1)}` +
+            ` Q${(-cr * 1.04).toFixed(1)} ${(cy - cr * 1.02).toFixed(1)} 0 ${(cy - cr * 1.02).toFixed(1)}` +
+            ` Q${(cr * 1.04).toFixed(1)} ${(cy - cr * 1.02).toFixed(1)} ${cr.toFixed(1)} ${(cy + cr * 0.12).toFixed(1)}` +
+            // maca do rosto: o degrau que separa a calota do maxilar
+            ` L${(cr * 0.82).toFixed(1)} ${(cy + cr * 0.34).toFixed(1)}` +
+            ` Q${(cr * 0.74).toFixed(1)} ${(cy + cr * 0.62).toFixed(1)} ${(cr * 0.5).toFixed(1)} ${(cy + cr * 0.7).toFixed(1)}` +
+            ` L${(-cr * 0.5).toFixed(1)} ${(cy + cr * 0.7).toFixed(1)}` +
+            ` Q${(-cr * 0.74).toFixed(1)} ${(cy + cr * 0.62).toFixed(1)} ${(-cr * 0.82).toFixed(1)} ${(cy + cr * 0.34).toFixed(1)}Z`;
+          return (
+            <g>
+              <path d={d} fill={SILHUETA} opacity={0.98} />
+              <path d={d} fill="none" stroke={cor.medio} strokeWidth={Math.max(1.6, H * 0.05)} opacity={0.75} />
+            </g>
+          );
+        })()}
+        {/* orbitas acesas: o unico ponto de luz do dominio, e ele esta olhando */}
+        {[-1, 1].map((l) => (
+          <g key={l} filter="url(#pw-glow-medio)">
+            <ellipse cx={l * cr * 0.44} cy={cy} rx={cr * 0.3} ry={cr * 0.25} fill={cor.forte} opacity={0.9} transform={`rotate(${l * 14} ${l * cr * 0.44} ${cy})`} />
+            <ellipse cx={l * cr * 0.44} cy={cy} rx={cr * 0.13} ry={cr * 0.11} fill={cor.claro} opacity={0.85} />
+          </g>
+        ))}
+        <path d={`M0 ${(cy + cr * 0.2).toFixed(1)} L${(cr * 0.13).toFixed(1)} ${(cy + cr * 0.48).toFixed(1)} L${(-cr * 0.13).toFixed(1)} ${(cy + cr * 0.48).toFixed(1)}Z`} fill={cor.forte} opacity={0.6} />
+        {/* mandibula */}
+        <rect x={-cr * 0.46} y={cy + cr * 0.7} width={cr * 0.92} height={cr * 0.24} fill={SILHUETA} opacity={0.98} />
+        {Array.from({ length: 7 }, (_, i2) => (
+          <rect key={i2} x={(i2 - 3) * cr * 0.13 - cr * 0.045} y={cy + cr * 0.7} width={cr * 0.09} height={cr * 0.22} fill={cor.fundo} opacity={0.9} />
+        ))}
+        {/* tres beirais, do mais largo em baixo ao mais estreito em cima */}
+        {[0, 1, 2].map((i2) => {
+          const base = y(7.8 + i2 * 1.75);
+          const w = larg * (1.35 - i2 * 0.26);
+          return (
+            <g key={`t${i2}`}>
+              <path d={beiral(base, w, alt * sobe)} fill={SILHUETA} opacity={0.98} />
+              <path d={beiral(base, w, alt * sobe)} fill="none" stroke={cor.medio} strokeWidth={Math.max(1.4, H * 0.04)} opacity={0.65} />
+            </g>
+          );
+        })}
+      </g>
+    );
+  })();
+
+  return (
+    <g data-dominio="campo-de-laminas">
+      {/* halo atras do campo: o fundo contra o qual as laminas recortam */}
+      <circle cx={a.x} cy={a.y - r * 0.1} r={r * 0.4 * m} fill={cor.fundo} opacity={0.4 * m} />
+      <circle cx={a.x} cy={a.y - r * 0.1} r={r * 0.44 * m} fill="none" stroke={cor.forte} strokeWidth={r * 0.016} opacity={0.32 * m} />
+      {santuario}
+      {planos.map((plano, pi) =>
+        Array.from({ length: plano.quantidade }, (_, i) => {
+          const semente = pi * 31 + i * 17;
+          // sobem em ORDEM: tudo junto le como imagem aparecendo, em ordem le
+          // como espaco sendo construido em volta de quem o abriu
+          const atraso = clamp01((montagem - (pi * 3 + i) * 0.035) / 0.4);
+          if (atraso <= 0) return null;
+          const sobe = saiRapido(atraso);
+          const x = a.x + (ruido(semente) - 0.5) * r * plano.espalha;
+          const h = r * plano.escala * (0.34 + 0.28 * ruido(semente * 3)) * sobe;
+          const larg = h * (0.085 + 0.03 * ruido(semente * 5));
+          const inc = (ruido(semente * 7) - 0.5) * 26;
+          // lamina: base larga, ponta fina, um lado reto e o outro curvo
+          const d =
+            `M${(-larg).toFixed(1)} 0` +
+            ` Q${(-larg * 0.75).toFixed(1)} ${(-h * 0.55).toFixed(1)} 0 ${(-h).toFixed(1)}` +
+            ` Q${(larg * 0.55).toFixed(1)} ${(-h * 0.5).toFixed(1)} ${larg.toFixed(1)} 0Z`;
+          return (
+            <g key={`${pi}-${i}`} transform={`translate(${x.toFixed(1)} ${CHAO}) rotate(${inc.toFixed(1)})`}>
+              <path d={d} fill={SILHUETA} opacity={plano.opacidade * m} />
+              {/* gume: o unico lugar em que a lamina pega a luz do dominio */}
+              <path
+                d={`M0 ${(-h).toFixed(1)} Q${(-larg * 0.75).toFixed(1)} ${(-h * 0.55).toFixed(1)} ${(-larg).toFixed(1)} 0`}
+                fill="none"
+                stroke={cor.medio}
+                strokeWidth={Math.max(1.5, h * 0.012)}
+                opacity={0.8 * plano.opacidade * m}
+              />
+              {/* sombra no chao: sem ela a lamina flutua em vez de estar fincada */}
+              <ellipse cx={0} cy={2} rx={larg * 2.1} ry={larg * 0.3} fill={SILHUETA} opacity={0.5 * plano.opacidade * m} />
+            </g>
+          );
+        }),
+      )}
+    </g>
+  );
+};
+
+/**
  * EXPANSAO DE DOMINIO: a arena deixa de ser a arena.
  *
  * A tecnica existia como telaBranca + nome + chuva de cortes, e foi descrita
@@ -769,6 +1029,7 @@ const Dominio: React.FC<{ e: PoderEvent; f: number }> = ({ e, f }) => {
         uma tinta. Ele e a peca que faz o cenario mudar.
       */}
       <circle cx={a.x} cy={a.y} r={r * respira} fill={`url(#${id})`} opacity={clamp01(fecha)} />
+      <EstruturaDoDominio e={e} f={f} r={r} />
       {/* cortes a deriva no fundo do dominio, em tres profundidades */}
       {Array.from({ length: 22 }, (_, i) => {
         const prof = 0.35 + 0.65 * ruido(i * 3 + 1);

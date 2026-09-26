@@ -655,7 +655,7 @@ export const POSES_DE_APOIO = new Set<PoseName>([
   "absorver", "absorverKatana", "pousoKatana",
   "corteSobe", "corteDesce", "corteLateral", "corteRapido", "corteMergulho",
   "corridaKatana1", "corridaKatana2", "saltoParaTras", "lancar", "bracosFrente",
-  "katanaErguida",
+  "katanaErguida", "oracao",
 ]);
 
 const POSES_DE_LOCOMOCAO = new Set<PoseName>([

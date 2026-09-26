@@ -79,6 +79,8 @@ export type PoseName =
   | "charge"
   | "danca"
   | "placa"
+  /** maos unidas a frente do peito: o gesto que abre um dominio */
+  | "oracao"
   // katana
   | "guardaKatana"
   | "bloqueioKatana"

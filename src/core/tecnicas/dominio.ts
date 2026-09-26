@@ -23,28 +23,57 @@ export const dominio: Tecnica = (ctx) => {
   } = ctx;
 
       const m = (estado[G].x + estado[F].x) / 2;
-      // andando para a marca, nao deslizando ate ela
-      pose(G, "retreat", c + 10, m - lado * 250);
-      pose(F, "advance", c + 10, m + lado * 250);
+      /*
+        ELE SE AFASTA ANTES DE ABRIR.
+
+        Nao e enfeite de coreografia: abrir um dominio colado no adversario
+        nao tem leitura nenhuma, porque o espectador nao ve o gesto -- ve dois
+        corpos juntos e uma tela mudando de cor. Recuando, o gesto acontece
+        num corpo isolado, e o dominio nasce visivelmente DELE.
+
+        `retreat` e nao `oracao` para o deslocamento: pose de apoio que nao e
+        de locomocao faz o corpo escorregar em vez de dar passos (ver
+        POSES_DE_APOIO em animation/corpo). O que anda e a passada; a oracao
+        so comeca depois que os pes pararam.
+      */
+      pose(G, "guard", c + 10, m - lado * 230);
+      pose(F, "retreat", c + s(0.55), m + lado * 620);
 
       /*
-        CARGA. O dominio nao pode abrir do nada: ele precisa de alguem
-        abrindo. Pose de acumulo, energia juntando nas maos (ancorada, entao
-        presa a elas), e a camera em cima dele.
+        A ORACAO. As maos se unem e a partir daqui nada mais no corpo se mexe:
+        o proximo movimento e o mundo, nao ele. E a pausa que faz a expansao
+        chegar como consequencia de um gesto e nao como efeito disparado.
       */
-      const carrega = c + s(0.35);
-      pose(F, "charge", carrega);
+      const reza = c + s(0.7);
+      pose(F, "oracao", reza);
+      // a camera fecha NELE: e o gesto que precisa ser visto, nao a arena
+      cameraKeys.push({ frame: reza, center: { x: estado[F].x, y: ALTURA_QUADRIL - 110 }, zoom: 1.45, ease: s(0.4), cena: true });
+
+      /*
+        A energia junta nas maos unidas -- ancorada, entao presa a elas. Ela
+        so aparece DEPOIS da pose assentar: nascendo junto, o gesto e a carga
+        acontecem no mesmo instante e um esconde o outro.
+      */
+      const carrega = reza + s(0.45);
       poder({
         tipo: "esferaInferno",
         quem: F,
         ancora: "entreMaos",
-        a: { x: 20, y: -10 },
+        /*
+          PEQUENA E A FRENTE DAS MAOS. Em forca 40 com offset colado no corpo
+          ela cobria o peito e metade da cabeca dele: a carga escondia o
+          gesto que a carga existe para acompanhar. O que precisa ser visto
+          aqui sao as maos unidas, e a energia e o que confirma elas.
+        */
+        a: { x: 44, y: -4 },
         from: carrega,
-        to: carrega + s(0.5),
-        forca: 46,
+        to: carrega + s(0.6),
+        forca: 20,
         paleta: "sombra",
       });
-      cameraKeys.push({ frame: carrega, center: { x: estado[F].x, y: ALTURA_QUADRIL - 150 }, zoom: 1.3, ease: 10, cena: true });
+      // o chao sente antes da arena: o dominio ja esta chegando
+      poder({ tipo: "rachadura", a: { x: estado[F].x, y: 0 }, from: carrega + s(0.25), to: carrega + s(1.4), forca: 320 });
+      cameraKeys.push({ frame: carrega + s(0.3), center: { x: estado[F].x, y: ALTURA_QUADRIL - 130 }, zoom: 1.6, ease: s(0.45), shake: 7, cena: true });
 
       /*
         A EXPANSAO. Sai do peito de F e engole a arena.
@@ -55,7 +84,9 @@ export const dominio: Tecnica = (ctx) => {
         expande, tem borda e troca o mundo por dentro (ver effects/Poderes,
         Dominio).
       */
-      const abre = carrega + s(0.55);
+      const abre = carrega + s(0.65);
+      // as maos ABREM: e o gesto que solta o dominio, e por isso ele so pode
+      // existir depois da oracao ter sido vista
       pose(F, "bracosFrente", abre);
       poder({ tipo: "telaBranca", from: abre, to: abre + 4 });
       poder({

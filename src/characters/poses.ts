@@ -451,6 +451,43 @@ const ESCRITAS: Record<PoseName, Pose> = {
     kneeFront: { x: 40, y: 44 },
     footFront: { x: 60, y: 92 },
   }),
+  /**
+   * ORACAO: as duas maos unidas a frente do peito.
+   *
+   * O gesto que abre um dominio. Tres coisas fazem ele ler como ritual e nao
+   * como "parado de braco dobrado":
+   *
+   *   AS MAOS NO MESMO PONTO. Duas unidades de diferenca entre elas, o
+   *   bastante para as duas aparecerem e pouco o bastante para lerem como uma
+   *   so. Separadas, viram guarda.
+   *   AS MAOS A FRENTE DO PEITO, NAO SOB O QUEIXO. Primeira tentativa: maos
+   *   em y -84, oito unidades acima do pescoco. A cabeca deste boneco e um
+   *   circulo grande, e ela cobria as duas -- o gesto existia na pose e nao
+   *   existia na tela. A 38 a frente e na altura do peito, o triangulo
+   *   antebraco-antebraco recorta contra o tronco e se le de longe.
+   *   OS COTOVELOS BAIXOS, quase na cintura. E o que faz os antebracos
+   *   subirem na diagonal; cotovelo na altura da mao daria um retangulo e
+   *   perderia o gesto.
+   *   OS PES JUNTOS E O CORPO RETO. Toda pose de luta deste motor tem base
+   *   aberta e quadril baixo; fechar a base e endireitar o tronco tira o
+   *   corpo da briga, que e o que diz que o que vem agora nao e um golpe.
+   *
+   * Pose de APOIO (os pes sustentam) mas nao de locomocao: deslocar com ela
+   * faria o corpo escorregar sem passada. Quem se afasta usa `retreat` e so
+   * depois assume esta -- que e a ordem do gesto de qualquer forma.
+   */
+  oracao: p({
+    neck: { x: 0, y: -76 },
+    head: { x: 0, y: -116 },
+    elbowFront: { x: 16, y: -18 },
+    handFront: { x: 38, y: -62 },
+    elbowBack: { x: 12, y: -16 },
+    handBack: { x: 36, y: -60 },
+    kneeBack: { x: -12, y: 48 },
+    footBack: { x: -20, y: 92 },
+    kneeFront: { x: 12, y: 48 },
+    footFront: { x: 16, y: 92 },
+  }),
   /** katana erguida na vertical sobre a cabeca */
   katanaErguida: p({
     neck: { x: 0, y: -74 },
