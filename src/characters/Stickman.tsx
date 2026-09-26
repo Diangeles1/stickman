@@ -201,8 +201,52 @@ export const Stickman: React.FC<StickmanProps> = ({
   const corLuz = preset.tracos?.luzDeContorno ?? clarear(preset.stroke, 0.45);
   const corSombra = escurecer(preset.stroke, 0.72);
 
+  /*
+    ESTICA COM A VELOCIDADE.
+
+    Ate aqui o corpo a 300 unidades por quadro era desenhado exatamente igual
+    ao corpo parado. Isso e o que mais separa este motor de animacao de luta
+    de verdade, e nenhuma quantidade de efeito em volta conserta: linhas de
+    velocidade, rastro e brilho sao coisas ADICIONADAS ao lado do corpo, e o
+    que falta e o CORPO responder.
+
+    Em animacao 2D a forma se alonga na direcao em que viaja e encolhe na
+    perpendicular. Nao e estilo: e como o olho integra um objeto que se move
+    mais rapido do que o quadro consegue registrar.
+
+    APLICADO NO DESENHO, NUNCA NO ESQUELETO. Os ossos mantem o comprimento
+    (ver skeleton: membro que estica e encolhe le como borracha) e, mais
+    importante, a distancia de combate e a cinematica inversa sao calibradas
+    contra o esqueleto -- deformar ali tiraria todo golpe do alcance e
+    reprovaria em scripts/contato.mts. Aqui e so a matriz de desenho.
+
+    LIMIAR 14: o mesmo das linhas de velocidade. Abaixo disso o corpo esta
+    andando, e andar nao deforma nada. A 60 unidades por quadro (acima do p99
+    medido, que e 28) a deformacao chega ao teto de 22%.
+
+    VOLUME QUASE PRESERVADO: o que estica em x encolhe em y, mas nao na mesma
+    proporcao. Preservar volume exato deixa o corpo fino demais nos picos; a
+    animacao classica tambem "cola" aqui.
+  */
+  const rapidez = Math.abs(velocidade);
+  const k = Math.max(0, Math.min(1, (rapidez - 14) / 46));
+  const esticaX = 1 + 0.22 * k;
+  const esticaY = 1 - 0.14 * k;
+  /*
+    O CENTRO DA DEFORMACAO E O QUADRIL, e nao o meio do corpo: e onde a massa
+    esta. Deformar em torno dos pes levantaria a cabeca do lugar, e em torno
+    da cabeca arrancaria os pes do chao.
+  */
+  const pivo = j.hip;
+  const deforma =
+    k > 0.01
+      ? `translate(${pivo.x.toFixed(1)} ${pivo.y.toFixed(1)}) ` +
+        `scale(${esticaX.toFixed(3)} ${esticaY.toFixed(3)}) ` +
+        `translate(${(-pivo.x).toFixed(1)} ${(-pivo.y).toFixed(1)})`
+      : undefined;
+
   return (
-    <g data-fighter={preset.id} opacity={opacity}>
+    <g data-fighter={preset.id} opacity={opacity} transform={deforma}>
       <defs>
         {/*
           A LUZ E A SOMBRA COMO MASCARAS DA SILHUETA INTEIRA, e nao como uma
