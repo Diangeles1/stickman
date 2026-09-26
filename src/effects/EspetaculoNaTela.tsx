@@ -22,7 +22,9 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+import { POSES } from "../characters/poses";
 import { PRESETS } from "../characters/presets";
+import { Stickman } from "../characters/Stickman";
 import { MarcaDagua } from "./MarcaDagua";
 import type { FighterId, Timeline } from "../core/types";
 import {
@@ -61,6 +63,10 @@ const corDe = (id: FighterId): string =>
   id === "black" ? "#dfe5f5" : PRESETS[id].stroke;
 
 /** contorno grosso de letreiro: em SVG o traco vai por baixo do preenchimento */
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+/** chega devagar: rapido no comeco e assentando no fim */
+const saiDevagar = (t: number) => 1 - (1 - clamp01(t)) ** 3;
+
 const contorno = (px: number, cor = "#000"): React.SVGProps<SVGTextElement> => ({
   stroke: cor,
   strokeWidth: px,
@@ -365,6 +371,167 @@ const LogoDoFinal: React.FC<{ idade: number; fps: number; largura: number; altur
   );
 };
 
+/** joinha desenhado a mao: em SVG proprio, porque emoji depende da fonte
+ *  instalada na maquina que renderiza, e o Chrome do render nao tem as
+ *  mesmas do computador onde isto foi escrito. */
+const Joinha: React.FC<{ escala: number }> = ({ escala }) => (
+  <g transform={`scale(${escala})`}>
+    <path
+      d="M -26 -6 L -26 40 L -6 40 L -6 -6 Z"
+      fill="#ffffff"
+      stroke="#000000"
+      strokeWidth={7}
+      strokeLinejoin="round"
+    />
+    <path
+      d="M -2 40 L 30 40 C 40 40 44 33 42 25 L 34 -4 C 32 -12 26 -16 18 -16 L 6 -16 L 10 -34 C 12 -44 6 -52 -2 -50 C -7 -49 -9 -45 -10 -40 L -14 -20 C -15 -14 -12 -8 -6 -6 L -2 -6 Z"
+      fill="#ffffff"
+      stroke="#000000"
+      strokeWidth={7}
+      strokeLinejoin="round"
+    />
+  </g>
+);
+
+/**
+ * ENCERRAMENTO: o vencedor vem para cima da camera e fecha a lona.
+ *
+ * Um botao parado no canto e um pedido que o espectador ja aprendeu a
+ * ignorar. Aqui quem pede e o personagem que ele acabou de ver vencer, e o
+ * pedido acontece COMO ACAO: ele corre na direcao de quem assiste, alcanca o
+ * alto do quadro e puxa uma lona que cobre a cena inteira. O texto aparece na
+ * lona -- ou seja, dentro do mundo, e nao colado por cima dele.
+ *
+ * Quatro tempos, e a ordem e o que faz funcionar:
+ *
+ *   CORRE      ele se aproxima. A escala cresce e o chao DESCE no quadro:
+ *              as duas coisas juntas leem como aproximacao; so a escala
+ *              leria como zoom.
+ *   ALCANCA    para, braços para cima (a pose de salto ja tem as maos acima
+ *              da cabeca), e e ai que fica claro que ele vai puxar algo.
+ *   PUXA       a lona desce. A borda de baixo ONDULA e passa do ponto antes
+ *              de assentar -- pano tem peso e nao para de uma vez; reta e
+ *              rigida leria como retangulo preto aparecendo.
+ *   PEDE       o texto entra na lona ja parada. Texto entrando junto com o
+ *              pano em movimento disputa o olho com ele.
+ */
+const Encerramento: React.FC<{
+  idade: number;
+  fps: number;
+  largura: number;
+  altura: number;
+  quem: FighterId;
+}> = ({ idade, fps, largura, altura, quem }) => {
+  if (idade < 0) return null;
+  const preset = PRESETS[quem];
+
+  // ---- 1. corre para a camera ---------------------------------------------
+  const CORRIDA = 42;
+  const k = clamp01(idade / CORRIDA);
+  const chegou = idade >= CORRIDA;
+  // ciclo de passada: duas poses alternando. Rapido o bastante para ler como
+  // corrida, nao tao rapido que vire vibracao
+  const passada = Math.floor(idade / 4) % 2 === 0 ? POSES.run1 : POSES.run2;
+  /*
+    ATE ONDE ELE CRESCE, e isto e conta e nao gosto.
+
+    Da sola ao alto da cabeca o corpo mede cerca de 682 unidades na escala 1
+    (267 do quadril ao pe, mais 322 do quadril a cabeca, mais 93 de raio do
+    cranio). Numa tela de 1920 com o chao a 95% da altura, a escala 2.7 da
+    1841 de corpo e a cabeca sai por cima da borda -- foi o que aconteceu na
+    primeira versao, e cabeca cortada le como erro, nao como proximidade.
+
+    Em 2.0 o corpo mede 1364 e o alto da cabeca cai a 460 do topo: ele chega
+    perto o bastante para dominar o quadro e ainda cabe inteiro nele.
+  */
+  const escala = 0.5 + 1.5 * saiDevagar(k);
+  const chao = altura * (0.52 + 0.43 * saiDevagar(k));
+  const cx = largura * (0.18 + 0.32 * saiDevagar(k));
+
+  // ---- 2. alcanca ---------------------------------------------------------
+  const ALCANCA = CORRIDA + 16;
+  const esticando = clamp01((idade - CORRIDA) / 16);
+
+  // ---- 3. a lona desce ----------------------------------------------------
+  const PUXA_LONA = ALCANCA - 4;
+  const q = clamp01((idade - PUXA_LONA) / 22);
+  // passa do ponto e volta: pano pesado nao para de uma vez
+  const descida = saiDevagar(q) * (1 + 0.06 * Math.sin(q * Math.PI));
+  const base = altura * 1.04 * descida;
+  // a barriga do pano some conforme ele assenta
+  const barriga = 150 * (1 - q) + 26 * (1 - clamp01((idade - PUXA_LONA - 22) / 20));
+
+  // ---- 4. o pedido --------------------------------------------------------
+  const TEXTO = PUXA_LONA + 26;
+  const molaTexto = spring({ frame: idade - TEXTO, fps, config: { damping: 11, stiffness: 220, mass: 0.6 } });
+  const pulso = 1 + 0.05 * Math.sin((idade - TEXTO) * 0.26);
+
+  return (
+    <g>
+      {/*
+        O corpo sai assim que a lona passa por ele. A 0.75 as pernas ainda
+        apareciam por baixo da borda do pano, o que le como recorte mal feito
+        -- quem puxa a lona fica ATRAS dela.
+      */}
+      {q < 0.42 && (
+        <g transform={`translate(${cx.toFixed(1)} ${chao.toFixed(1)}) scale(${escala.toFixed(3)})`}>
+          <Stickman
+            preset={preset}
+            pose={chegou ? POSES.jump : passada}
+            baseX={0}
+            baseY={0}
+            facing={1}
+            giro={1}
+            spin={0}
+            scaleExtra={1}
+            opacity={1 - clamp01((esticando - 1) * 0)}
+          />
+        </g>
+      )}
+
+      {/* A LONA. Borda de baixo em curva: e ela que da peso ao pano. */}
+      {q > 0 && (
+        <path
+          d={
+            `M0 0 L${largura} 0 L${largura} ${base.toFixed(1)} ` +
+            `Q${(largura / 2).toFixed(1)} ${(base + barriga).toFixed(1)} 0 ${base.toFixed(1)} Z`
+          }
+          fill="#07080c"
+        />
+      )}
+      {/* vinco de luz na dobra: sem ele a lona e um retangulo preto chapado */}
+      {q > 0 && (
+        <path
+          d={`M0 ${base.toFixed(1)} Q${(largura / 2).toFixed(1)} ${(base + barriga).toFixed(1)} ${largura} ${base.toFixed(1)}`}
+          fill="none"
+          stroke="#2a2f3f"
+          strokeWidth={7}
+        />
+      )}
+
+      {/* O PEDIDO, na lona */}
+      {idade >= TEXTO && (
+        <g transform={`translate(${largura / 2} ${altura * 0.42}) scale(${batida(molaTexto)})`}>
+          <text textAnchor="middle" fontFamily={PILHA} fontSize={128} fill="#ffffff" {...contorno(12)} letterSpacing={2}>
+            GOSTOU?
+          </text>
+          <g transform={`translate(0 130) scale(${pulso})`}>
+            <text textAnchor="middle" fontFamily={PILHA} fontSize={150} fill="#ffd23f" {...contorno(14)} letterSpacing={3}>
+              SE INSCREVE!
+            </text>
+          </g>
+          <g transform={`translate(0 270) scale(${pulso})`}>
+            <Joinha escala={2.6} />
+          </g>
+          <text y={510} textAnchor="middle" fontFamily={PILHA} fontSize={78} fill="#ffffff" {...contorno(10)} letterSpacing={2}>
+            DEIXA O LIKE!
+          </text>
+        </g>
+      )}
+    </g>
+  );
+};
+
 /**
  * O FIM. Duas versoes do mesmo bloco, e o que muda entre elas e se a luta
  * teve vencedor:
@@ -389,7 +556,27 @@ const FinalAberto: React.FC<{
   corA: string;
   corB: string;
   vencedor?: { nome: string; cor: string };
-}> = ({ idade, fps, largura, altura, a, b, corA, corB, vencedor }) => {
+  vencedorId?: FighterId;
+}> = ({ idade, fps, largura, altura, a, b, corA, corB, vencedor, vencedorId }) => {
+  /**
+   * Quando o encerramento comeca, contado do inicio do fim.
+   *
+   * Depois da pergunta (que entra em 100) e nao junto: a pergunta cobra a
+   * aposta da tela de escolha e precisa ser lida sozinha. O vencedor so entra
+   * correndo quando ela ja foi entendida.
+   */
+  const ENTRADA_DO_BOTAO = 158;
+  /*
+    O QUE ESTAVA NA TELA SAI ANTES DELE CHEGAR.
+
+    O nome de quem venceu e a pergunta ficavam no quadro enquanto o vencedor
+    corria para a camera, e o corpo dele passava por cima das letras. Duas
+    camadas de informacao disputando o mesmo espaco: nenhuma das duas e lida.
+
+    Some nos 26 quadros que antecedem a chegada, entao quando ele domina o
+    quadro ja nao ha texto atras dele.
+  */
+  const saiTexto = 1 - clamp01((idade - (ENTRADA_DO_BOTAO - 26)) / 22);
   const escurece = Math.min(0.45, idade / 30);
   const nomes = idade - 45;
   const pergunta = idade - ESPERA_DA_PERGUNTA;
@@ -399,8 +586,8 @@ const FinalAberto: React.FC<{
   return (
     <g>
       <rect width={largura} height={altura} fill="#000" opacity={escurece} />
-      {nomes >= 0 && vencedor && (
-        <g transform={`translate(${largura / 2} ${altura * 0.45}) scale(${batida(molaNomes)})`}>
+      {nomes >= 0 && vencedor && saiTexto > 0 && (
+        <g opacity={saiTexto} transform={`translate(${largura / 2} ${altura * 0.45}) scale(${batida(molaNomes)})`}>
           <text textAnchor="middle" fontFamily={PILHA} fontSize={150} fill={vencedor.cor} {...contorno(14)}>
             {vencedor.nome}
           </text>
@@ -409,8 +596,8 @@ const FinalAberto: React.FC<{
           </text>
         </g>
       )}
-      {nomes >= 0 && !vencedor && (
-        <g transform={`translate(${largura / 2} ${altura * 0.47}) scale(${batida(molaNomes)})`}>
+      {nomes >= 0 && !vencedor && saiTexto > 0 && (
+        <g opacity={saiTexto} transform={`translate(${largura / 2} ${altura * 0.47}) scale(${batida(molaNomes)})`}>
           <text x={-40} textAnchor="end" fontFamily={PILHA} fontSize={130} fill={corA} {...contorno(12)}>
             {a}
           </text>
@@ -422,8 +609,8 @@ const FinalAberto: React.FC<{
           </text>
         </g>
       )}
-      {pergunta >= 0 && (
-        <g transform={`translate(${largura / 2} ${altura * 0.63}) rotate(-3) scale(${batida(molaPergunta) * pulso})`}>
+      {pergunta >= 0 && saiTexto > 0 && (
+        <g opacity={saiTexto} transform={`translate(${largura / 2} ${altura * 0.63}) rotate(-3) scale(${batida(molaPergunta) * pulso})`}>
           {vencedor ? (
             <>
               <text textAnchor="middle" fontFamily={PILHA} fontSize={136} fill="#ffd23f" {...contorno(14)} letterSpacing={3}>
@@ -450,6 +637,15 @@ const FinalAberto: React.FC<{
             </>
           )}
         </g>
+      )}
+      {vencedorId && (
+        <Encerramento
+          idade={idade - ENTRADA_DO_BOTAO}
+          fps={fps}
+          largura={largura}
+          altura={altura}
+          quem={vencedorId}
+        />
       )}
     </g>
   );
@@ -586,6 +782,7 @@ export const Espetaculo: React.FC<{ timeline: Timeline }> = ({ timeline }) => {
                   }
                 : undefined
             }
+            vencedorId={e.ko?.vencedor}
           />
         )}
       </svg>

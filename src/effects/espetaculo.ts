@@ -530,16 +530,32 @@ const montarCinematico = (
     .map((m) => real(m.contact));
   // o narrador so fala no fim: "Quem deve vencer?", junto com a pergunta na
   // tela. Durante a luta quem conta a historia sao os efeitos.
-  const falas: { real: number; fala: Fala }[] =
-    final === undefined
-      ? []
-      : [
-          {
-            real: final + ESPERA_DA_PERGUNTA + 6,
-            // com vencedor o narrador anuncia; sem, ele devolve a pergunta
-            fala: ko ? (ko.vencedor === "red" ? "venceu_red" : "venceu_black") : "quem",
-          },
-        ];
+  /*
+    O NARRADOR FALA DUAS VEZES NO FIM, em sequencia e nunca por cima:
+    primeiro o resultado, depois o pedido.
+
+    A fala do like ("Da like e se inscreve no canal!") ja existia no motor e
+    so era usada em luta com placa de vencedor -- a luta cinematica nunca
+    chegava nela. O audio estava gravado e o video nao pedia inscricao.
+
+    O intervalo entre as duas e o comprimento da primeira mais folga: falas
+    sobrepostas viram ruido e nenhuma das duas e entendida.
+  */
+  const falas: { real: number; fala: Fala }[] = [];
+  if (final !== undefined) {
+    const anuncio = final + ESPERA_DA_PERGUNTA + 6;
+    const resultado: Fala = ko
+      ? ko.vencedor === "red"
+        ? "venceu_red"
+        : "venceu_black"
+      : "quem";
+    falas.push({ real: anuncio, fala: resultado });
+    // o pedido entra junto com o botao aparecendo na tela
+    falas.push({
+      real: anuncio + Math.round(FALAS[resultado].segundos * 60) + 26,
+      fala: "like",
+    });
+  }
   return {
     ko,
     rotulos,

@@ -145,8 +145,11 @@ export const choqueDivisor: Tecnica = (ctx) => {
     venceu e a pergunta que cobra a aposta da tela de escolha -- cerca de
     quatro segundos e meio de coisas acontecendo. Com os 2.4 que havia aqui, o
     video acabava 43 quadros depois de o fecho comecar e cortava no meio dele.
+
+    Subiu de 6 para 8 quando entrou a chamada de inscricao: o botao aparece
+    depois da pergunta e o narrador ainda fala por cima de um segundo e meio.
   */
-  const fim = parte + s(6.0);
+  const fim = parte + s(8.0);
   // o vencedor continua de costas: ele nao precisa olhar para tras
   pose(F, "idle", fim);
   cameraKeys.push({ frame: parte + s(1.2), center: { x: m, y: ALTURA_QUADRIL - 130 }, zoom: 0.78, ease: s(1.0), cena: true });
