@@ -138,7 +138,15 @@ export const choqueDivisor: Tecnica = (ctx) => {
   });
   cameraKeys.push({ frame: parte, center: { x: m + lado * 340, y: ALTURA_QUADRIL - 150 }, zoom: 1.1, ease: s(0.5), cena: true });
 
-  const fim = parte + s(2.4);
+  /*
+    O FIM PRECISA DE TEMPO DEPOIS DA QUEDA, e nao e margem: e o fecho inteiro.
+
+    Depois do corpo cair vem o K.O. (78 quadros apos o golpe), o nome de quem
+    venceu e a pergunta que cobra a aposta da tela de escolha -- cerca de
+    quatro segundos e meio de coisas acontecendo. Com os 2.4 que havia aqui, o
+    video acabava 43 quadros depois de o fecho comecar e cortava no meio dele.
+  */
+  const fim = parte + s(6.0);
   // o vencedor continua de costas: ele nao precisa olhar para tras
   pose(F, "idle", fim);
   cameraKeys.push({ frame: parte + s(1.2), center: { x: m, y: ALTURA_QUADRIL - 130 }, zoom: 0.78, ease: s(1.0), cena: true });

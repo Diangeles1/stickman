@@ -89,32 +89,39 @@ export const CorpoDividido: React.FC<DivisaoProps> = ({
   const ny = ux;
 
   /*
-    O TEMPO DAS DUAS METADES E DIFERENTE, e e isso que faz o corpo parecer
-    ter sido cortado em vez de explodido em duas pecas.
+    AS DUAS METADES TOMBAM. Nao deslizam: TOMBAM.
 
-    Uma perdeu o apoio: ela se afasta, escorrega pelo proprio plano do corte
-    e cai girando. A outra ainda tem os pes no chao -- ela cede depois, e
-    muito menos. Duas pecas saindo simetricas leem como objeto quebrado;
-    assimetricas leem como corpo.
+    A versao anterior afastava as metades e somava uma queda vertical grande,
+    girando 15 graus em torno do ponto do corte. O resultado foi descrito
+    assim: "o azul morre e fica em pe morto?". Estava certo -- as duas ficavam
+    verticais lado a lado e afundavam no chao, o que le como recorte
+    deslizando, nao como corpo caindo.
 
-    As tres distancias sao FRACOES de `afastamento`, e as fracoes sao baixas
-    de proposito: a primeira versao usava 1.9 de queda e a metade de cima
-    saia inteira do quadro em meio segundo. O corte tem que ser visto, e para
-    ser visto as duas metades precisam continuar na tela.
+    O que faltava era o PIVO. Um corpo cortado nao desce: ele perde o
+    equilibrio e gira em torno do proprio pe. Com o pivo no CHAO, embaixo de
+    cada metade, a mesma rotacao que antes nao dizia nada agora deita a peca
+    inteira -- e e a rotacao, nao a translacao, que conta a queda.
+
+    O tombo usa t ao quadrado porque queda acelera; o afastamento usa
+    saiRapido porque o empurrao do corte acontece todo no comeco e vai
+    morrendo. Separar as duas curvas e o que faz as metades se afastarem
+    primeiro e so depois desabarem.
   */
-  const sep = saiRapido(t) * afastamento * 0.85;
-  const desliza = saiRapido(t) * afastamento;
-  const queda = t * t * afastamento * 1.55;
+  const tomba = t * t;
+  const sep = saiRapido(t) * afastamento * 0.55;
+  const desliza = saiRapido(t) * afastamento * 0.3;
 
   const cima = {
     dx: -nx * sep + ux * desliza,
-    dy: -ny * sep + uy * desliza + queda,
-    giro: t * 15,
+    dy: -ny * sep + uy * desliza,
+    giro: tomba * 84,
+    pivo: { x: corte.x + afastamento * 0.3, y: 0 },
   };
   const baixo = {
-    dx: nx * sep * 0.55,
-    dy: ny * sep * 0.55 + queda * 0.22,
-    giro: -t * 5,
+    dx: nx * sep * 0.8,
+    dy: ny * sep * 0.8,
+    giro: -tomba * 71,
+    pivo: { x: corte.x - afastamento * 0.3, y: 0 },
   };
 
   /**
@@ -151,7 +158,7 @@ export const CorpoDividido: React.FC<DivisaoProps> = ({
       key={chave}
       transform={
         `translate(${m.dx.toFixed(1)} ${m.dy.toFixed(1)}) ` +
-        `rotate(${m.giro.toFixed(2)} ${corte.x.toFixed(1)} ${corte.y.toFixed(1)})`
+        `rotate(${m.giro.toFixed(2)} ${m.pivo.x.toFixed(1)} ${m.pivo.y.toFixed(1)})`
       }
     >
       <g mask={`url(#${uid}-${acima ? "a" : "b"})`}>

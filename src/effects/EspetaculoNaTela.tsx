@@ -365,7 +365,20 @@ const LogoDoFinal: React.FC<{ idade: number; fps: number; largura: number; altur
   );
 };
 
-/** final aberto: "BLACK vs RED" e a pergunta que puxa comentario */
+/**
+ * O FIM. Duas versoes do mesmo bloco, e o que muda entre elas e se a luta
+ * teve vencedor:
+ *
+ *   sem vencedor  "BLACK vs RED" e "QUEM DEVE VENCER?" -- a pergunta puxa o
+ *                 comentario porque ninguem ganhou
+ *   com vencedor  o nome de quem venceu e "VOCE ACERTOU?" -- que cobra a
+ *                 aposta feita na tela de escolha, no comeco do video
+ *
+ * A segunda existe porque o video abre pedindo para escolher um personagem.
+ * Terminar com "quem deve vencer?" depois de um deles ter sido partido ao
+ * meio faria a pergunta errada, e pior: jogaria fora a unica coisa que o
+ * gancho prometeu entregar.
+ */
 const FinalAberto: React.FC<{
   idade: number;
   fps: number;
@@ -375,7 +388,8 @@ const FinalAberto: React.FC<{
   b: string;
   corA: string;
   corB: string;
-}> = ({ idade, fps, largura, altura, a, b, corA, corB }) => {
+  vencedor?: { nome: string; cor: string };
+}> = ({ idade, fps, largura, altura, a, b, corA, corB, vencedor }) => {
   const escurece = Math.min(0.45, idade / 30);
   const nomes = idade - 45;
   const pergunta = idade - ESPERA_DA_PERGUNTA;
@@ -385,7 +399,17 @@ const FinalAberto: React.FC<{
   return (
     <g>
       <rect width={largura} height={altura} fill="#000" opacity={escurece} />
-      {nomes >= 0 && (
+      {nomes >= 0 && vencedor && (
+        <g transform={`translate(${largura / 2} ${altura * 0.45}) scale(${batida(molaNomes)})`}>
+          <text textAnchor="middle" fontFamily={PILHA} fontSize={150} fill={vencedor.cor} {...contorno(14)}>
+            {vencedor.nome}
+          </text>
+          <text y={120} textAnchor="middle" fontFamily={PILHA} fontSize={110} fill="#ffffff" {...contorno(12)} letterSpacing={4}>
+            VENCE!
+          </text>
+        </g>
+      )}
+      {nomes >= 0 && !vencedor && (
         <g transform={`translate(${largura / 2} ${altura * 0.47}) scale(${batida(molaNomes)})`}>
           <text x={-40} textAnchor="end" fontFamily={PILHA} fontSize={130} fill={corA} {...contorno(12)}>
             {a}
@@ -399,16 +423,32 @@ const FinalAberto: React.FC<{
         </g>
       )}
       {pergunta >= 0 && (
-        <g transform={`translate(${largura / 2} ${altura * 0.6}) rotate(-3) scale(${batida(molaPergunta) * pulso})`}>
-          <text textAnchor="middle" fontFamily={PILHA} fontSize={120} fill="#ffd23f" {...contorno(14)} letterSpacing={3}>
-            QUEM DEVE
-          </text>
-          <text y={120} textAnchor="middle" fontFamily={PILHA} fontSize={140} fill="#ffd23f" {...contorno(14)} letterSpacing={3}>
-            VENCER?
-          </text>
-          <text y={205} textAnchor="middle" fontFamily={PILHA} fontSize={54} fill="#ffffff" {...contorno(8)}>
-            COMENTA AI!
-          </text>
+        <g transform={`translate(${largura / 2} ${altura * 0.63}) rotate(-3) scale(${batida(molaPergunta) * pulso})`}>
+          {vencedor ? (
+            <>
+              <text textAnchor="middle" fontFamily={PILHA} fontSize={136} fill="#ffd23f" {...contorno(14)} letterSpacing={3}>
+                VOCE
+              </text>
+              <text y={128} textAnchor="middle" fontFamily={PILHA} fontSize={150} fill="#ffd23f" {...contorno(14)} letterSpacing={3}>
+                ACERTOU?
+              </text>
+              <text y={210} textAnchor="middle" fontFamily={PILHA} fontSize={54} fill="#ffffff" {...contorno(8)}>
+                COMENTA AI!
+              </text>
+            </>
+          ) : (
+            <>
+              <text textAnchor="middle" fontFamily={PILHA} fontSize={120} fill="#ffd23f" {...contorno(14)} letterSpacing={3}>
+                QUEM DEVE
+              </text>
+              <text y={120} textAnchor="middle" fontFamily={PILHA} fontSize={140} fill="#ffd23f" {...contorno(14)} letterSpacing={3}>
+                VENCER?
+              </text>
+              <text y={205} textAnchor="middle" fontFamily={PILHA} fontSize={54} fill="#ffffff" {...contorno(8)}>
+                COMENTA AI!
+              </text>
+            </>
+          )}
         </g>
       )}
     </g>
@@ -538,6 +578,14 @@ export const Espetaculo: React.FC<{ timeline: Timeline }> = ({ timeline }) => {
             b={nomeDe(timeline, fighterB)}
             corA={corDoElemento(timeline, fighterA)}
             corB={corDoElemento(timeline, fighterB)}
+            vencedor={
+              e.ko
+                ? {
+                    nome: nomeDe(timeline, e.ko.vencedor),
+                    cor: corDoElemento(timeline, e.ko.vencedor),
+                  }
+                : undefined
+            }
           />
         )}
       </svg>

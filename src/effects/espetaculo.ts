@@ -454,9 +454,19 @@ const efeitosDe = (
 const COR_DO_ELEMENTO = { gelo: "#8fe3ff", fogo: "#ff8a2a" } as const;
 
 /**
- * LUTA CINEMATICA (spec.cinematico): sem placar, sem combo, sem K.O. Os
- * letreiros sao so os NOMES DAS TECNICAS, na cor do elemento de quem usa, e
- * o fim e aberto (logo, nomes, "QUEM DEVE VENCER?").
+ * LUTA CINEMATICA (spec.cinematico): sem placar e sem combo. Os letreiros sao
+ * os NOMES DAS TECNICAS, na cor do elemento de quem usa.
+ *
+ * O FIM PODE SER DOS DOIS JEITOS, e quem decide e a luta:
+ *
+ *   sem finalizador   fim aberto -- logo, nomes, "QUEM DEVE VENCER?"
+ *   com finalizador   K.O., o nome de quem venceu, e a pergunta vira
+ *                     "VOCE ACERTOU?"
+ *
+ * O segundo caso passou a existir quando a luta ganhou um desfecho. Antes
+ * este modo ignorava `finalizador` por completo, e o resultado era um video
+ * que abre pedindo para o espectador escolher um personagem e termina sem
+ * dizer quem ganhou: o gancho fazia uma promessa que o fim nao pagava.
  */
 const montarCinematico = (
   t: Timeline,
@@ -464,6 +474,12 @@ const montarCinematico = (
 ): Espetaculo => {
   const rotulos: Rotulo[] = [];
   let final: number | undefined;
+  let ko: Espetaculo["ko"];
+  /*
+    O GOLPE QUE DECIDE. Procurado entre os impactos, e nao entre os letreiros:
+    quem sabe que a luta acabou e a coreografia, nao o texto na tela.
+  */
+  const decisivo = t.impacts.find((i) => i.finalizador && i.victim && i.attacker);
   for (const e of t.poderes) {
     if (e.tipo !== "nomeDaTecnica" || !e.texto) continue;
     if (e.texto === "FINAL") {
@@ -485,17 +501,50 @@ const montarCinematico = (
       pancada: true,
     });
   }
+  if (decisivo && decisivo.attacker) {
+    const r = real(decisivo.frame);
+    ko = { real: r, vencedor: decisivo.attacker };
+    /*
+      O K.O. espera o corpo cair. No quadro do golpe a camera esta fechada e
+      a separacao ainda nem comecou; o letreiro entrando ali cobriria
+      exatamente o que o espectador precisa ver.
+    */
+    const koNaTela = r + 78;
+    // o fim comeca quando o K.O. sai: um de cada vez, nunca os dois juntos
+    final = koNaTela + 70;
+    rotulos.push({
+      inicio: koNaTela,
+      duracao: 70,
+      texto: "K.O.!",
+      cor: COR.ko,
+      tamanho: 290,
+      lado: 0,
+      y: 0.28,
+      vaga: "centro",
+      pancada: true,
+    });
+  }
+
   const esquivas = t.aims
     .filter((m) => m.congelarEm !== undefined)
     .map((m) => real(m.contact));
   // o narrador so fala no fim: "Quem deve vencer?", junto com a pergunta na
   // tela. Durante a luta quem conta a historia sao os efeitos.
   const falas: { real: number; fala: Fala }[] =
-    final === undefined ? [] : [{ real: final + ESPERA_DA_PERGUNTA + 6, fala: "quem" }];
+    final === undefined
+      ? []
+      : [
+          {
+            real: final + ESPERA_DA_PERGUNTA + 6,
+            // com vencedor o narrador anuncia; sem, ele devolve a pergunta
+            fala: ko ? (ko.vencedor === "red" ? "venceu_red" : "venceu_black") : "quem",
+          },
+        ];
   return {
+    ko,
     rotulos,
     golpes: [],
-    impactosAnime: [],
+    impactosAnime: decisivo ? [{ real: real(decisivo.frame), quadros: 5, at: decisivo.at }] : [],
     quedas: [],
     esquivas,
     abertura: { vs: -999, lute: -999, fim: -999 },
