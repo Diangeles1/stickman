@@ -20,6 +20,7 @@ import {
 } from "../src/animation/corpo";
 import { compilar } from "../src/core/timeline";
 import { BENCHMARK } from "../src/data/fights/benchmark";
+import { DOMINIO } from "../src/data/fights/dominio";
 import { BENCHMARK2 } from "../src/data/fights/benchmark2";
 import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
 import { GELO_VS_FOGO } from "../src/data/fights/gelo-vs-fogo";
@@ -44,7 +45,9 @@ const DEBUG = process.env.PES_DEBUG === "1";
 const ARRASTO = 16;
 
 const qual = process.argv[2] ?? "benchmark";
-const spec = qual.startsWith("gerada:")
+const spec = qual === "dominio"
+  ? DOMINIO
+  : qual.startsWith("gerada:")
   ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
   : qual === "gelofogo"
     ? GELO_VS_FOGO
