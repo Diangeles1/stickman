@@ -187,6 +187,17 @@ export const choqueDeRajadas: Tecnica = (ctx) => {
     pose(quem, "downed", estoura + s(0.95), m + sinal * lado * 960);
   }
 
+  /*
+    O MARCADOR DE FIM. Esta cena E o fim da luta: os dois ficam no chao e
+    ninguem se levanta. Sem este letreiro o video simplesmente para -- o
+    fecho (logo, os dois nomes, "QUEM DEVE VENCER?" e a narracao) so existe
+    a partir dele (ver effects/espetaculo, montarCinematico).
+
+    "FINAL" nao aparece escrito na tela: o espetaculo le o texto como sinal e
+    desenha o fecho no lugar dele.
+  */
+  nome("FINAL", F, estoura + s(1.1));
+
   const fim = estoura + s(1.4);
   cameraKeys.push({ frame: estoura + s(0.8), center: { x: m, y: ALTURA_QUADRIL - 90 }, zoom: 0.46, ease: s(0.8), shake: 10, cena: true });
   return fim;
