@@ -42,6 +42,7 @@ import { Placa } from "../effects/Placa";
 import { ArcoDaKatana, Katana } from "../characters/Katana";
 import { CamadaDePoderes, laminaInteira, PoderesNaTela } from "../effects/Poderes";
 import { CeuNoturno, Chuva } from "../backgrounds/Noite";
+import { CeuDeMetropole, RuaMolhada } from "../backgrounds/Metropole";
 import { DebugOverlay } from "../debug/DebugOverlay";
 import { poeiraAmbiente } from "../particles/particles";
 import type { Timeline } from "../core/types";
@@ -103,9 +104,11 @@ export const FightScene: React.FC<FightSceneProps> = ({
       });
   const fx = !semEfeitos;
   const { fighterA, fighterB, seed, scenario } = timeline.spec;
+  const metropole = scenario === "metropole";
   // os cenarios de rabisco sao o limpo com desenho no fundo
-  const limpo = scenario !== "arena" && scenario !== "noite";
-  const noite = scenario === "noite";
+  const limpo = scenario !== "arena" && scenario !== "noite" && !metropole;
+  // a metropole compartilha a chuva e o piso escuro com a noite
+  const noite = scenario === "noite" || metropole;
   const espetaculo = fx ? espetaculoDe(timeline) : null;
 
   // QUADRO DE IMPACTO (anime): nos golpes mais fortes, um ou dois quadros
@@ -251,7 +254,13 @@ export const FightScene: React.FC<FightSceneProps> = ({
             frame={frameReal}
           />
         )}
-        {noite && <CeuNoturno camX={cam.center.x} />}
+        {noite && !metropole && <CeuNoturno camX={cam.center.x} />}
+        {metropole && (
+          <>
+            <CeuDeMetropole camX={cam.center.x} />
+            <RuaMolhada camX={cam.center.x} />
+          </>
+        )}
         <Arena
           seed={seed}
           rachaduras={rachaduras}
@@ -317,13 +326,26 @@ export const FightScene: React.FC<FightSceneProps> = ({
             )}
             {lutadores.map(({ id, corpo, preset, rapido, rastro }) => (
               <g key={`tras-${id}`}>
+                {/*
+                  O arco sai na cor da AURA, nao na do corpo.
+
+                  Com preset.stroke ele era um rastro da mesma cor do
+                  personagem, desenhado ATRAS dele e a 42% -- sobre fundo
+                  escuro isso e invisivel, e a parte mais importante (junto do
+                  membro) ainda ficava coberta pelo proprio corpo. O smear
+                  existia no codigo e nao existia na tela.
+
+                  A cor da aura e clara e saturada em todos os presets, entao
+                  o caminho do golpe se le sem competir com a silhueta: o
+                  corpo continua sendo a forma, o arco e a velocidade.
+                */}
                 <ArcoDoGolpe
                   timeline={timeline}
                   frame={frame}
                   id={id}
-                  cor={preset.stroke}
+                  cor={preset.auraColor}
                   largura={preset.limbWidth * preset.scale * 1.15}
-                  opacidade={limpo ? 0.32 : 0.42}
+                  opacidade={limpo ? 0.5 : 0.75}
                 />
                 {rastro.length > 0 && (
                   <StickmanTrail
@@ -381,6 +403,8 @@ export const FightScene: React.FC<FightSceneProps> = ({
             scaleExtra={corpo.scale / preset.scale}
             spin={corpo.spin}
             giro={corpo.giro}
+            // secondary action: o cabelo atrasa em relacao a cabeca
+            velocidade={corpo.velocidade}
             contorno={!limpo}
           />
         ))}
