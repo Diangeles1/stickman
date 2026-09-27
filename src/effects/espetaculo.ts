@@ -210,11 +210,12 @@ const montar = (t: Timeline): Espetaculo => {
 
     if (imp.finalizador) {
       ko = { real: r, vencedor: quem };
-      impactosAnime.push({ real: r, quadros: 5, at: imp.at });
+      // ver a nota sobre duracao em scenes/FightScene (modoAnime)
+      impactosAnime.push({ real: r, quadros: 14, at: imp.at });
       continue;
     }
     if (imp.tier === "extreme") {
-      impactosAnime.push({ real: r, quadros: 2, at: imp.at });
+      impactosAnime.push({ real: r, quadros: 8, at: imp.at });
     }
 
     const esquivou = esquivas.some(
@@ -586,7 +587,23 @@ const montarCinematico = (
     ko,
     rotulos,
     golpes: [],
-    impactosAnime: decisivo ? [{ real: real(decisivo.frame), quadros: 5, at: decisivo.at }] : [],
+    /*
+      O QUADRO DE IMPACTO VALE PARA TODO GOLPE FORTE, e nao so para o que
+      encerra. A versao anterior so o emitia quando havia `decisivo`: numa
+      luta cinematica que termina empatada -- como a dos ninjas -- o recurso
+      existia no motor e NUNCA acontecia, nem uma vez em cinquenta segundos,
+      apesar de a luta ter impacto extremo em quase toda cena.
+
+      O finalizador segura mais tempo porque e o unico golpe que precisa ser
+      lembrado; os outros marcam e saem.
+    */
+    impactosAnime: t.impacts
+      .filter((i) => i.tier === "extreme" && !i.bloqueado)
+      .map((i) => ({
+        real: real(i.frame),
+        quadros: i.finalizador ? 14 : 8,
+        at: i.at,
+      })),
     quedas: [],
     esquivas,
     abertura: { vs: -999, lute: -999, fim: -999 },

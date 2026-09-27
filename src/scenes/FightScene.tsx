@@ -145,10 +145,29 @@ export const FightScene: React.FC<FightSceneProps> = ({
   const anime = espetaculo?.impactosAnime.find(
     (a) => frameReal >= a.real && frameReal < a.real + a.quadros,
   );
+  /*
+    QUADRO DE IMPACTO: a tela inteira vira abstracao por um instante.
+    E a assinatura da animacao de stickman -- em referencia da web ele aparece
+    como um quadro CHAPADO com linhas radiais, sem cenario e sem personagem.
+
+    DURACAO. Era de 2 quadros reais (33 ms) para impacto forte. A convencao do
+    genero segura de 2 a 4 desenhos a 12 fps, ou seja 167 a 333 ms: estavamos
+    de cinco a dez vezes curtos, e o recurso existia sem ser visto. Agora sao
+    8 quadros (133 ms) no forte e 14 (233 ms) no finalizador.
+
+    A INVERSAO PRECISOU DESACELERAR JUNTO, e isso e seguranca e nao estetica.
+    Ela trocava preto e branco a CADA quadro: a 60 fps sao 30 Hz de tela cheia
+    em contraste maximo. Em 2 quadros isso e um piscar unico e inofensivo; em
+    14 vira exatamente o padrao que dispara crise fotossensitiva (o limite
+    aceito e 3 Hz). Com a troca a cada 5 quadros o impacto inverte no maximo
+    duas vezes -- abaixo de 3 Hz, e mais perto da referencia, que e um quadro
+    SEGURADO e nao um tremeluzir.
+  */
+  const QUADROS_POR_POLARIDADE = 5;
   const modoAnime = anime
-    ? (frameReal - anime.real) % 2 === 0
-      ? { fundo: "#000000", figura: "#ffffff" }
-      : { fundo: "#ffffff", figura: "#000000" }
+    ? Math.floor((frameReal - anime.real) / QUADROS_POR_POLARIDADE) % 2 === 0
+      ? { fundo: "#ffffff", figura: "#000000" }
+      : { fundo: "#000000", figura: "#ffffff" }
     : null;
 
   // rachaduras abertas pelos impactos que JA aconteceram neste quadro: elas
