@@ -29,6 +29,7 @@
  */
 
 import { corpoNoQuadro } from "../src/animation/corpo";
+import { estiloDe } from "../src/animation/estilo";
 import { cameraNoQuadro } from "../src/camera/camera";
 import { compilar } from "../src/core/timeline";
 import type { FighterId, NomeDePaleta, Timeline } from "../src/core/types";
@@ -61,7 +62,22 @@ if (nTracks !== 2) {
  * que ele nao pode e MUDAR DE LUGAR entre dois quadros sem nenhuma dessas
  * condicoes -- isso e keyframe mal escrito, e na tela le como corte errado.
  */
-const SALTO_MAXIMO = 90; // unidades por quadro com os pes no chao
+/*
+  O LIMITE ESCALA COM OS QUADROS POR DESENHO.
+
+  90 unidades por quadro pressupoe interpolacao lisa. Quando o estilo segura a
+  pose por dois quadros (animacao em 2s, ver animation/estilo), o corpo anda o
+  DOBRO por passo visivel -- e isso nao e teleporte, e o proprio recurso
+  funcionando: desenho segurado e o que separa animacao desenhada de
+  interpolacao.
+
+  Medido: com quadrosPorDesenho 2 a luta dos ninjas acusava saltos de 114
+  unidades, que sao 57 por quadro logico -- bem dentro do limite. Comparar um
+  salto de passo duplo contra um limite de passo simples reprova o recurso em
+  vez do defeito.
+*/
+const PASSOS = estiloDe(spec.estilo).quadrosPorDesenho;
+const SALTO_MAXIMO = 90 * PASSOS; // unidades por passo com os pes no chao
 const INICIO_VALIDO = 6;
 for (const id of ids) {
   let pior = { frame: 0, delta: 0 };

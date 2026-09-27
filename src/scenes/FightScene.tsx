@@ -26,7 +26,7 @@ import {
 } from "../camera/camera";
 import { PRESETS } from "../characters/presets";
 import { ALTURA_QUADRIL, OSSOS } from "../characters/skeleton";
-import { Stickman, StickmanTrail } from "../characters/Stickman";
+import { Stickman, StickmanSmear, StickmanTrail } from "../characters/Stickman";
 import {
   Aura,
   Clarao,
@@ -100,6 +100,15 @@ const LIMITE_LINHAS = 14;
  * entao andar e trocar golpe parado seguem sem rastro.
  */
 const LIMITE_RASTRO = 18;
+/**
+ * Acima DESTA velocidade o corpo deixa de ser desenhado como copias e passa a
+ * ser um BORRAO CONTINUO (ver characters/Stickman, StickmanSmear).
+ *
+ * Reservado para os picos de verdade. Na referencia de stickman o smear
+ * aparece nos poucos quadros em que o personagem atravessa a tela; usar em
+ * tudo que passa do limiar do rastro transformaria a luta inteira em mancha.
+ */
+const LIMITE_SMEAR = 30;
 /**
  * Quantos quadros atras entram no rastro. Seis em vez de quatro: com o passo
  * de 2 quadros, o rastro cobre 12 quadros de caminho em vez de 8, e um corpo
@@ -394,14 +403,29 @@ export const FightScene: React.FC<FightSceneProps> = ({
                   largura={preset.limbWidth * preset.scale * 1.15}
                   opacidade={limpo ? 0.5 : 0.75}
                 />
-                {rastro.length > 0 && (
-                  <StickmanTrail
-                    preset={preset}
-                    quadros={rastro}
-                    facing={corpo.facing}
-                    forca={limpo ? 0.34 : 0.22}
-                  />
-                )}
+                {/*
+                  Um OU outro, nunca os dois: copias soltas por baixo de um
+                  borrao continuo sujam a forma que o borrao existe para ter.
+                */}
+                {rastro.length > 0 &&
+                  (Math.abs(corpo.velocidade) > LIMITE_SMEAR ? (
+                    <StickmanSmear
+                      preset={preset}
+                      quadros={[
+                        ...rastro,
+                        { pose: corpo.pose, baseX: corpo.x, baseY: corpo.baseY, spin: corpo.spin, giro: corpo.giro },
+                      ]}
+                      facing={corpo.facing}
+                      forca={limpo ? 0.6 : 0.45}
+                    />
+                  ) : (
+                    <StickmanTrail
+                      preset={preset}
+                      quadros={rastro}
+                      facing={corpo.facing}
+                      forca={limpo ? 0.34 : 0.22}
+                    />
+                  ))}
                 {auraDe(id) > 0.02 && (
                   <Aura
                     centro={{ x: corpo.x, y: corpo.baseY }}

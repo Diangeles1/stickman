@@ -885,6 +885,86 @@ const Tracos: React.FC<{
  * E o "afterimage" que o briefing pede. Fica aqui e nao em effects/ porque
  * depende do desenho do personagem, nao de uma camada de efeito.
  */
+/**
+ * SMEAR: o corpo vira um BORRAO CONTINUO no caminho que percorreu.
+ *
+ * Copiado da referencia de animacao stickman, e a diferenca com o que o motor
+ * ja fazia e categorica. O rastro fantasma sao COPIAS SOLTAS do corpo, cada
+ * uma reconhecivel como um boneco; o smear da referencia nao tem bonecos
+ * dentro -- e uma forma unica, grossa, tracando a trajetoria. O personagem
+ * deixa de ser desenhado e passa a ser o rastro dele.
+ *
+ * COMO: para cada osso, o quadrilatero que ele VARREU entre uma posicao e a
+ * seguinte (as duas pontas de antes e as duas de agora). A uniao dessas
+ * varreduras com as cabecas no caminho fecha a silhueta continua.
+ *
+ * A OPACIDADE FICA NO GRUPO, nunca em cada peca. Com opacidade por peca as
+ * varreduras se sobrepoem e cada cruzamento fica mais escuro que o resto --
+ * o borrao vira uma colagem de pedacos translucidos, que e exatamente o que
+ * ele nao pode ser. No grupo, tudo achata numa forma so.
+ */
+export const StickmanSmear: React.FC<{
+  preset: FighterPreset;
+  /** do mais antigo ao mais recente, incluindo a posicao atual no fim */
+  quadros: {
+    pose: Pose;
+    baseX: number;
+    baseY: number;
+    spin?: number;
+    giro?: number;
+  }[];
+  facing: 1 | -1;
+  forca?: number;
+}> = ({ preset, quadros, facing, forca = 0.5 }) => {
+  if (quadros.length < 2) return null;
+  const largura = preset.limbWidth * preset.scale;
+  const raioCabeca = preset.headRadius * preset.scale;
+  const juntasDe = (q: (typeof quadros)[number]) =>
+    juntasNoMundo(q.pose, {
+      baseX: q.baseX,
+      baseY: q.baseY,
+      facing,
+      scale: preset.scale,
+      spin: q.spin ?? 0,
+      giro: (q.giro ?? 1) as 1 | -1,
+    });
+  const todas = quadros.map(juntasDe);
+  return (
+    <g data-layer="smear" opacity={forca} fill={preset.stroke} stroke={preset.stroke}>
+      {todas.map((j, i) => {
+        if (i === 0) return null;
+        const a0 = todas[i - 1];
+        return (
+          <g key={i}>
+            {OSSOS.map(([de, para]) => (
+              <polygon
+                key={`${de}-${para}`}
+                points={
+                  `${a0[de].x.toFixed(1)},${a0[de].y.toFixed(1)} ` +
+                  `${a0[para].x.toFixed(1)},${a0[para].y.toFixed(1)} ` +
+                  `${j[para].x.toFixed(1)},${j[para].y.toFixed(1)} ` +
+                  `${j[de].x.toFixed(1)},${j[de].y.toFixed(1)}`
+                }
+                strokeWidth={largura}
+                strokeLinejoin="round"
+              />
+            ))}
+            {/* a cabeca varre junto: sem ela o borrao fica sem topo */}
+            <line
+              x1={a0.head.x}
+              y1={a0.head.y}
+              x2={j.head.x}
+              y2={j.head.y}
+              strokeWidth={raioCabeca * 2}
+              strokeLinecap="round"
+            />
+          </g>
+        );
+      })}
+    </g>
+  );
+};
+
 export const StickmanTrail: React.FC<{
   preset: FighterPreset;
   quadros: {

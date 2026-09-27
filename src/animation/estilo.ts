@@ -73,6 +73,25 @@ export type EstiloDeAnimacao = {
    * cansa e faz o impacto forte deixar de significar.
    */
   tremor: number;
+  /**
+   * QUADROS POR DESENHO: de quantos em quantos quadros a pose muda.
+   *
+   * E a diferenca mais profunda entre este motor e a animacao stickman de
+   * referencia, e nao e efeito nenhum. Animacao desenhada a mao vive em 2s ou
+   * 3s -- doze a vinte e quatro desenhos por segundo, cada um SEGURADO por
+   * dois ou tres quadros. O motor interpola liso a sessenta, e liso e
+   * exatamente a palavra que descreve o que falta: o olho le interpolacao,
+   * nao desenho.
+   *
+   * 1 = liso, como sempre foi (e o que mantem os episodios antigos iguais).
+   * 2 = em 2s, trinta desenhos por segundo.
+   * 3 = em 3s, vinte desenhos por segundo, o mais proximo da referencia.
+   *
+   * So a POSE e segurada. Camera, efeitos e som continuam lisos, como no
+   * desenho a mao: o fundo e a camera sao outra camada e nunca foram
+   * limitados pela taxa dos desenhos.
+   */
+  quadrosPorDesenho: number;
 };
 
 /**
@@ -94,6 +113,7 @@ export const STICK_FIGHT: EstiloDeAnimacao = {
   exageroLocomocao: 1,
   hitStop: 1,
   tremor: 1,
+  quadrosPorDesenho: 1,
 };
 
 /**
@@ -113,6 +133,8 @@ export const ANIME: EstiloDeAnimacao = {
   exageroLocomocao: 1.5,
   hitStop: 1.5,
   tremor: 1.15,
+  // em 2s: e o que mais aproxima da animacao desenhada a mao
+  quadrosPorDesenho: 2,
 };
 
 /**
@@ -130,6 +152,8 @@ export const REALISTA: EstiloDeAnimacao = {
   exageroLocomocao: 0.9,
   hitStop: 0.35,
   tremor: 0.6,
+  // realista e liso: aqui o objetivo e parecer captura, nao desenho
+  quadrosPorDesenho: 1,
 };
 
 /**
@@ -145,6 +169,7 @@ export const CARTOON: EstiloDeAnimacao = {
   exageroLocomocao: 1.7,
   hitStop: 1.8,
   tremor: 1.3,
+  quadrosPorDesenho: 2,
 };
 
 /**
@@ -163,6 +188,7 @@ export const COMBATE_PESADO: EstiloDeAnimacao = {
   exageroLocomocao: 1.2,
   hitStop: 1.9,
   tremor: 1.4,
+  quadrosPorDesenho: 2,
 };
 
 const POR_NOME: Record<NomeDeEstilo, EstiloDeAnimacao> = {

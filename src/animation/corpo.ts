@@ -27,6 +27,7 @@
  * (AimEvent) e aqui ela e resolvida por cinematica inversa de dois ossos.
  */
 
+import { estiloDe } from "./estilo";
 import {
   alturaDoVoo,
   amostrar,
@@ -958,11 +959,31 @@ const miraAtiva = (
  * atacante, e o membro atacante nunca e o pe de apoio. Assim a altura do
  * quadril continua valida e o personagem nao sai do chao ao golpear.
  */
+/**
+ * SEGURA A POSE: o quadro em que o corpo e amostrado, quantizado pelo estilo.
+ *
+ * Animacao desenhada a mao vive em 2s ou 3s -- cada desenho segurado por dois
+ * ou tres quadros. Interpolar liso a sessenta e o que faz o olho ler
+ * "interpolacao" em vez de "desenho", e nenhum efeito por cima conserta isso.
+ *
+ * O ARREDONDAMENTO SEGURA PARA TRAS (Math.floor) e nunca para o mais proximo.
+ * Arredondar para o mais proximo adiantaria metade dos desenhos, e um golpe
+ * adiantado por um quadro chega ANTES do quadro de contato calibrado -- o
+ * punho passaria pelo alvo antes da hora e scripts/contato.mts acusaria. Para
+ * tras, o desenho e sempre um que ja aconteceu.
+ */
+const quadroDoDesenho = (timeline: Timeline, frame: number): number => {
+  const n = estiloDe(timeline.spec.estilo).quadrosPorDesenho;
+  if (n <= 1) return frame;
+  return Math.floor(frame / n) * n;
+};
+
 export const corpoNoQuadro = (
   timeline: Timeline,
   id: FighterId,
-  frame: number,
+  quadroPedido: number,
 ): Corpo => {
+  const frame = quadroDoDesenho(timeline, quadroPedido);
   const eu = corpoPlantado(timeline, id, frame);
   const aim = miraAtiva(timeline, id, frame);
   if (!aim) return eu;

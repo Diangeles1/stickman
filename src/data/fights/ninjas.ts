@@ -40,6 +40,8 @@ export const NINJAS: FightSpec = {
   scenario: "noite",
   // silhueta mais aberta e timing mais agressivo: é o que o roteiro pede na
   // direção ("antecipação, poses fortes, aceleração"). Ver animation/estilo.
+  // anime traz `quadrosPorDesenho: 2` -- a pose segura por dois quadros, que e
+  // o que aproxima da animacao desenhada a mao (ver animation/estilo.ts)
   estilo: "anime",
   nomes: { blue: "AZUL", red: "VERMELHO" },
   poderes: { blue: "VAZIO", red: "CHAMA" },
