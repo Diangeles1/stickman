@@ -18,6 +18,7 @@ import {
   corpoNoQuadro,
   juntasDoCorpo,
 } from "../src/animation/corpo";
+import { estiloDe } from "../src/animation/estilo";
 import { compilar } from "../src/core/timeline";
 import { BENCHMARK } from "../src/data/fights/benchmark";
 import { DOMINIO } from "../src/data/fights/dominio";
@@ -62,6 +63,20 @@ const spec = qual === "dominio"
     : BENCHMARK;
 const t = compilar(spec);
 
+/*
+  O PASSO DA MEDICAO E O PASSO DO DESENHO.
+
+  Quando o estilo segura a pose por dois quadros (ver animation/estilo,
+  quadrosPorDesenho), os quadros do meio NUNCA SAO DESENHADOS -- o corpo
+  neles e identico ao do quadro anterior. Andar de um em um mede a troca de
+  desenho como se fosse escorregao: na luta do dominio isso acusava 29
+  unidades de patinacao e 5 estalos que nao existem na tela.
+
+  Medir no passo do desenho compara o que o espectador ve com o que ele ve em
+  seguida, que e a unica comparacao que significa alguma coisa aqui.
+*/
+const PASSO = estiloDe(spec.estilo).quadrosPorDesenho;
+
 console.log(`luta: ${qual}\n`);
 let totalRuim = 0;
 
@@ -76,8 +91,8 @@ const PERTO = 15;
 let estalos = 0;
 for (const id of [spec.fighterA, spec.fighterB] as FighterId[]) {
   for (const pe of ["footFront", "footBack"] as JointName[]) {
-    for (let f = 1; f <= t.durationInFrames; f++) {
-      const a = corpoNoQuadro(t, id, f - 1);
+    for (let f = PASSO; f <= t.durationInFrames; f += PASSO) {
+      const a = corpoNoQuadro(t, id, f - PASSO);
       const b = corpoNoQuadro(t, id, f);
       if (a.noAr || b.noAr) continue;
       if (!POSES_DE_APOIO.has(a.poseNome) || !POSES_DE_APOIO.has(b.poseNome)) continue;
@@ -102,8 +117,8 @@ for (const id of [spec.fighterA, spec.fighterB] as FighterId[]) {
     let arrastado = 0;
     let quadrosRuins = 0;
     let pior = { d: 0, f: 0 };
-    for (let f = 1; f <= t.durationInFrames; f++) {
-      const a = corpoNoQuadro(t, id, f - 1);
+    for (let f = PASSO; f <= t.durationInFrames; f += PASSO) {
+      const a = corpoNoQuadro(t, id, f - PASSO);
       const b = corpoNoQuadro(t, id, f);
       if (a.noAr || b.noAr) continue;
       // corpo deitado, caindo ou levantando nao esta de pe: membro que se move

@@ -22,7 +22,8 @@ export type NomeDeEstilo =
   | "anime"
   | "realista"
   | "cartoon"
-  | "combatePesado";
+  | "combatePesado"
+  | "animeDesenhado";
 
 export type EstiloDeAnimacao = {
   /**
@@ -133,7 +134,41 @@ export const ANIME: EstiloDeAnimacao = {
   exageroLocomocao: 1.5,
   hitStop: 1.5,
   tremor: 1.15,
-  // em 2s: e o que mais aproxima da animacao desenhada a mao
+  /*
+    LISO, e nao em 2s. A pose segurada foi tirada daqui e vive no preset
+    `animeDesenhado` (abaixo).
+
+    Motivo: segurar a pose conflita com o planejamento dos pes em cenas de
+    locomocao longa. Medido -- a luta do dominio saiu de zero para 8 estalos
+    de pe com quadrosPorDesenho 2, e medir no passo do desenho so resolveu
+    metade. O conflito e real e ainda nao foi entendido.
+
+    Enquanto isso, `anime` continua sendo o estilo seguro: episodios que ja
+    foram publicados com ele nao podem regredir por um recurso novo.
+  */
+  quadrosPorDesenho: 1,
+};
+
+/**
+ * ANIME DESENHADO: o mesmo timing do anime, com a POSE SEGURADA em 2s.
+ *
+ * Separado do `anime` porque a pose segurada ainda tem um conflito aberto com
+ * o planejamento dos pes em cenas de locomocao longa (ver a nota acima). Quem
+ * escolhe este preset esta aceitando esse risco em troca da leitura de
+ * desenho a mao, que e o que ele entrega.
+ *
+ * Confirmado limpo na luta dos ninjas: cinco unidades de patinacao e nenhum
+ * estalo.
+ */
+export const ANIME_DESENHADO: EstiloDeAnimacao = {
+  atrasoDaCabeca: 4,
+  pesoDoAtraso: 0.7,
+  gravidade: 1.15,
+  exagero: 1.25,
+  secundario: 1.4,
+  exageroLocomocao: 1.5,
+  hitStop: 1.5,
+  tremor: 1.15,
   quadrosPorDesenho: 2,
 };
 
@@ -169,7 +204,8 @@ export const CARTOON: EstiloDeAnimacao = {
   exageroLocomocao: 1.7,
   hitStop: 1.8,
   tremor: 1.3,
-  quadrosPorDesenho: 2,
+  // ver a nota em ANIME: a pose segurada vive em `animeDesenhado`
+  quadrosPorDesenho: 1,
 };
 
 /**
@@ -188,7 +224,7 @@ export const COMBATE_PESADO: EstiloDeAnimacao = {
   exageroLocomocao: 1.2,
   hitStop: 1.9,
   tremor: 1.4,
-  quadrosPorDesenho: 2,
+  quadrosPorDesenho: 1,
 };
 
 const POR_NOME: Record<NomeDeEstilo, EstiloDeAnimacao> = {
@@ -197,6 +233,7 @@ const POR_NOME: Record<NomeDeEstilo, EstiloDeAnimacao> = {
   realista: REALISTA,
   cartoon: CARTOON,
   combatePesado: COMBATE_PESADO,
+  animeDesenhado: ANIME_DESENHADO,
 };
 
 /**
