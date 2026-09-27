@@ -80,7 +80,12 @@ export const NINJAS: FightSpec = {
     // ---- 48-60: o choque de rajadas e os dois caídos --------------------
     // A técnica já termina com os dois no chão e a arena desmoronando.
     { type: "tecnica", tecnica: "choqueDeRajadas", gelo: "blue", fogo: "red" },
-    // o tempo de eles tentarem levantar: sem `recover`, ninguém se levanta
-    { type: "hold", duration: 260, label: "os dois caidos" },
+    /*
+      A tentativa de levantar agora mora DENTRO da técnica (ela tem as poses e
+      a câmera). O `hold` de 260 quadros que havia aqui virava 4,3 segundos
+      sem nada mudar -- a maior pausa do vídeo, medida com scripts/ritmo.mts
+      contra 1,2s da maior pausa da referência.
+    */
+    { type: "hold", duration: 40, label: "respiro final" },
   ],
 };

@@ -131,6 +131,32 @@ export const choqueDeRajadas: Tecnica = (ctx) => {
       paleta: k % 2 === 0 ? "azul" : "vermelho",
     });
     poder({ tipo: "rachadura", a: { x: m + avanco * 120, y: 0 }, from: q, to: q + s(1.4), forca: 260 + k * 110 });
+
+    /*
+      OS CORPOS TAMBEM DISPUTAM.
+
+      Medido com scripts/ritmo.mts: a primeira versao desta cena eram CINCO
+      SEGUNDOS com os dois em `bracosFrente` sem uma chave sequer -- so a
+      energia mudava. O video inteiro deu 67% de quadros parados contra 47%
+      da referencia, e as pausas mais longas estavam todas aqui.
+
+      Num choque assim o corpo e a coisa que mais trabalha: quem esta cedendo
+      e EMPURRADO para tras e afunda na base; quem esta ganhando avanca e se
+      estica. Duas chaves por etapa, alternando de lado junto com o nucleo --
+      entao a posicao dos corpos conta a mesma historia que a esfera, e nao
+      ha um so trecho em que nada muda.
+
+      O deslocamento e pequeno (26 por etapa) de proposito: cabo de guerra se
+      perde em centimetros, e passos grandes leriam como recuo voluntario.
+    */
+    const cedendo = avanco > 0 ? F : G;
+    const ganhando = avanco > 0 ? G : F;
+    const recuo = 26;
+    pose(cedendo, "cargaBaixa", q, estado[cedendo].x + (cedendo === G ? -lado : lado) * recuo);
+    pose(ganhando, "bracosFrente", q, estado[ganhando].x + (ganhando === G ? lado : -lado) * (recuo * 0.55));
+    // e no meio da etapa os dois se firmam de novo: a disputa nao e uma queda
+    pose(cedendo, "bracosFrente", q + s(0.42));
+    pose(ganhando, "cargaBaixa", q + s(0.42));
     /*
       A camera alterna: plano dos DOIS (com fit) e close no nucleo. So o close
       perderia quem esta empurrando; so o plano aberto perderia a escalada da
@@ -188,6 +214,33 @@ export const choqueDeRajadas: Tecnica = (ctx) => {
   }
 
   /*
+    ---- 5. OS DOIS TENTAM LEVANTAR -----------------------------------------
+
+    O roteiro pede isto com todas as letras ("ambos tentam levantar") e a
+    primeira versao entregou um `hold` de 260 quadros com os dois parados.
+    Medido depois com scripts/ritmo.mts: 4,3 segundos sem um pixel mudar --
+    a maior pausa do video inteiro, contra 1,2s da maior pausa da referencia.
+
+    Corpo exausto nao fica imovel: ele tenta, nao consegue, e cede. Cada um
+    tenta no seu tempo (o vermelho antes, o azul depois) porque sincronizados
+    leriam como coreografia em vez de esgotamento.
+
+    A tentativa vai ate `sitUp` e VOLTA para `downed`: o meio do caminho e o
+    que conta a historia. Chegar a ficar de pe diria que ainda ha luta.
+  */
+  const tenta = estoura + s(1.6);
+  pose(F, "sitUp", tenta);
+  pose(F, "downed", tenta + s(0.75));
+  pose(G, "sitUp", tenta + s(1.1));
+  pose(G, "downed", tenta + s(1.85));
+  // a segunda tentativa e mais curta: a forca esta acabando
+  pose(F, "sitUp", tenta + s(2.3));
+  pose(F, "downed", tenta + s(2.8));
+  cameraKeys.push({ frame: tenta, center: { x: estado[F].x, y: ALTURA_QUADRIL - 40 }, zoom: 0.92, ease: s(0.8), cena: true });
+  cameraKeys.push({ frame: tenta + s(1.1), center: { x: estado[G].x, y: ALTURA_QUADRIL - 40 }, zoom: 0.92, ease: s(0.7), cena: true });
+  cameraKeys.push({ frame: tenta + s(2.4), center: { x: m, y: ALTURA_QUADRIL - 60 }, zoom: 0.5, ease: s(1.2), fit: true, cena: true });
+
+  /*
     O MARCADOR DE FIM. Esta cena E o fim da luta: os dois ficam no chao e
     ninguem se levanta. Sem este letreiro o video simplesmente para -- o
     fecho (logo, os dois nomes, "QUEM DEVE VENCER?" e a narracao) so existe
@@ -196,9 +249,9 @@ export const choqueDeRajadas: Tecnica = (ctx) => {
     "FINAL" nao aparece escrito na tela: o espetaculo le o texto como sinal e
     desenha o fecho no lugar dele.
   */
-  nome("FINAL", F, estoura + s(1.1));
+  nome("FINAL", F, tenta + s(3.2));
 
-  const fim = estoura + s(1.4);
+  const fim = tenta + s(3.5);
   cameraKeys.push({ frame: estoura + s(0.8), center: { x: m, y: ALTURA_QUADRIL - 90 }, zoom: 0.46, ease: s(0.8), shake: 10, cena: true });
   return fim;
 };
