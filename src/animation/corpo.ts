@@ -445,11 +445,47 @@ export const pesoDoLutador = (id: FighterId): number => {
   return Math.max(-1, Math.min(1, power - speed));
 };
 
+/**
+ * SEGURA A POSE: o quadro em que o corpo e amostrado, quantizado pelo estilo.
+ *
+ * Animacao desenhada a mao vive em 2s ou 3s -- cada desenho segurado por dois
+ * ou tres quadros. Interpolar liso a sessenta e o que faz o olho ler
+ * "interpolacao" em vez de "desenho", e nenhum efeito por cima conserta isso.
+ *
+ * O ARREDONDAMENTO SEGURA PARA TRAS (Math.floor) e nunca para o mais proximo.
+ * Arredondar para o mais proximo adiantaria metade dos desenhos, e um golpe
+ * adiantado por um quadro chega ANTES do quadro de contato calibrado -- o
+ * punho passaria pelo alvo antes da hora e scripts/contato.mts acusaria. Para
+ * tras, o desenho e sempre um que ja aconteceu.
+ */
+const quadroDoDesenho = (timeline: Timeline, frame: number): number => {
+  const n = estiloDe(timeline.spec.estilo).quadrosPorDesenho;
+  if (n <= 1) return frame;
+  return Math.floor(frame / n) * n;
+};
+
 const corpoBase = (
   timeline: Timeline,
   id: FighterId,
-  frame: number,
+  quadroPedido: number,
 ): Corpo => {
+  /*
+    A POSE SEGURADA ENTRA AQUI, na raiz, e nao em corpoNoQuadro.
+
+    Quantizar no topo quebrava o apoio dos pes, e a causa levou uma
+    bissecao para aparecer: `planejarPes` constroi o plano de apoio chamando
+    corpoBase em TODO quadro, sem quantizar, enquanto corpoNoQuadro consultava
+    esse plano num quadro quantizado. O plano era construido sobre o movimento
+    liso e lido sobre o movimento em degraus -- os dois discordavam, e o pe
+    plantado saltava. Medido: a luta do dominio saia de zero para 8 estalos,
+    todos em ciclo de locomocao (run1 -> run1, retreat -> retreat), que e
+    justamente onde o pe fica plantado enquanto o corpo passa por cima.
+
+    Na raiz, TUDO enxerga o mesmo corpo em degraus: o plano dos pes, a mira, a
+    camera e o desenho. A quantizacao deixa de ser uma camada por cima e passa
+    a ser o tempo do motor.
+  */
+  const frame = quadroDoDesenho(timeline, quadroPedido);
   const { fighterA, fighterB } = timeline.spec;
   const outroId = id === fighterA ? fighterB : fighterA;
   const preset = PRESETS[id];
@@ -911,8 +947,23 @@ const mirarPorAngulo = (
 const corpoPlantado = (
   timeline: Timeline,
   id: FighterId,
-  frame: number,
+  quadroPedido: number,
 ): Corpo => {
+  /*
+    O ALVO DO PE E LIDO NO MESMO QUADRO EM QUE O CORPO FOI DESENHADO.
+
+    Com a pose segurada, `corpoBase` devolve o corpo em degraus, mas a busca
+    abaixo interpolava o plano entre dois quadros LISOS: o alvo do pe andava
+    suave contra um corpo que saltava, e a cinematica inversa arrastava a
+    perna para acompanhar. Era essa discordancia que sobrava depois de
+    quantizar corpoBase -- cinco estalos em ciclo de locomocao, que e
+    exatamente onde o pe deveria estar mais preso.
+
+    Quantizar aqui tambem faz o alvo segurar junto com o corpo. A
+    interpolacao entre f0 e f1 continua existindo para quem nao segura a pose
+    (quadrosPorDesenho 1), onde `frame` e o quadro pedido sem alteracao.
+  */
+  const frame = quadroDoDesenho(timeline, quadroPedido);
   const eu = corpoBase(timeline, id, frame);
   // na volta do giro nao ha IK de perna (ver `girando` no planejamento)
   if (eu.giro < 0.75) return eu;
@@ -959,31 +1010,11 @@ const miraAtiva = (
  * atacante, e o membro atacante nunca e o pe de apoio. Assim a altura do
  * quadril continua valida e o personagem nao sai do chao ao golpear.
  */
-/**
- * SEGURA A POSE: o quadro em que o corpo e amostrado, quantizado pelo estilo.
- *
- * Animacao desenhada a mao vive em 2s ou 3s -- cada desenho segurado por dois
- * ou tres quadros. Interpolar liso a sessenta e o que faz o olho ler
- * "interpolacao" em vez de "desenho", e nenhum efeito por cima conserta isso.
- *
- * O ARREDONDAMENTO SEGURA PARA TRAS (Math.floor) e nunca para o mais proximo.
- * Arredondar para o mais proximo adiantaria metade dos desenhos, e um golpe
- * adiantado por um quadro chega ANTES do quadro de contato calibrado -- o
- * punho passaria pelo alvo antes da hora e scripts/contato.mts acusaria. Para
- * tras, o desenho e sempre um que ja aconteceu.
- */
-const quadroDoDesenho = (timeline: Timeline, frame: number): number => {
-  const n = estiloDe(timeline.spec.estilo).quadrosPorDesenho;
-  if (n <= 1) return frame;
-  return Math.floor(frame / n) * n;
-};
-
 export const corpoNoQuadro = (
   timeline: Timeline,
   id: FighterId,
-  quadroPedido: number,
+  frame: number,
 ): Corpo => {
-  const frame = quadroDoDesenho(timeline, quadroPedido);
   const eu = corpoPlantado(timeline, id, frame);
   const aim = miraAtiva(timeline, id, frame);
   if (!aim) return eu;
