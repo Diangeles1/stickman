@@ -479,7 +479,15 @@ export type FightSpec = {
    * "vilarejo" e "cidade" sao o limpo com um cenario de rabisco no fundo
    * (ver backgrounds/Rabisco.tsx): traco cinza claro que ferve e se mexe.
    */
-  scenario: "arena" | "limpo" | "vilarejo" | "cidade" | "noite" | "metropole";
+  scenario:
+    | "arena"
+    | "limpo"
+    | "vilarejo"
+    | "cidade"
+    | "noite"
+    | "metropole"
+    /** vale destruido: serras em quatro planos, montanha partida, terra rachada */
+    | "vale";
   /**
    * ESTILO de animacao. Ausente = o da casa (stickFight), que reproduz
    * exatamente o comportamento que o motor sempre teve -- por isso os

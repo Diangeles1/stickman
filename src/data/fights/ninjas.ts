@@ -32,12 +32,8 @@ export const NINJAS: FightSpec = {
   width: 1080,
   height: 1920,
   intensity: 9,
-  /*
-    O vale destruído ainda não existe como cenário próprio; `noite` é o mais
-    perto que o motor tem -- céu escuro, chuva e piso que aceita rachadura.
-    A montanha do beat 25-32 fica por fazer.
-  */
-  scenario: "noite",
+  // o vale destruído do roteiro (ver backgrounds/Vale.tsx)
+  scenario: "vale",
   // silhueta mais aberta e timing mais agressivo: é o que o roteiro pede na
   // direção ("antecipação, poses fortes, aceleração"). Ver animation/estilo.
   // a POSE SEGURADA em 2s, que e o que aproxima da animacao desenhada a mao.

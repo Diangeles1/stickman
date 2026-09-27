@@ -44,6 +44,7 @@ import { CorpoDividido } from "../effects/Divisao";
 import { CamadaDePoderes, laminaInteira, PoderesNaTela } from "../effects/Poderes";
 import { CeuNoturno, Chuva } from "../backgrounds/Noite";
 import { CeuDeMetropole, RuaMolhada } from "../backgrounds/Metropole";
+import { CeuDoVale, ChaoDoVale, PoeiraDoVale } from "../backgrounds/Vale";
 import { DebugOverlay } from "../debug/DebugOverlay";
 import { poeiraAmbiente } from "../particles/particles";
 import type { Timeline } from "../core/types";
@@ -142,10 +143,13 @@ export const FightScene: React.FC<FightSceneProps> = ({
   const fx = !semEfeitos;
   const { fighterA, fighterB, seed, scenario } = timeline.spec;
   const metropole = scenario === "metropole";
+  const vale = scenario === "vale";
   // os cenarios de rabisco sao o limpo com desenho no fundo
-  const limpo = scenario !== "arena" && scenario !== "noite" && !metropole;
+  const limpo =
+    scenario !== "arena" && scenario !== "noite" && !metropole && !vale;
   // a metropole compartilha a chuva e o piso escuro com a noite
-  const noite = scenario === "noite" || metropole;
+  // o vale tambem e noturno: ceu escuro e o mesmo tratamento de contraste
+  const noite = scenario === "noite" || metropole || vale;
   const espetaculo = fx ? espetaculoDe(timeline) : null;
 
   // QUADRO DE IMPACTO (anime): nos golpes mais fortes, um ou dois quadros
@@ -310,18 +314,27 @@ export const FightScene: React.FC<FightSceneProps> = ({
             frame={frameReal}
           />
         )}
-        {noite && !metropole && <CeuNoturno camX={cam.center.x} />}
+        {vale && (
+          <>
+            <CeuDoVale camX={cam.center.x} />
+            <ChaoDoVale camX={cam.center.x} />
+          </>
+        )}
+        {noite && !metropole && !vale && <CeuNoturno camX={cam.center.x} />}
         {metropole && (
           <>
             <CeuDeMetropole camX={cam.center.x} />
             <RuaMolhada camX={cam.center.x} />
           </>
         )}
-        <Arena
-          seed={seed}
-          rachaduras={rachaduras}
-          cenario={limpo ? "limpo" : "arena"}
-        />
+        {/* o vale tem piso proprio: a arena por cima cobriria a terra */}
+        {!vale && (
+          <Arena
+            seed={seed}
+            rachaduras={rachaduras}
+            cenario={limpo ? "limpo" : "arena"}
+          />
+        )}
         {(scenario === "vilarejo" || scenario === "cidade") && (
           <Rabisco
             seed={seed}
@@ -586,7 +599,19 @@ export const FightScene: React.FC<FightSceneProps> = ({
         {debug && <DebugOverlay timeline={timeline} frame={frame} />}
       </g>
 
-      {noite && (
+      {/*
+        POEIRA DO VALE em vez de chuva. Um vale de terra rachada com chuva
+        caindo conta duas historias diferentes ao mesmo tempo.
+      */}
+      {vale && (
+        <PoeiraDoVale
+          camX={cam.center.x}
+          frame={frameReal}
+          largura={width}
+          altura={height}
+        />
+      )}
+      {noite && !vale && (
         <Chuva
           frame={frameReal}
           largura={width}
