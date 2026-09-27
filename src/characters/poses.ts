@@ -836,8 +836,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handBack: { x: -18, y: -56 },
   }),
   punchHeavy: p({
-    neck: { x: 18, y: -68 },
-    head: { x: 28, y: -104 },
+    neck: { x: 34, y: -64 },
+    head: { x: 54, y: -98 },
     elbowFront: { x: 46, y: -58 },
     handFront: { x: 104, y: -66 },
     elbowBack: { x: -26, y: -48 },
@@ -858,8 +858,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
    */
   uppercut: p({
     // o tronco SOBE e abre um pouco para tras: e o corpo inteiro que sobe
-    neck: { x: 4, y: -77 },
-    head: { x: 4, y: -117 },
+    neck: { x: -18, y: -74 },
+    head: { x: -32, y: -112 },
     // braco a 45 graus para cima, antebraco na vertical: punho na altura da
     // cabeca, na frente dela (medidas dentro do comprimento do braco)
     elbowFront: { x: 38, y: -92 },
@@ -874,8 +874,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
 
   // --- chutes --------------------------------------------------------------
   kick: p({
-    neck: { x: -12, y: -72 },
-    head: { x: -20, y: -110 },
+    neck: { x: -26, y: -68 },
+    head: { x: -44, y: -104 },
     kneeFront: { x: 52, y: 4 },
     footFront: { x: 104, y: -18 },
     kneeBack: { x: -20, y: 52 },
@@ -905,8 +905,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: -42, y: -56 },
   }),
   spinKick: p({
-    neck: { x: -16, y: -68 },
-    head: { x: -28, y: -104 },
+    neck: { x: -32, y: -64 },
+    head: { x: -56, y: -96 },
     kneeFront: { x: 40, y: -28 },
     footFront: { x: 100, y: -60 },
     kneeBack: { x: -16, y: 50 },
@@ -928,8 +928,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
     handFront: { x: 36, y: -30 },
   }),
   elbow: p({
-    neck: { x: 14, y: -72 },
-    head: { x: 22, y: -108 },
+    neck: { x: 28, y: -68 },
+    head: { x: 44, y: -102 },
     elbowFront: { x: 62, y: -74 },
     handFront: { x: 30, y: -96 },
     elbowBack: { x: -16, y: -46 },
@@ -1003,8 +1003,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
 
   /** Soco no rosto: a cabeca CHICOTEIA para tras e o tronco vem atras. */
   hitHead: p({
-    neck: { x: -22, y: -70 },
-    head: { x: -76, y: -96 },
+    neck: { x: -38, y: -66 },
+    head: { x: -96, y: -88 },
     elbowFront: { x: -6, y: -54 },
     handFront: { x: -30, y: -78 },
     elbowBack: { x: -30, y: -44 },
@@ -1026,8 +1026,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
    */
   hitChest: p({
     hip: { x: -26, y: 16 },
-    neck: { x: -6, y: -46 },
-    head: { x: 12, y: -78 },
+    neck: { x: -20, y: -44 },
+    head: { x: -8, y: -74 },
     // os bracos caem: nao ha ar para segurar a guarda
     elbowFront: { x: -12, y: -32 },
     handFront: { x: -28, y: -16 },
@@ -1071,8 +1071,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
   }),
 
   knockback: p({
-    neck: { x: -24, y: -70 },
-    head: { x: -44, y: -104 },
+    neck: { x: -44, y: -66 },
+    head: { x: -82, y: -96 },
     elbowFront: { x: -6, y: -50 },
     handFront: { x: -24, y: -74 },
     elbowBack: { x: -34, y: -42 },
