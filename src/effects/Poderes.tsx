@@ -109,10 +109,23 @@ const ancorado = (e: PoderEvent, corpo?: Corpo): PoderEvent => {
  */
 const DefsDePoder: React.FC = () => (
   <defs>
-    <filter id="pw-glow-forte" x="-90%" y="-90%" width="280%" height="280%">
+    {/*
+      BRILHO LARGO. Comparado com referencia de canais de stickman (Hyun's
+      Dojo, colabs), o brilho daqui era curto demais: la o halo vaza para
+      MUITO longe do feixe e tinge a cena inteira, e o desfoque de 30 mal
+      saia da borda do poligono.
+
+      A regiao do filtro tambem precisou crescer junto -- desfoque grande
+      dentro de regiao pequena e cortado na borda e aparece como uma caixa
+      retangular em volta do efeito.
+    */}
+    <filter id="pw-glow-forte" x="-160%" y="-160%" width="420%" height="420%">
+      <feGaussianBlur stdDeviation="80" result="enorme" />
       <feGaussianBlur stdDeviation="30" result="largo" />
-      <feGaussianBlur stdDeviation="10" result="perto" />
+      <feGaussianBlur stdDeviation="9" result="perto" />
       <feMerge>
+        <feMergeNode in="enorme" />
+        <feMergeNode in="enorme" />
         <feMergeNode in="largo" />
         <feMergeNode in="perto" />
         <feMergeNode in="perto" />
@@ -1216,7 +1229,18 @@ const Feixe: React.FC<{ e: PoderEvent; f: number; fogo: boolean }> = ({ e, f, fo
   const entra = saiRapido((f - e.from) / 8);
   const pontaX = a.x + (b.x - a.x) * entra;
   const cor = paletaDe(e, fogo ? FOGO : GELO);
-  const larg = (e.forca ?? 90) * (0.85 + 0.15 * Math.sin(f * 0.9));
+  /*
+    ESPESSURA DO FEIXE: fino de nucleo, enorme de halo.
+
+    Na referencia o feixe e um FIO branco com um brilho gigante em volta; o
+    que ocupa a tela e a luz, nao a massa. Aqui ele era uma barra solida com
+    halo modesto -- cheio no meio e curto na borda, o oposto.
+
+    O numero do compilador passa a descrever o HALO, e o corpo solido fica
+    numa fracao dele. Feixe de forca 210 passa a ter nucleo de ~59 e brilho
+    passando de 500.
+  */
+  const larg = (e.forca ?? 90) * 0.58 * (0.85 + 0.15 * Math.sin(f * 0.9));
   const onda = (i: number) => Math.sin(f * 0.7 + i) * (fogo ? 14 : 5);
   const pts = (k: number) => {
     const n = 10;
@@ -1234,13 +1258,34 @@ const Feixe: React.FC<{ e: PoderEvent; f: number; fogo: boolean }> = ({ e, f, fo
   const ponta = { x: pontaX, y: a.y + (b.y - a.y) * entra };
   return (
     <g data-poder={fogo ? "feixe-fogo" : "raio-gelo"}>
-      {/* halo largo por baixo: e ele que faz o feixe iluminar em vez de so ocupar espaco */}
-      <g filter="url(#pw-glow-forte)" opacity={0.9}>
-        <polygon points={pts(1.15)} fill={cor.forte} opacity={0.55} />
+      {/*
+        QUATRO CAMADAS, do mais largo e apagado ao fio branco no meio. As duas
+        de fora nao tem forma legivel nenhuma -- elas so derramam luz, que e o
+        que faz o feixe iluminar a cena em vez de ocupar espaco nela.
+      */}
+      {/*
+        O EQUILIBRIO ENTRE ESPALHAR E SATURAR.
+
+        Primeira tentativa: um poligono muito largo (2.8) e apagado (0.3) sob
+        desfoque de 80. A energia se espalhou tanto que virou NEVOA PALIDA --
+        larga, sim, mas sem intensidade, e a referencia tem o contrario: o
+        brilho e saturado e cai rapido.
+
+        A solucao e separar os papeis. A camada externa espalha e quase nao
+        tem cor; a MEDIA e a que brilha, e ela fica concentrada perto do
+        feixe. Tentar fazer uma so camada espalhar e saturar ao mesmo tempo
+        so produz o meio-termo que nao e nenhum dos dois.
+      */}
+      <g filter="url(#pw-glow-forte)" opacity={0.5}>
+        <polygon points={pts(2.0)} fill={cor.forte} opacity={0.35} />
       </g>
-      <polygon points={pts(1.5)} fill={cor.forte} opacity={0.35} />
-      <polygon points={pts(1)} fill={cor.medio} opacity={0.85} />
-      <polygon points={pts(0.45)} fill={cor.claro} />
+      <g filter="url(#pw-glow-medio)" opacity={1}>
+        <polygon points={pts(1.25)} fill={cor.forte} opacity={0.9} />
+      </g>
+      <polygon points={pts(0.85)} fill={cor.medio} opacity={0.95} />
+      <polygon points={pts(0.46)} fill={cor.claro} />
+      {/* o fio: quase branco, e a coisa mais brilhante do quadro */}
+      <polygon points={pts(0.18)} fill="#ffffff" opacity={0.96} />
       {/*
         A BOCA DE DISPARO: onde o feixe encontra a mao.
 
@@ -1629,11 +1674,15 @@ export const PoderesNaTela: React.FC<{
     tingir, nao iluminar.
   */
   const LUMINOSOS: Partial<Record<TipoPoder, number>> = {
-    esferaInferno: 0.14,
-    feixeFogo: 0.22,
-    raioGelo: 0.19,
-    explosaoFogo: 0.28,
-    bolaDeFogo: 0.11,
+    /*
+      Na referencia a cena INTEIRA fica tingida pela cor do feixe -- ceu,
+      montanha e chao. Aqui a luz ambiente era timida demais para isso.
+    */
+    esferaInferno: 0.17,
+    feixeFogo: 0.27,
+    raioGelo: 0.23,
+    explosaoFogo: 0.33,
+    bolaDeFogo: 0.13,
   };
   let luz: { cor: string; forca: number } | null = null;
   for (const e of timeline.poderes) {
