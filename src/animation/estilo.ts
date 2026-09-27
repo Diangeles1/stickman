@@ -135,16 +135,13 @@ export const ANIME: EstiloDeAnimacao = {
   hitStop: 1.5,
   tremor: 1.15,
   /*
-    LISO, e nao em 2s. A pose segurada foi tirada daqui e vive no preset
-    `animeDesenhado` (abaixo).
+    LISO. A pose segurada vive no preset `animeDesenhado` (abaixo).
 
-    Motivo: segurar a pose conflita com o planejamento dos pes em cenas de
-    locomocao longa. Medido -- a luta do dominio saiu de zero para 8 estalos
-    de pe com quadrosPorDesenho 2, e medir no passo do desenho so resolveu
-    metade. O conflito e real e ainda nao foi entendido.
-
-    Enquanto isso, `anime` continua sendo o estilo seguro: episodios que ja
-    foram publicados com ele nao podem regredir por um recurso novo.
+    Os dois sao escolhas legitimas e nao um seguro contra bug: o conflito com
+    o planejamento dos pes que existia aqui foi resolvido (o planejador passou
+    a andar em passos de desenho, ver planejarPes). `anime` continua liso
+    porque episodios ja publicados usam ele, e o timing de um video no ar nao
+    deve mudar por baixo.
   */
   quadrosPorDesenho: 1,
 };
@@ -152,13 +149,20 @@ export const ANIME: EstiloDeAnimacao = {
 /**
  * ANIME DESENHADO: o mesmo timing do anime, com a POSE SEGURADA em 2s.
  *
- * Separado do `anime` porque a pose segurada ainda tem um conflito aberto com
- * o planejamento dos pes em cenas de locomocao longa (ver a nota acima). Quem
- * escolhe este preset esta aceitando esse risco em troca da leitura de
- * desenho a mao, que e o que ele entrega.
+ * E o que mais aproxima da animacao desenhada a mao -- o olho le desenho em
+ * vez de interpolacao. Medido contra referencia de stickman da web, a mediana
+ * do movimento sobe de 6.9 para 7.5 contra 7.7 da referencia.
  *
- * Confirmado limpo na luta dos ninjas: cinco unidades de patinacao e nenhum
- * estalo.
+ * O CUSTO, e ele e real e nao um defeito a corrigir: segurar a pose COMPRIME
+ * A CADEIA CINETICA. Um golpe de seis quadros tem tres desenhos distintos, e
+ * tres desenhos nao cabem os cinco picos que o quadril, o tronco, o ombro, o
+ * cotovelo e o punho deveriam ter em sequencia -- scripts/cadeia.mts acusa
+ * isso corretamente. Quem usar este preset deve dar JANELAS MAIORES aos
+ * golpes (windup e strike), senao a corrente do corpo deixa de ser lida.
+ *
+ * A luta dos ninjas passa em todos os cinco validadores com ele; a do dominio
+ * passa em quatro e perde um golpe na cadeia, porque os golpes dela sao
+ * curtos.
  */
 export const ANIME_DESENHADO: EstiloDeAnimacao = {
   atrasoDaCabeca: 4,

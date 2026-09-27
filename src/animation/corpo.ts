@@ -782,7 +782,29 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
       distancia(POSE_BASE.kneeFront, POSE_BASE.footFront)) *
     escalaDoMundo(PRESETS[id].scale);
 
-  for (let f = 0; f < n; f++) {
+  /*
+    O PLANEJADOR ANDA EM PASSOS DE DESENHO, e nao de quadro.
+
+    Ele e uma maquina de estados com tudo medido em quadros: a duracao do
+    passo, a da soltura e -- o que mais importava -- PASSO_MAXIMO_POR_QUADRO,
+    que limita quanto o pe anda de um quadro para o outro.
+
+    Com a pose segurada, `corpoBase` devolve o MESMO corpo em quadros
+    consecutivos e depois salta dois quadros de uma vez. A maquina avancava um
+    tique por quadro enquanto a entrada so mudava a cada dois: o corpo andava
+    o dobro num degrau e o limitador so deixava o pe andar a metade disso.
+    O pe ficava para tras e estalava para alcancar. Era esse o defeito que
+    sobrava -- sete estalos, todos em ciclo de locomocao.
+
+    Andando de PASSO em PASSO, a maquina enxerga exatamente os corpos que
+    serao desenhados, e o limite por tique passa a valer para o deslocamento
+    de um tique. O plano e depois REPETIDO nos quadros do meio, que e o que
+    o desenho faz com eles de qualquer forma.
+
+    Com quadrosPorDesenho 1, PASSO e 1 e este laco e identico ao de antes.
+  */
+  const PASSO = Math.max(1, estiloDe(timeline.spec.estilo).quadrosPorDesenho);
+  for (let f = 0; f < n; f += PASSO) {
     const c = corpoBase(timeline, id, f);
     const j = juntasDoCorpo(c);
     // Girando no eixo vertical o esqueleto esta achatado: a conversao do alvo
@@ -899,8 +921,10 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
         const dx = saida.x - st.ultimo.x;
         const dy = saida.y - st.ultimo.y;
         const d = Math.hypot(dx, dy);
-        if (d > PASSO_MAXIMO_POR_QUADRO) {
-          const k = PASSO_MAXIMO_POR_QUADRO / d;
+        // o limite e por TIQUE do planejador, e um tique vale PASSO quadros
+        const limite = PASSO_MAXIMO_POR_QUADRO * PASSO;
+        if (d > limite) {
+          const k = limite / d;
           // pe que precisa andar tanto esta DANDO UM PASSO: sai do chao. Preso
           // na altura em que estava, ele deslizava rente ao chao.
           saida = {
@@ -913,9 +937,12 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
       }
 
       st.ultimo = saida;
-      plano.alvo[pe].x[f] = saida.x;
-      plano.alvo[pe].y[f] = saida.y;
-      plano.alvo[pe].peso[f] = peso;
+      // o mesmo alvo vale para os quadros SEGURADOS deste desenho
+      for (let q = f; q < Math.min(n, f + PASSO); q++) {
+        plano.alvo[pe].x[q] = saida.x;
+        plano.alvo[pe].y[q] = saida.y;
+        plano.alvo[pe].peso[q] = peso;
+      }
     }
   }
 

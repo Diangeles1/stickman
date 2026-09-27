@@ -86,7 +86,21 @@ let totalRuim = 0;
  * Nao e patinacao (o pe nao esta apoiado), e e pior: e o pe teleportando.
  * Passo de verdade anda no maximo ~25 unidades por quadro perto do chao.
  */
-const ESTALO = 30;
+/*
+  O LIMITE E POR TIQUE DE DESENHO, e nao por quadro.
+
+  30 unidades pressupoe um desenho por quadro. Quando o estilo segura a pose
+  em 2s, o intervalo entre dois desenhos vale dois quadros, e o pe pode andar
+  o dobro nele -- pela mesma razao que um corpo anda o dobro (ver o limite de
+  teleporte em scripts/qualidade.mts).
+
+  O QUE NAO MUDA E A VELOCIDADE FISICA. O planejador limita o pe a 28 unidades
+  por tique (PASSO_MAXIMO_POR_QUADRO em animation/corpo), e com dois quadros
+  por tique isso e 28 por quadro -- exatamente o mesmo de antes. Comparar
+  deslocamento de tique duplo contra limite de tique simples reprova o tempo
+  do desenho, nao o movimento do pe.
+*/
+const ESTALO = 30 * PASSO;
 const PERTO = 15;
 let estalos = 0;
 for (const id of [spec.fighterA, spec.fighterB] as FighterId[]) {
