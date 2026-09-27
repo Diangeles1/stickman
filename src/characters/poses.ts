@@ -59,6 +59,64 @@ const ESCRITAS: Record<PoseName, Pose> = {
     footFront: { x: 40, y: 91 },
   }),
 
+  /*
+    VARIANTES DA GUARDA.
+
+    Medido com scripts/desenhos.mts: `guard` sozinha responde por 18 a 25%
+    de TODAS as chaves de uma luta. E o desenho que o espectador mais ve, e
+    ver o mesmo desenho um quarto do tempo e o que mais denuncia motor --
+    numa animacao desenhada a mao nenhum desenho se repete assim.
+
+    TRONCO E QUADRIL SAO IDENTICOS AOS DA GUARDA, e isso nao e preguica: a
+    distancia de combate e medida contra a guarda do alvo (ver
+    distanciaDeCombate com poseParaDistancia), e o ponto mirado sai do
+    pescoco e do quadril. Variante que mexesse no tronco poria o peito noutro
+    lugar e todo golpe erraria o alvo. O que muda e o que NAO e medido: a
+    altura dos punhos, a abertura do cotovelo e a base das pernas.
+
+    Sao tres atitudes diferentes do mesmo lutador esperando: guarda alta e
+    fechada, guarda baixa e aberta, e peso trocado para a outra perna.
+  */
+  /** guarda ALTA: punhos junto do rosto, cotovelos fechados, base curta */
+  guardaAlta: p({
+    neck: { x: 9, y: -72 },
+    head: { x: 14, y: -111 },
+    elbowBack: { x: 6, y: -46 },
+    handBack: { x: 22, y: -82 },
+    elbowFront: { x: 26, y: -52 },
+    handFront: { x: 40, y: -86 },
+    kneeBack: { x: -8, y: 50 },
+    footBack: { x: -34, y: 88 },
+    kneeFront: { x: 26, y: 40 },
+    footFront: { x: 34, y: 91 },
+  }),
+  /** guarda BAIXA: punhos na altura do peito, cotovelos soltos, base larga */
+  guardaBaixa: p({
+    neck: { x: 9, y: -72 },
+    head: { x: 14, y: -111 },
+    elbowBack: { x: -2, y: -36 },
+    handBack: { x: 16, y: -48 },
+    elbowFront: { x: 34, y: -38 },
+    handFront: { x: 54, y: -54 },
+    kneeBack: { x: -16, y: 48 },
+    footBack: { x: -54, y: 82 },
+    kneeFront: { x: 34, y: 34 },
+    footFront: { x: 48, y: 91 },
+  }),
+  /** peso TROCADO: o corpo desloca para a perna de tras, punhos assimetricos */
+  guardaTrocada: p({
+    neck: { x: 9, y: -72 },
+    head: { x: 14, y: -111 },
+    elbowBack: { x: 10, y: -42 },
+    handBack: { x: 26, y: -72 },
+    elbowFront: { x: 24, y: -40 },
+    handFront: { x: 44, y: -62 },
+    kneeBack: { x: -20, y: 44 },
+    footBack: { x: -50, y: 90 },
+    kneeFront: { x: 22, y: 44 },
+    footFront: { x: 28, y: 86 },
+  }),
+
   /**
    * DANCA: ponto de partida da danca da vitoria. A danca em si e calculada
    * quadro a quadro em animation/danca.ts; esta pose e so a base (a guarda

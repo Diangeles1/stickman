@@ -79,6 +79,10 @@ export type PoseName =
   | "charge"
   | "danca"
   | "placa"
+  /** variantes da guarda: mesmo tronco, atitude diferente (ver poses.ts) */
+  | "guardaAlta"
+  | "guardaBaixa"
+  | "guardaTrocada"
   /** maos unidas a frente do peito: o gesto que abre um dominio */
   | "oracao"
   // katana

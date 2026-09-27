@@ -312,6 +312,39 @@ const curvaDoDeslocamento = (destino: PoseName): ((t: number) => number) =>
  * A pose que uma chave pede: a escrita, a fase do ciclo de locomocao, ou a
  * escrita EXAGERADA em relacao a guarda (carga mais funda, follow-through).
  */
+/**
+ * VARIANTES DA GUARDA: o mesmo lutador esperando de tres jeitos diferentes.
+ *
+ * `guard` responde por 18 a 25% de TODAS as chaves de uma luta (medido com
+ * scripts/desenhos.mts). Ver o mesmo desenho um quarto do tempo e o que mais
+ * denuncia motor -- numa animacao desenhada a mao nenhum desenho se repete
+ * assim.
+ *
+ * TROCA SO O DESENHO, NUNCA O NOME. Tudo que decide comportamento le
+ * `k.pose`, que continua sendo "guard": o apoio dos pes, a curva de
+ * interpolacao, a respiracao e -- o mais importante -- a distancia de
+ * combate, que e medida contra a guarda do alvo. Se o nome mudasse, cada
+ * variante viraria uma pose desconhecida para essas regras e o golpe
+ * passaria a errar o alvo.
+ *
+ * A escolha vem do QUADRO DA CHAVE e nao de um sorteio: o Remotion desenha
+ * cada quadro isolado e possivelmente em processos paralelos, entao valor
+ * aleatorio faria a guarda trocar sozinha entre um quadro e o seguinte.
+ */
+const VARIANTES_DA_GUARDA: PoseName[] = [
+  "guard",
+  "guardaAlta",
+  "guardaBaixa",
+  "guardaTrocada",
+];
+
+export const desenhoDaChave = (k: FighterTrack["keys"][number]): PoseName => {
+  if (k.pose !== "guard") return k.pose;
+  // o quadro ja e unico por chave; dividir espalha as trocas
+  const i = Math.floor(k.frame / 7) % VARIANTES_DA_GUARDA.length;
+  return VARIANTES_DA_GUARDA[i];
+};
+
 const poseDaChave = (
   track: FighterTrack,
   k: FighterTrack["keys"][number],
@@ -344,11 +377,12 @@ const poseDaChave = (
     Com o estilo da casa (exagero 1) a conta devolve exatamente o fator da
     chave, entao nada muda em quem nao declara estilo.
   */
+  const desenho = desenhoDaChave(k);
   const fator = (k.exagero ?? 1) * (track.estilo ?? STICK_FIGHT).exagero;
   if (fator !== 1) {
-    return exagerar(POSES.guard, POSES[k.pose], fator);
+    return exagerar(POSES.guard, POSES[desenho], fator);
   }
-  return POSES[k.pose];
+  return POSES[desenho];
 };
 
 /**
