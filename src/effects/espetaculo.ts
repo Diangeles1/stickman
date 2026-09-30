@@ -365,7 +365,8 @@ const montar = (t: Timeline): Espetaculo => {
     rotulos.push({
       inicio: vence,
       duracao: ateAPlaca - vence,
-      texto: `${NOMES[ko.vencedor]} VENCE!`,
+      // o nome do spec tem precedencia sobre a tabela padrao do modulo
+      texto: `${t.spec.nomes?.[ko.vencedor] ?? NOMES[ko.vencedor]} VENCE!`,
       sub: "QUEM GANHA A REVANCHE?",
       cor: COR.vence,
       tamanho: 124,
@@ -480,7 +481,13 @@ const narrar = (
     let fala: Fala | null = null;
     if (r.texto === "K.O.!") fala = "nocaute";
     else if (r.texto.endsWith("VENCE!")) {
-      const vencedor = Object.entries(NOMES).find(([, n]) => r.texto.startsWith(n))?.[0];
+      /*
+        Procura tambem entre os nomes DO SPEC: sem isso, uma luta que
+        renomeia os lutadores tinha o letreiro de vitoria escrito com o nome
+        novo e esta busca procurando pelo antigo -- e nao achava ninguem.
+      */
+      const tabela = { ...NOMES, ...(t.spec.nomes ?? {}) };
+      const vencedor = Object.entries(tabela).find(([, n]) => r.texto.startsWith(n as string))?.[0];
       fala = vencedor === "red" ? "venceu_red" : "venceu_black";
     }
     if (!fala) continue;

@@ -93,13 +93,23 @@ const TOPO = 220;
 
 const Barra: React.FC<{
   id: FighterId;
+  /**
+   * O NOME VEM DE FORA, ja resolvido.
+   *
+   * Aqui se lia NOMES[id] -- a tabela padrao do modulo -- e com isso o campo
+   * `nomes` do FightSpec era ignorado pela barra de vida. O duelo do vale
+   * declarava CIANO e LARANJA e a tela escrevia VERDE e DOURADO, os nomes de
+   * quando aqueles presets tinham outra cor. O spec declarava e o motor nao
+   * lia.
+   */
+  nome: string;
   lado: -1 | 1;
   vida: number;
   fantasma: number;
   atingido: number;
   entrada: number;
   largura: number;
-}> = ({ id, lado, vida, fantasma, atingido, entrada, largura }) => {
+}> = ({ id, nome, lado, vida, fantasma, atingido, entrada, largura }) => {
   const L = 430;
   const H = 46;
   const x0 = lado < 0 ? 44 : largura - 44 - L;
@@ -160,7 +170,7 @@ const Barra: React.FC<{
         {...contorno(10)}
         letterSpacing={2}
       >
-        {NOMES[id]}
+        {nome}
       </text>
     </g>
   );
@@ -236,6 +246,9 @@ const Letreiro: React.FC<{
 const Abertura: React.FC<{
   a: FighterId;
   b: FighterId;
+  /** os nomes ja resolvidos pelo spec (ver a nota em Barra) */
+  nomeA: string;
+  nomeB: string;
   frame: number;
   fps: number;
   vs: number;
@@ -243,7 +256,7 @@ const Abertura: React.FC<{
   fim: number;
   largura: number;
   altura: number;
-}> = ({ a, b, frame, fps, vs, lute, fim, largura, altura }) => {
+}> = ({ a, b, nomeA, nomeB, frame, fps, vs, lute, fim, largura, altura }) => {
   if (frame > lute + 40) return null;
   const sai = interpolate(frame, [fim - 8, fim], [1, 0], {
     extrapolateLeft: "clamp",
@@ -287,7 +300,7 @@ const Abertura: React.FC<{
             fill="#ffffff"
             {...contorno(12)}
           >
-            {NOMES[a]}
+            {nomeA}
           </text>
           <text
             x={interpolate(chega, [0, 1], [largura + 400, largura - 60])}
@@ -298,7 +311,7 @@ const Abertura: React.FC<{
             fill="#ffffff"
             {...contorno(12)}
           >
-            {NOMES[b]}
+            {nomeB}
           </text>
           {frame >= vs && (
             <text
@@ -707,6 +720,7 @@ export const Espetaculo: React.FC<{ timeline: Timeline }> = ({ timeline }) => {
                 <Barra
                   key={id}
                   id={id}
+                  nome={nomeDe(timeline, id)}
                   lado={i === 0 ? -1 : 1}
                   vida={v.vida}
                   fantasma={v.fantasma}
@@ -742,6 +756,8 @@ export const Espetaculo: React.FC<{ timeline: Timeline }> = ({ timeline }) => {
         <Abertura
           a={fighterA}
           b={fighterB}
+          nomeA={nomeDe(timeline, fighterA)}
+          nomeB={nomeDe(timeline, fighterB)}
           frame={frame}
           fps={fps}
           {...e.abertura}
