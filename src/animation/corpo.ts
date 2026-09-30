@@ -814,6 +814,28 @@ export const POSES_DE_APOIO = new Set<PoseName>([
   "katanaErguida", "oracao",
 ]);
 
+/**
+ * Poses em que o pe DA FRENTE e o que golpeia, e portanto nao apoia nada.
+ *
+ * Todas elas estao em POSES_DE_APOIO -- e devem estar, porque o pe de TRAS
+ * continua plantado e segurando o corpo. O erro era tratar os DOIS pes como
+ * apoio: o planejador pregava o pe que chuta, brigava com ele, e o medidor
+ * acusava estalo de 157 unidades num pe que estava fazendo exatamente o que
+ * deveria.
+ *
+ * Um chute alto move o pe mais de cem unidades por desenho. Isso nao e
+ * patinacao: e o golpe.
+ */
+const PE_DA_FRENTE_GOLPEIA = new Set<PoseName>([
+  "kick",
+  "kickLow",
+  "kickHigh",
+  "knee",
+  "spinKick",
+  "diveAttack",
+  "corteMergulho",
+]);
+
 const POSES_DE_LOCOMOCAO = new Set<PoseName>([
   "walk1", "walk2", "run1", "run2", "sprint1", "sprint2", "advance", "retreat",
 ]);
@@ -948,6 +970,9 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
       !girando;
 
     for (const pe of PES) {
+      // o pe que golpeia nao apoia: ver PE_DA_FRENTE_GOLPEIA
+      const apoiaEste =
+        podeApoiar && !(pe === "footFront" && PE_DA_FRENTE_GOLPEIA.has(c.poseNome));
       const st = estado[pe];
       const outro = estado[pe === "footFront" ? "footBack" : "footFront"];
       const cru = j[pe];
@@ -955,7 +980,7 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
       let saida: Vec2 = cru;
       let peso = 0;
 
-      if (!podeApoiar || !noChao) {
+      if (!apoiaEste || !noChao) {
         if (st.modo === "plantado" || st.modo === "passo") {
           st.modo = "soltando";
           st.de = { ...st.ultimo };

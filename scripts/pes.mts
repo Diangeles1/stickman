@@ -78,6 +78,29 @@ const quadrosDesenhados = (id: FighterId): number[] => {
 };
 
 console.log(`luta: ${qual}\n`);
+/**
+ * Poses em que o pe DA FRENTE golpeia, e portanto nao apoia nada.
+ *
+ * Elas estao em POSES_DE_APOIO com razao -- o pe de TRAS continua plantado e
+ * segurando o corpo. O erro era cobrar apoio dos DOIS.
+ *
+ * Medido: os tres estalos do duelo do vale eram todos `kickHigh -> kickHigh`
+ * no pe da frente, com 157, 89 e 162 unidades. Um chute alto move o pe mais
+ * de cem unidades por desenho: isso nao e patinacao, e o golpe. O medidor
+ * estava cobrando que o chute ficasse parado.
+ *
+ * A mesma regra vale no motor (PE_DA_FRENTE_GOLPEIA em animation/corpo), e as
+ * duas tem que concordar: o planejador nao prega esse pe e o medidor nao
+ * cobra dele. Note que ela NAO afrouxa o resto -- o pe de tras continua
+ * cobrado em toda pose de chute, e dominio e benchmark seguem em zero.
+ */
+const PE_DA_FRENTE_GOLPEIA = new Set<string>([
+  "kick", "kickLow", "kickHigh", "knee", "spinKick", "diveAttack", "corteMergulho",
+]);
+
+const apoiaDeVerdade = (pe: JointName, pose: string): boolean =>
+  !(pe === "footFront" && PE_DA_FRENTE_GOLPEIA.has(pose));
+
 let totalRuim = 0;
 
 /**
@@ -114,6 +137,8 @@ for (const id of [spec.fighterA, spec.fighterB] as FighterId[]) {
       const b = corpoNoQuadro(t, id, f);
       if (a.noAr || b.noAr) continue;
       if (!POSES_DE_APOIO.has(a.poseNome) || !POSES_DE_APOIO.has(b.poseNome)) continue;
+      // o pe que GOLPEIA nao apoia (ver PE_DA_FRENTE_GOLPEIA)
+      if (!apoiaDeVerdade(pe, a.poseNome) || !apoiaDeVerdade(pe, b.poseNome)) continue;
       if (Math.abs(b.velocidade) > ARRASTO) continue;
       const pa = juntasDoCorpo(a)[pe];
       const pb = juntasDoCorpo(b)[pe];
@@ -146,6 +171,8 @@ for (const id of [spec.fighterA, spec.fighterB] as FighterId[]) {
       // corpo deitado, caindo ou levantando nao esta de pe: membro que se move
       // no chao ali e a queda acontecendo, nao patinacao
       if (!POSES_DE_APOIO.has(a.poseNome) || !POSES_DE_APOIO.has(b.poseNome)) continue;
+      // o pe que GOLPEIA nao apoia (ver PE_DA_FRENTE_GOLPEIA)
+      if (!apoiaDeVerdade(pe, a.poseNome) || !apoiaDeVerdade(pe, b.poseNome)) continue;
       const pa = juntasDoCorpo(a)[pe];
       const pb = juntasDoCorpo(b)[pe];
       if (pa.y < -NO_CHAO || pb.y < -NO_CHAO) continue;

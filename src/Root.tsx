@@ -24,6 +24,7 @@ import { trocarVencedor } from "./data/trocar";
 import { TESTE_KATANA } from "./data/fights/teste-katana";
 import { GELO_VS_FOGO } from "./data/fights/gelo-vs-fogo";
 import { DOMINIO } from "./data/fights/dominio";
+import { DUELO_DO_VALE } from "./data/fights/duelo-do-vale";
 import { NINJAS } from "./data/fights/ninjas";
 import { DUELO } from "./data/fights/duelo";
 import { UM_SOCO } from "./data/fights/um-soco";
@@ -221,6 +222,17 @@ export const RemotionRoot: React.FC = () => {
         width={DUELO.width}
         height={DUELO.height}
         defaultProps={{ spec: DUELO }}
+      />
+
+      {/* DUELO DO VALE: verde contra roxo, COM placar e vencedor */}
+      <Composition
+        id="DueloDoVale"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(DUELO_DO_VALE)}
+        fps={DUELO_DO_VALE.fps}
+        width={DUELO_DO_VALE.width}
+        height={DUELO_DO_VALE.height}
+        defaultProps={{ spec: DUELO_DO_VALE }}
       />
 
       {/* DOMINIO: o de branco contra o de marcas */}
