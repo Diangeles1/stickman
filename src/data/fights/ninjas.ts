@@ -48,18 +48,44 @@ export const NINJAS: FightSpec = {
     { type: "tecnica", tecnica: "sumirEColidir", gelo: "blue", fogo: "red" },
 
     // ---- 5-12: corpo a corpo --------------------------------------------
-    // A troca alterna quem acerta e quem defende: sequência em que só um
-    // conecta decide a luta cedo, e este trecho existe para empatar.
+    /*
+      A TROCA ALTERNA QUEM ACERTA, e isso precisou ser MEDIDO para ser
+      verdade.
+
+      A intencao sempre esteve escrita aqui, e mesmo assim a luta terminava
+      OITO A TRES para o vermelho (scripts/coreografia.mts). O motivo nao
+      estava em nenhum beat isolado: os ataques do azul eram quase todos
+      `blocked` ou `dodged` e os do vermelho eram `attack`. Cada beat parecia
+      razoavel sozinho; somados, contavam uma surra.
+
+      Num roteiro que termina em aberto -- ninguem vence -- isso e uma
+      contradicao que o espectador sente antes de saber nomear: o azul apanha
+      a luta inteira e de repente empata.
+    */
     { type: "attack", attacker: "red", target: "blue", move: "punchFast" },
     { type: "blocked", attacker: "blue", target: "red", move: "punch" },
     { type: "dodged", attacker: "red", target: "blue", move: "kickHigh", targetPoint: "head" },
-    { type: "combo", attacker: "blue", target: "red", moves: ["punchFast", "punch", "knee"], final: "blocked" },
-    { type: "attack", attacker: "red", target: "blue", move: "elbow" },
+    { type: "combo", attacker: "blue", target: "red", moves: ["punchFast", "punch", "knee"] },
+    { type: "blocked", attacker: "red", target: "blue", move: "elbow" },
     { type: "dodged", attacker: "blue", target: "red", move: "kickLow", targetPoint: "legs", pulo: true },
 
     // ---- 12-18: lança para o alto e persegue ----------------------------
+    /*
+      QUEM LEVA O UPPERCUT E QUEM SOBE.
+
+      Estava `airborne: "red"` -- o proprio atacante. Medido quadro a quadro:
+      o vermelho acertava o queixo do azul, o azul caia no chao em 40 quadros,
+      e entao o VERMELHO pulava sozinho ate y -660 e ficava 40 quadros no ar
+      com o adversario deitado embaixo. Depois descia, e so entao o azul se
+      levantava para pular nele.
+
+      Ninguem pula sozinho no meio de uma luta. O roteiro pede outra coisa e e
+      a coisa que se entende: o golpe lanca o azul, o vermelho SOBE ATRAS
+      dele, e o azul revida la em cima.
+    */
     { type: "attack", attacker: "red", target: "blue", move: "uppercut", targetPoint: "queixo" },
-    { type: "airborne", who: "red", duration: 46 },
+    { type: "airborne", who: "blue", duration: 58 },
+    { type: "attack", attacker: "red", target: "blue", move: "airAttack" },
     { type: "attack", attacker: "blue", target: "red", move: "airAttack" },
 
     // ---- 18-25: a esfera do azul ----------------------------------------
@@ -82,7 +108,23 @@ export const NINJAS: FightSpec = {
       percorre as chaves em sequencia, descartava todas elas em silencio: o
       arremesso nao acontecia e o que se via era a queda do proprio combo.
     */
-    { type: "hold", duration: 190, label: "respiro antes do arremesso" },
+    /*
+      O ESPACO ENTRE O COMBO E O ARREMESSO E PREENCHIDO POR LUTA.
+
+      Ele existe por uma razao tecnica: `golpear` escreve chaves do alvo ALEM
+      do cursor que devolve -- o combo acima escreve ate bem depois de onde
+      termina, e uma cena que comece antes disso tem as chaves descartadas em
+      silencio pela amostragem, que percorre chaves em sequencia.
+
+      A primeira solucao foi um `hold` de 190 quadros. Resolvia o descarte e
+      criava outro problema: TRES SEGUNDOS E MEIO em que nada acontece, bem
+      no ponto em que a luta deveria estar mais apertada. O tempo tem que ser
+      gasto do mesmo jeito; so nao precisa ser gasto parado.
+    */
+    { type: "attack", attacker: "blue", target: "red", move: "punchFast" },
+    { type: "attack", attacker: "red", target: "blue", move: "punch" },
+    { type: "dodged", attacker: "blue", target: "red", move: "kickHigh", targetPoint: "head" },
+    { type: "dodged", attacker: "red", target: "blue", move: "kickHigh", targetPoint: "head" },
     { type: "tecnica", tecnica: "arremessoNoParedao", gelo: "blue", fogo: "red" },
 
     // ---- 32-40: vermelho libera tudo ------------------------------------
@@ -90,7 +132,22 @@ export const NINJAS: FightSpec = {
 
     // ---- 40-48: azul responde, e os dois colidem ------------------------
     { type: "tecnica", tecnica: "liberarAzul", gelo: "blue", fogo: "red" },
-    { type: "tecnica", tecnica: "sumirEColidir", gelo: "blue", fogo: "red" },
+    /*
+      AQUI HAVIA UM SEGUNDO `sumirEColidir`, IGUAL AO DA ABERTURA.
+
+      A mesma tecnica, a mesma camera, as mesmas poses, 3,4 segundos --
+      repetida a 36 segundos de distancia num video de 53. E o trecho ficava
+      ainda mais exposto porque dele ate o fim nao ha nenhum golpe que
+      conecte: medido, a luta inteira tem CINCO socos que acertam, e todos
+      acontecem nos primeiros vinte segundos. O resto sao poderes.
+
+      Depois de os dois liberarem tudo, o que falta ver e os dois LUTANDO com
+      o que liberaram -- e nao a abertura de novo.
+    */
+    { type: "combo", attacker: "blue", target: "red", moves: ["punchFast", "elbow", "spinKick"] },
+    { type: "attack", attacker: "red", target: "blue", move: "spinKick" },
+    { type: "attack", attacker: "blue", target: "red", move: "punchHeavy" },
+    { type: "attack", attacker: "blue", target: "red", move: "uppercut", targetPoint: "queixo" },
 
     // ---- 48-60: o choque de rajadas e os dois caídos --------------------
     // A técnica já termina com os dois no chão e a arena desmoronando.

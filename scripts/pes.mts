@@ -20,15 +20,8 @@ import {
 } from "../src/animation/corpo";
 import { estiloDe } from "../src/animation/estilo";
 import { compilar } from "../src/core/timeline";
-import { BENCHMARK } from "../src/data/fights/benchmark";
-import { DOMINIO } from "../src/data/fights/dominio";
-import { BENCHMARK2 } from "../src/data/fights/benchmark2";
-import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
-import { GELO_VS_FOGO } from "../src/data/fights/gelo-vs-fogo";
-import { trocarVencedor } from "../src/data/trocar";
-import { gerarLuta } from "../src/data/gerador";
-import { UM_SOCO } from "../src/data/fights/um-soco";
 import type { FighterId, JointName } from "../src/core/types";
+import { escolherLuta } from "./lutas.mjs";
 
 /**
  * Pe a menos disto do chao (unidades de mundo) conta como apoiado.
@@ -45,22 +38,7 @@ const DEBUG = process.env.PES_DEBUG === "1";
 /** Acima desta velocidade do quadril o corpo esta sendo ARRASTADO. */
 const ARRASTO = 16;
 
-const qual = process.argv[2] ?? "benchmark";
-const spec = qual === "dominio"
-  ? DOMINIO
-  : qual.startsWith("gerada:")
-  ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
-  : qual === "gelofogo"
-    ? GELO_VS_FOGO
-  : qual === "completa-vermelho"
-    ? trocarVencedor(LUTA_COMPLETA)
-  : qual === "completa"
-    ? LUTA_COMPLETA
-    : qual === "benchmark2"
-    ? BENCHMARK2
-    : qual === "um-soco"
-    ? UM_SOCO
-    : BENCHMARK;
+const { nome: qual, spec } = escolherLuta(process.argv[2], "benchmark");
 const t = compilar(spec);
 
 /*

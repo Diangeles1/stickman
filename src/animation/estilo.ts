@@ -93,6 +93,19 @@ export type EstiloDeAnimacao = {
    * limitados pela taxa dos desenhos.
    */
   quadrosPorDesenho: number;
+  /**
+   * MULTIPLICA AS JANELAS DOS GOLPES (windup, strike, recover).
+   *
+   * Existe por causa do conflito descrito em ANIME_DESENHADO: segurar a pose
+   * comprime a cadeia cinetica, porque um golpe de seis quadros so tem tres
+   * desenhos distintos e tres desenhos nao cabem os cinco picos que o
+   * quadril, o tronco, o ombro, o cotovelo e o punho deveriam ter em
+   * sequencia.
+   *
+   * A nota daquele preset ja dizia que o remedio era dar janelas maiores aos
+   * golpes -- e nao havia como pedir isso. Aqui ha.
+   */
+  janelaDeGolpe: number;
 };
 
 /**
@@ -115,6 +128,7 @@ export const STICK_FIGHT: EstiloDeAnimacao = {
   hitStop: 1,
   tremor: 1,
   quadrosPorDesenho: 1,
+  janelaDeGolpe: 1,
 };
 
 /**
@@ -144,6 +158,7 @@ export const ANIME: EstiloDeAnimacao = {
     deve mudar por baixo.
   */
   quadrosPorDesenho: 1,
+  janelaDeGolpe: 1,
 };
 
 /**
@@ -160,9 +175,17 @@ export const ANIME: EstiloDeAnimacao = {
  * isso corretamente. Quem usar este preset deve dar JANELAS MAIORES aos
  * golpes (windup e strike), senao a corrente do corpo deixa de ser lida.
  *
- * A luta dos ninjas passa em todos os cinco validadores com ele; a do dominio
- * passa em quatro e perde um golpe na cadeia, porque os golpes dela sao
- * curtos.
+ * ESTA NOTA JA AFIRMOU QUE "a luta dos ninjas passa em todos os cinco
+ * validadores com ele". Era falso, e vale registrar por que passou tanto
+ * tempo sem ser percebido: os validadores escolhiam a luta por uma escada de
+ * ternarios terminando num padrao, e `ninjas` nao estava em nenhuma delas.
+ * Rodar `contato.mts ninjas` auditava o benchmark e imprimia APROVADO.
+ *
+ * Medido de verdade (ver scripts/lutas.mts, que agora recusa nome
+ * desconhecido): a luta dos ninjas passa em contato e arcos, e perde em
+ * cadeia -- pelo motivo descrito acima, que e o custo conhecido deste preset
+ * e nao uma regressao. Os golpes dela ainda sao curtos demais para a pose
+ * segurada.
  */
 export const ANIME_DESENHADO: EstiloDeAnimacao = {
   atrasoDaCabeca: 4,
@@ -174,6 +197,7 @@ export const ANIME_DESENHADO: EstiloDeAnimacao = {
   hitStop: 1.5,
   tremor: 1.15,
   quadrosPorDesenho: 2,
+  janelaDeGolpe: 1.4,
 };
 
 /**
@@ -193,6 +217,7 @@ export const REALISTA: EstiloDeAnimacao = {
   tremor: 0.6,
   // realista e liso: aqui o objetivo e parecer captura, nao desenho
   quadrosPorDesenho: 1,
+  janelaDeGolpe: 1,
 };
 
 /**
@@ -210,6 +235,7 @@ export const CARTOON: EstiloDeAnimacao = {
   tremor: 1.3,
   // ver a nota em ANIME: a pose segurada vive em `animeDesenhado`
   quadrosPorDesenho: 1,
+  janelaDeGolpe: 1,
 };
 
 /**
@@ -229,6 +255,7 @@ export const COMBATE_PESADO: EstiloDeAnimacao = {
   hitStop: 1.9,
   tremor: 1.4,
   quadrosPorDesenho: 1,
+  janelaDeGolpe: 1,
 };
 
 const POR_NOME: Record<NomeDeEstilo, EstiloDeAnimacao> = {

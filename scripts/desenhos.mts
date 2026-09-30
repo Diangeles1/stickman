@@ -13,15 +13,10 @@
  */
 import { desenhoDaChave } from "../src/animation/sampler";
 import { compilar } from "../src/core/timeline";
-import { BENCHMARK } from "../src/data/fights/benchmark";
-import { BENCHMARK2 } from "../src/data/fights/benchmark2";
-import { DOMINIO } from "../src/data/fights/dominio";
-import { NINJAS } from "../src/data/fights/ninjas";
 import type { FighterId, PoseName } from "../src/core/types";
+import { escolherLuta } from "./lutas.mjs";
 
-const qual = process.argv[2] ?? "ninjas";
-const spec = qual === "dominio" ? DOMINIO : qual === "benchmark" ? BENCHMARK
-  : qual === "benchmark2" ? BENCHMARK2 : NINJAS;
+const { nome: qual, spec } = escolherLuta(process.argv[2], "ninjas");
 const t = compilar(spec);
 
 console.log(`luta: ${qual}\n`);

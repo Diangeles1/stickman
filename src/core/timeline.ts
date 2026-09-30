@@ -321,7 +321,18 @@ export const compilar = (spec: FightSpec): Timeline => {
 
   const duracaoDe = (quem: FighterId, move: AttackName) => {
     const a = ATAQUES[move];
-    const k = escalaDuracao(preset[quem].profile.speed, spec.intensity);
+    /*
+      A JANELA DO ESTILO ENTRA AQUI, multiplicando a escala de duracao.
+
+      Um estilo que segura a pose (quadrosPorDesenho > 1) precisa de golpes
+      mais LONGOS para que a corrente do corpo caiba em desenhos distintos --
+      ver janelaDeGolpe em animation/estilo. Sem isso o golpe continua com o
+      mesmo numero de quadros, mas com metade dos desenhos, e a cadeia
+      cinetica se achata num bloco so.
+    */
+    const k =
+      escalaDuracao(preset[quem].profile.speed, spec.intensity) *
+      estiloDe(spec.estilo).janelaDeGolpe;
     return {
       windup: Math.max(2, Math.round(a.windup * k)),
       strike: Math.max(2, Math.round(a.strike * k)),

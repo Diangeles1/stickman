@@ -53,7 +53,7 @@ const FACE_Y = -300;
   pedra. Afastar menos enterra, afastar mais deixa ele parando no ar.
 */
 const NO_CORPO_DA_FACE = 275; // knockback: extremo a 263
-const DEITADO_NA_FACE = 175; // deitado, o corpo vira e a ponta fica a ~150
+const DEITADO_NA_FACE = 300; // o pior caso medido: downed estende 272 do quadril
 
 export const arremessoNoParedao = (
   ctx: ContextoDeTecnica,

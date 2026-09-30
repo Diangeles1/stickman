@@ -17,15 +17,8 @@
 import { corpoNoQuadro, juntasDoCorpo } from "../src/animation/corpo";
 import { CADEIA_DO_MEMBRO } from "../src/characters/skeleton";
 import { compilar } from "../src/core/timeline";
-import { BENCHMARK } from "../src/data/fights/benchmark";
-import { DOMINIO } from "../src/data/fights/dominio";
-import { BENCHMARK2 } from "../src/data/fights/benchmark2";
-import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
-import { GELO_VS_FOGO } from "../src/data/fights/gelo-vs-fogo";
-import { trocarVencedor } from "../src/data/trocar";
-import { gerarLuta } from "../src/data/gerador";
-import { UM_SOCO } from "../src/data/fights/um-soco";
 import type { FighterId, JointName } from "../src/core/types";
+import { escolherLuta } from "./lutas.mjs";
 
 /**
  * Cadeia a auditar, da raiz para a ponta do membro que DE FATO golpeia.
@@ -42,29 +35,7 @@ const cadeiaDe = (ponta: JointName): JointName[] => {
   return lista;
 };
 
-const qual = process.argv[2] ?? "benchmark";
-/**
- * Qual luta auditar. "gerada:7" audita a luta que a semente 7 produz.
- *
- * E este o ponto de ter auditoria automatica: uma luta gerada pode ser
- * conferida SEM ninguem assistir a ela. Sem isso, gerar cem lutas seria gerar
- * cem lutas nao verificadas.
- */
-const spec = qual === "dominio"
-  ? DOMINIO
-  : qual.startsWith("gerada:")
-  ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
-  : qual === "gelofogo"
-    ? GELO_VS_FOGO
-  : qual === "completa-vermelho"
-    ? trocarVencedor(LUTA_COMPLETA)
-  : qual === "completa"
-    ? LUTA_COMPLETA
-    : qual === "benchmark2"
-    ? BENCHMARK2
-    : qual === "um-soco"
-    ? UM_SOCO
-    : BENCHMARK;
+const { nome: qual, spec } = escolherLuta(process.argv[2], "benchmark");
 const t = compilar(spec);
 
 /** Posicao de uma junta no mundo, no quadro pedido. */

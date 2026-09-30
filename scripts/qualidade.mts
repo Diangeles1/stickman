@@ -33,13 +33,9 @@ import { estiloDe } from "../src/animation/estilo";
 import { cameraNoQuadro } from "../src/camera/camera";
 import { compilar } from "../src/core/timeline";
 import type { FighterId, NomeDePaleta, Timeline } from "../src/core/types";
-import { DOMINIO } from "../src/data/fights/dominio";
-import { GELO_VS_FOGO } from "../src/data/fights/gelo-vs-fogo";
-import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
+import { escolherLuta } from "./lutas.mjs";
 
-const qual = process.argv[2] ?? "dominio";
-const spec =
-  qual === "gelofogo" ? GELO_VS_FOGO : qual === "completa" ? LUTA_COMPLETA : DOMINIO;
+const { nome: qual, spec } = escolherLuta(process.argv[2], "dominio");
 const t: Timeline = compilar(spec);
 const ids = [spec.fighterA, spec.fighterB] as FighterId[];
 

@@ -127,7 +127,19 @@ export const choqueDeRajadas: Tecnica = (ctx) => {
       a: onde,
       from: q,
       to: q + s(0.9),
-      forca: 120 + k * 42,
+      /*
+        A ESCALADA PARA ANTES DE ENGOLIR OS CORPOS.
+
+        Com 42 por etapa a ultima esfera chegava a forca 288, e o raio
+        desenhado de uma esfera vai ate (30 + forca) * 1,1 -- 350 unidades.
+        Medido em scripts/qualidade: ela alcancava o vermelho a 248 e o
+        cobria. Um poder que esconde quem o lancou deixa de ser poder e vira
+        mancha na tela.
+
+        A escalada continua existindo; ela so para de crescer antes do ponto
+        em que apaga os personagens.
+      */
+      forca: 120 + k * 30,
       paleta: k % 2 === 0 ? "azul" : "vermelho",
     });
     poder({ tipo: "rachadura", a: { x: m + avanco * 120, y: 0 }, from: q, to: q + s(1.4), forca: 260 + k * 110 });
@@ -191,6 +203,31 @@ export const choqueDeRajadas: Tecnica = (ctx) => {
   poder({ tipo: "explosaoFogo", a: { x: m + lado * DESLOCA, y: ALTURA }, from: estoura + 3, to: estoura + s(1.2), forca: 560, paleta: "vermelho" });
   poder({ tipo: "telaBranca", from: estoura, to: estoura + s(0.55), forca: 1 });
   poder({ tipo: "rachadura", a: { x: m, y: 0 }, from: estoura, to: estoura + s(2.5), forca: 900 });
+  /*
+    `fit` PORQUE OS DOIS SAO JOGADOS PARA LONGE NESTE MESMO QUADRO.
+
+    Medido: no estouro cada corpo vai parar a 860 unidades do meio, e o
+    enquadramento fixo mostrava 614 para cada lado -- os dois impactos caiam
+    FORA DA TELA. O espectador via o clarao e, quando a camera reencontrava
+    os corpos, eles ja estavam caidos: o momento em que sao arremessados,
+    que e o assunto da cena, acontecia fora de quadro.
+  */
+  /*
+    A ABERTURA CHEGA ANTES DO ESTOURO, E SEM `fit`.
+
+    Duas coisas davam errado aqui. A chave marcada exatamente em `estoura` so
+    valia alguns quadros depois, e no quadro da explosao a camera ainda
+    estava fechada -- o espectador via o clarao com os corpos ja fora de
+    quadro e os reencontrava caidos. Por isso a chave vem antes.
+
+    E `fit` PIORAVA. Ele recalcula centro e zoom a partir dos corpos e
+    descarta o enquadramento pedido: medido, com `fit` a camera devolvia
+    meia largura de 614 centrada em 2384, o que cabe o vermelho em 2482 e
+    deixa o azul em 1503 de fora. Numa cena em que os dois sao arremessados
+    ao mesmo tempo para lados opostos, enquadrar automaticamente acaba
+    escolhendo um. O zoom explicito cabe os dois.
+  */
+  cameraKeys.push({ frame: estoura - 4, center: { x: m, y: ALTURA }, zoom: 0.42, ease: 0, shake: 40, cena: true });
   cameraKeys.push({ frame: estoura, center: { x: m, y: ALTURA }, zoom: 0.42, ease: 0, shake: 40, cena: true });
 
   /*
