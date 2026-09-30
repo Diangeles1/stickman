@@ -27,7 +27,8 @@ export const liberarPoder = (
   quem: FighterId,
   paleta: "azul" | "vermelho",
 ): number => {
-  const { c, s, estado, pose, poder, nome, cameraKeys, ALTURA_QUADRIL } = ctx;
+  const { G, F, c, s, estado, pose, poder, nome, cameraKeys, ALTURA_QUADRIL, DISTANCIA_DE_ESPERA } =
+    ctx;
   const x = estado[quem].x;
 
   // ---- 1. O SILÊNCIO ------------------------------------------------------
@@ -77,6 +78,32 @@ export const liberarPoder = (
   const sustenta = rompe + s(0.9);
   cameraKeys.push({ frame: sustenta, center: { x, y: ALTURA_QUADRIL - 200 }, zoom: 0.56, ease: s(0.8), shake: 16, cena: true });
   pose(quem, "charge", sustenta + s(1.4));
+  /*
+    OS DOIS VOLTAM A SE ENCARAR ANTES DE A CENA ACABAR.
+
+    Esta cena so mexia em quem libera o poder; o outro ficava onde a cena
+    anterior o deixou. Medido na luta dos ninjas: o arremesso deixa os dois a
+    1360 unidades um do outro, e essa distancia ATRAVESSAVA esta cena e a
+    seguinte intacta. Quando enfim vinha um combo, o atacante corria 1360
+    unidades ate o adversario -- e durante a corrida inteira o adversario
+    estava FORA DA TELA, porque a camera nao consegue caber os dois a essa
+    distancia num zoom legivel (ver ZOOM_MINIMO_LEGIVEL em camera/camera).
+
+    O espectador via um personagem correndo em direcao a nada.
+
+    Liberar poder e justamente o momento em que o outro se aproxima para
+    encarar: a aproximacao ja era o que a cena pedia, e agora e tambem o que
+    devolve a luta a distancia de combate.
+  */
+  const outro = quem === G ? F : G;
+  const distancia = Math.abs(estado[outro].x - estado[quem].x);
+  if (distancia > DISTANCIA_DE_ESPERA * 1.4) {
+    const lado = estado[outro].x >= estado[quem].x ? 1 : -1;
+    pose(outro, "walk1", rompe + s(0.6));
+    pose(outro, "walk2", rompe + s(1.7), estado[quem].x + lado * DISTANCIA_DE_ESPERA * 1.15);
+    pose(outro, "guard", rompe + s(2.2));
+  }
+
   const fim = rompe + s(2.6);
   cameraKeys.push({ frame: fim - s(0.5), center: { x, y: ALTURA_QUADRIL - 150 }, zoom: 0.78, ease: s(0.6), shake: 9, cena: true });
   pose(quem, "guard", fim);

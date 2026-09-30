@@ -785,6 +785,35 @@ const trechosNoAr = (track: FighterTrack) => {
   return trechos;
 };
 
+/**
+ * Gravidade da descida em relacao a da subida.
+ *
+ * 1 devolve a parabola simetrica de um projetil. 1,35 e o valor que a
+ * pratica de game feel usa: o corpo desaba mais rapido do que subiu, e e
+ * disso que vem a sensacao de peso.
+ */
+const GRAVIDADE_DA_QUEDA = 1.35;
+
+/**
+ * Achatamento do topo do arco: o apex hang.
+ *
+ * 2 e a parabola exata. Acima disso o corpo passa mais quadros perto do
+ * apice -- o instante suspenso em que da para ler a pose no ar.
+ */
+const ACHATAMENTO_DO_APICE = 2.4;
+
+/**
+ * Onde o apice cai dentro do trecho no ar.
+ *
+ * Com a descida mais pesada ela e mais CURTA, entao o topo nao fica no meio:
+ * a subida leva sqrt(1,35) = 1,16 vez o tempo da descida.
+ */
+const APICE = 1 / (1 + Math.sqrt(1 / GRAVIDADE_DA_QUEDA));
+
+/** distancia ao apice, de 0 (no topo) a 1 (no chao), em cada metade do arco */
+const distanciaDoApice = (p: number): number =>
+  p < APICE ? (APICE - p) / APICE : (p - APICE) / (1 - APICE);
+
 export const alturaDoVoo = (
   track: FighterTrack,
   frame: number,
@@ -813,7 +842,34 @@ export const alturaDoVoo = (
     // voo longo e alto, que e o que o olho espera.
     const g = (track.estilo ?? STICK_FIGHT).gravidade;
     const altura = Math.min(alturaMaxima, (g * dur * dur) / 8);
-    return 4 * altura * p * (1 - p);
+    /*
+      O ARCO NAO E SIMETRICO, e e por isso que o pulo antigo parecia flutuar.
+
+      `4 h p (1-p)` e a parabola de um projetil com gravidade constante:
+      sobe e desce no mesmo tempo, e passa pelo topo com a mesma pressa com
+      que passa por qualquer outra altura. Fisicamente correta, e e
+      exatamente o que ninguem anima.
+
+      A animacao de personagem -- e a de jogo, onde isto e assunto antigo sob
+      o nome de "game feel" -- usa duas correcoes, e as duas tem numeros
+      conhecidos:
+
+        QUEDA MAIS PESADA   a descida usa mais gravidade que a subida
+                            (~1,35x). O corpo sobe com esforco e DESABA. Com
+                            gravidade igual dos dois lados, a descida tem a
+                            mesma leveza da subida e o corpo parece nao ter
+                            peso.
+        APEX HANG           perto do topo a gravidade afrouxa (~0,55x) e o
+                            corpo fica suspenso um instante. E o que da tempo
+                            de LER a pose no ar -- num golpe aereo, e o
+                            quadro que o espectador guarda.
+
+      Aqui as duas entram por forma, e nao por integracao: o topo nao fica no
+      meio do trecho (com queda 1,35x a subida leva 1,16 vez o tempo da
+      descida, entao o apice cai em 0,537), e o expoente acima de 2 achata o
+      topo, que e o apex hang.
+    */
+    return altura * (1 - Math.pow(distanciaDoApice(p), ACHATAMENTO_DO_APICE));
   }
   return 0;
 };

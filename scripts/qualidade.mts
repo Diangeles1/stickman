@@ -34,6 +34,7 @@ import { cameraNoQuadro } from "../src/camera/camera";
 import { compilar } from "../src/core/timeline";
 import type { FighterId, NomeDePaleta, Timeline } from "../src/core/types";
 import { escolherLuta } from "./lutas.mjs";
+import { ALTURA_QUADRIL } from "../src/characters/skeleton";
 
 const { nome: qual, spec } = escolherLuta(process.argv[2], "dominio");
 const t: Timeline = compilar(spec);
@@ -178,7 +179,10 @@ const LARGURA = spec.width;
 for (const imp of t.impacts) {
   const cam = cameraNoQuadro(t, imp.frame, { center: { x: 0, y: -300 }, zoom: 1 }, {
     largura: LARGURA,
-    alturaQuadril: 600,
+    // o mesmo valor que a cena passa (ver scenes/FightScene); esta regra so
+    // usa o eixo x, mas um parametro errado aqui viraria defeito na proxima
+    // regra que olhar o eixo y
+    alturaQuadril: -ALTURA_QUADRIL,
   });
   const meiaLargura = LARGURA / 2 / cam.zoom;
   const fora = Math.abs(imp.at.x - cam.center.x) > meiaLargura;
