@@ -119,21 +119,39 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     },
     profile: { speed: 0.78, power: 0.6 },
   },
+  /*
+    OS DOIS DO DUELO DO VALE, refeitos MAIS MAGROS.
+    Com membro de 100 contra 267 do quadril ao pe, o membro era mais de um
+    terco do comprimento da perna -- e a espessura ainda e multiplicada pelo
+    calibre do tronco (ver CALIBRE em characters/Stickman). O resultado lia
+    como boneco inflado, nao como lutador.
+    72 poe o membro em 27% da perna. A cabeca nao encolhe junto de proposito:
+    e a razao entre ela e o corpo que faz a silhueta parecer mais alta.
+  */
   gold: {
     id: "gold",
-    stroke: "#d8a63a",
-    auraColor: "#ffd45e",
-    limbWidth: 100,
-    headRadius: 86,
+    // LARANJA e nao dourado: o dourado (#d8a63a) e o amarelo da barra de vida
+    // e o do letreiro de combo sao a mesma familia, e o lutador se perdia
+    // dentro do proprio placar. O laranja separa dos tres.
+    stroke: "#f2743a",
+    auraColor: "#ffb067",
+    limbWidth: 74,
+    // a cabeca desce junto, so que menos: com membro de 74 e cabeca de 86 o
+    // diametro dela virava 2,3 vezes a espessura do corpo e o boneco lia como
+    // cabecudo. 74 poe em 2,0, que e a proporcao de um atleta estilizado.
+    headRadius: 74,
     scale: 1.02,
     profile: { speed: 0.75, power: 0.8 },
   },
   green: {
     id: "green",
-    stroke: "#46a85e",
-    auraColor: "#63d97f",
-    limbWidth: 98,
-    headRadius: 85,
+    // CIANO contra o laranja: complementares, e os dois se separam do vale
+    // noturno (azul-arroxeado escuro) sem contorno extra. O verde #46a85e
+    // era escuro demais para um fundo escuro.
+    stroke: "#2fc8d6",
+    auraColor: "#74e8f2",
+    limbWidth: 72,
+    headRadius: 72,
     scale: 1,
     profile: { speed: 0.65, power: 0.6 },
   },

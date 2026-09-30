@@ -192,12 +192,12 @@ export const Stickman: React.FC<StickmanProps> = ({
   tronco.
 */
 const CALIBRE = {
-  tronco: 1.18,
+  tronco: 1.08,
   pescoco: 1.38,
-  ombro: 1.02,
+  ombro: 0.96,
   braco: 0.84,
   antebraco: 0.66,
-  coxa: 1.06,
+  coxa: 1.0,
   canela: 0.78,
   mao: 0.78,
   pe: 0.86,

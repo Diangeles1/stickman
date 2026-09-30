@@ -33,7 +33,7 @@ import type { FightSpec } from "../../core/types";
 export const DUELO_DO_VALE: FightSpec = {
   fighterA: "green",
   /*
-    O ADVERSARIO E O DOURADO, e nao o preset chamado "purple".
+    O ADVERSARIO E O LARANJA, e nao o preset chamado "purple".
     Aquele id engana: o corpo dele e PALIDO (#e8cbc0), pensado para receber
     marcas pretas. Renderizado, saiu um boneco creme com a barra escrita
     "ROXO" -- nome e cor discordando na tela. O dourado (#d8a63a) contrasta
@@ -49,8 +49,8 @@ export const DUELO_DO_VALE: FightSpec = {
   // o mesmo preset da luta dos ninjas: pose segurada em 2, janela de golpe
   // alargada e preparacao com tempo (ver animation/estilo.ts)
   estilo: "animeDesenhado",
-  nomes: { green: "VERDE", gold: "DOURADO" },
-  poderes: { green: "SELVA", gold: "RELAMPAGO" },
+  nomes: { green: "CIANO", gold: "LARANJA" },
+  poderes: { green: "MARE", gold: "TEMPESTADE" },
   // SEM `cinematico`: e ele que apaga o placar, e esta luta existe para ter um
   beats: [
     // ---- ABERTURA: somem e colidem ---------------------------------------
@@ -59,11 +59,18 @@ export const DUELO_DO_VALE: FightSpec = {
     // ---- PRIMEIRA TROCA: o verde abre vantagem ---------------------------
     { type: "attack", attacker: "green", target: "gold", move: "punchFast" },
     { type: "blocked", attacker: "gold", target: "green", move: "punch" },
-    { type: "attack", attacker: "green", target: "gold", move: "elbow" },
+    /*
+      A COTOVELADA VAI NO TRONCO, e nao na cabeca (que e o alvo padrao). O
+      cotovelo tem alcance curto, e com os membros afinados a distancia de
+      combate encurtou junto: mirando a cabeca ele parava a 83 unidades do
+      eixo quando precisava de 62, e scripts/contato.mts reprovava com razao.
+      Cotovelada e golpe de corpo mesmo.
+    */
+    { type: "attack", attacker: "green", target: "gold", move: "elbow", targetPoint: "chest" },
     { type: "dodged", attacker: "gold", target: "green", move: "kickHigh", targetPoint: "head" },
     { type: "combo", attacker: "green", target: "gold", moves: ["punchFast", "punch", "knee"] },
 
-    // ---- O DOURADO USA O MAPA -----------------------------------------------
+    // ---- O LARANJA USA O MAPA -----------------------------------------------
     /*
       Ele nao revida na linha: recua para o fundo do vale e volta cortando o
       palco em diagonal. E a virada da luta, e e por isso que ela esta aqui --
@@ -82,7 +89,7 @@ export const DUELO_DO_VALE: FightSpec = {
     */
     { type: "dodged", attacker: "green", target: "gold", move: "kickHigh", targetPoint: "head", pulo: true },
     /*
-      O VERDE ACERTA UM AQUI, e a razao e a mesma de sempre: sem ele o roxo
+      O CIANO ACERTA UM AQUI, e a razao e a mesma de sempre: sem ele o roxo
       emenda CINCO golpes seguidos entre os quadros 775 e 1413
       (scripts/coreografia.mts), e cinco sem resposta nao e virada, e
       atropelo. A virada precisa ser disputada para valer como virada.
@@ -96,8 +103,6 @@ export const DUELO_DO_VALE: FightSpec = {
 
     // ---- TERCEIRA TROCA: os dois trocam de igual --------------------------
     { type: "attack", attacker: "green", target: "gold", move: "punch" },
-    { type: "attack", attacker: "gold", target: "green", move: "kickHigh", targetPoint: "head" },
-    { type: "blocked", attacker: "green", target: "gold", move: "punchFast" },
     { type: "attack", attacker: "gold", target: "green", move: "knee" },
 
     /*
@@ -108,8 +113,14 @@ export const DUELO_DO_VALE: FightSpec = {
       ensinou: o tempo tem que ser gasto do mesmo jeito, so nao precisa ser
       gasto parado.
     */
-    { type: "attack", attacker: "green", target: "gold", move: "elbow" },
-    { type: "blocked", attacker: "gold", target: "green", move: "punch" },
+    /*
+      O RESPIRO ENCOLHEU, e nao pode sumir. Ele existe porque `golpear`
+      escreve chaves do alvo ALEM do cursor que devolve: uma cena que comece
+      antes disso tem as chaves descartadas em silencio pela amostragem, e o
+      arremesso simplesmente nao acontece. Eram dois beats (3,1s); um
+      bloqueio rapido cobre a mesma necessidade em menos de um segundo.
+    */
+    { type: "blocked", attacker: "green", target: "gold", move: "punchFast" },
 
     // ---- O ARREMESSO CONTRA A ROCHA --------------------------------------
     { type: "tecnica", tecnica: "arremessoNoParedao", gelo: "green", fogo: "gold" },
@@ -119,7 +130,7 @@ export const DUELO_DO_VALE: FightSpec = {
     { type: "tecnica", tecnica: "liberarVermelho", gelo: "green", fogo: "gold" },
     { type: "attack", attacker: "gold", target: "green", move: "punchHeavy" },
     /*
-      O VERDE DEVOLVE UM ANTES DE CAIR, e isso nao e generosidade com ele: e
+      O CIANO DEVOLVE UM ANTES DE CAIR, e isso nao e generosidade com ele: e
       o que separa luta de surra. scripts/coreografia.mts acusou o roxo
       encadeando CINCO golpes sem resposta aqui, e uma sequencia assim tira a
       graca do finalizador -- quem ja estava ganhando de lavada nao precisa
@@ -131,10 +142,10 @@ export const DUELO_DO_VALE: FightSpec = {
 
     // ---- FINALIZADOR ------------------------------------------------------
     { type: "finisher", attacker: "gold", target: "green", move: "spinKick", targetPoint: "chest" },
-    { type: "hold", duration: 54, label: "desfecho" },
+    { type: "hold", duration: 38, label: "desfecho" },
 
     // ---- E O PEDIDO PARA A PLATEIA ----------------------------------------
-    { type: "danca", who: "gold", duration: 160 },
+    { type: "danca", who: "gold", duration: 104 },
     {
       type: "placa",
       who: "gold",
