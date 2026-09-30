@@ -44,6 +44,49 @@ const juntaEm = (id: FighterId, frame: number, junta: JointName) =>
 
 console.log(`luta: ${qual}\n`);
 
+/*
+  O QUE JA FOI INVESTIGADO SOBRE AS REPROVACOES DESTE MEDIDOR, para ninguem
+  refazer o caminho.
+
+  A luta dos ninjas reprova em 10 de 21 golpes, e as falhas se concentram nos
+  COMBOS: `punchFast` sozinho espalha os picos por 16 quadros e passa; o mesmo
+  `punchFast` dentro de um combo espalha 4 e reprova.
+
+  CINCO EXPLICACOES FORAM MEDIDAS E AS CINCO SAO FALSAS:
+
+  1. "o avanco do corpo vaza para dentro do disparo e a translacao domina a
+     velocidade de todas as juntas" -- medido: 6% do avanco acontece durante o
+     disparo, e 18 dos 21 golpes tem deslocamento ZERO nele. Os tres que vazam
+     sao aereos, em que o corpo viaja porque esta voando.
+
+  2. "medir relativo ao quadril tira a translacao e revela a corrente" -- nao
+     revela: em alguns golpes melhora um pouco, em outro INVERTE a ordem
+     (pescoco e ombro passam a picar antes do quadril).
+
+  3. "golpe curto nao tem quadros para a corrente" -- a correlacao entre
+     duracao e espalhamento e 0,37. Golpes de CINCO quadros dao espalhamentos
+     de 16, 4, 18, 8 e 4: a duracao nao decide.
+
+  4. "no combo a preparacao encadeada e curta demais" (ela e 45% da normal) --
+     subir para 0,62 / 0,78 / 0,95 PIORA: a cadeia vai de 10 para 12 e a
+     patinacao dos pes triplica.
+
+  5. "no combo o braco ja esta perto da pose seguinte, entao nao ha caminho a
+     percorrer" -- medido: o braco viaja 194 a 214 unidades nos combos contra
+     220 a 297 nos golpes solo. Nao e pouco. E o `uppercut` viaja 143, menos
+     que qualquer combo, e PASSA.
+
+  O QUE SOBRA, e que e a leitura mais honesta disponivel: num golpe de sete
+  quadros a corrente aparece em DOIS estagios (o corpo, e depois o braco) em
+  vez de cinco. Medido no soco com contato no 475: quadril, pescoco e ombro
+  picam no 470 e cotovelo e punho no 473 -- tres quadros de separacao, na
+  ordem certa, mas so dois quadros DISTINTOS. O criterio de "3 dos 5 picos
+  distintos" pede mais estagios do que cabem num golpe rapido.
+
+  NAO MEXA NO CRITERIO SO PARA PASSAR. Se algum dia ele for afrouxado, que
+  seja com uma razao que valha para golpe lento tambem -- e note que golpe
+  lento passa: `punchHeavy` e `uppercut` espalham 20 e 28 quadros.
+*/
 let blocos = 0;
 
 for (const mira of t.aims) {
