@@ -49,7 +49,7 @@ export const DUELO_DO_VALE: FightSpec = {
   // o mesmo preset da luta dos ninjas: pose segurada em 2, janela de golpe
   // alargada e preparacao com tempo (ver animation/estilo.ts)
   estilo: "animeDesenhado",
-  nomes: { green: "HELENA", gold: "RAVI" },
+  nomes: { green: "MIGUEL", gold: "RAVI" },
   poderes: { green: "MARE", gold: "TEMPESTADE" },
   /*
     A COR DO EFEITO SEGUE A COR DO CORPO. Sem isto a ciano lancava uma esfera

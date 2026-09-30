@@ -186,14 +186,22 @@ export const Stickman: React.FC<StickmanProps> = ({
   corpo. Os numeros seguem o que o olho espera de proporcao humana: o tronco
   e o mais grosso, a coxa vem depois, e punho e tornozelo sao os mais finos.
 
-  O PESCOCO E GROSSO DE PROPOSITO (0,95). Ele era o mais fino de todos, e por
-  isso a cabeca parecia colada: entre o circulo da cabeca e a massa dos
-  ombros sobrava uma cintura que nenhum corpo tem. Grosso, a cabeca CRESCE do
-  tronco.
+  O PESCOCO JA FOI GROSSO, e foi um erro que durou duas mudancas.
+
+  Ele nasceu fino, a cabeca parecia colada, e a resposta foi engrossa-lo ate
+  1,38. Funcionou enquanto o corpo era largo. Quando os membros afinaram de
+  100 para 72, ninguem reviu este numero: o pescoco virou 99 unidades contra
+  78 do tronco e 69 do ombro -- a parte MAIS GROSSA do corpo, que e o
+  contrario de um corpo.
+
+  O entalhe entre a cabeca e os ombros nao se fecha engrossando o pescoco;
+  quem o fecha e o osso `neck -> head` ABRIR para baixo, do ombro para a
+  cabeca (ver calibreDoOsso). Com isso o pescoco pode ser o que e: mais fino
+  que o tronco.
 */
 const CALIBRE = {
   tronco: 1.08,
-  pescoco: 1.38,
+  pescoco: 0.52,
   ombro: 0.96,
   braco: 0.84,
   antebraco: 0.66,
@@ -205,9 +213,19 @@ const CALIBRE = {
 
 /** calibre das duas pontas de um osso, da raiz para a extremidade */
 const calibreDoOsso = (de: string, para: string): [number, number] => {
-  // O PESCOCO ALARGA PARA CIMA, em direcao a cabeca: e essa abertura que
-  // fecha o V concavo entre o circulo da cabeca e a massa dos ombros
-  if (para === "head") return [CALIBRE.ombro, CALIBRE.pescoco];
+  /*
+    O PESCOCO E MAIS FINO QUE O OMBRO, e abre so um pouco na base.
+
+    Medido na pose de guarda: a coluna do pescoco tem 44 unidades de ALTURA
+    (a cabeca fica 116 do pescoco e tem raio 72, entao sobram 44 entre a base
+    dela e a junta). Desenhada com a largura do ombro, ela ficava com 69 de
+    largura para 44 de altura -- mais larga do que alta. Um toco, e e isso
+    que le como pescoco grosso.
+
+    A abertura na base continua, porque e ela que evita o V concavo contra os
+    ombros; so que agora e de 0,66 para 0,52 em vez de 0,96 para 1,38.
+  */
+  if (para === "head") return [0.66, CALIBRE.pescoco];
   if (de === "hip" && para === "neck") return [CALIBRE.tronco, CALIBRE.ombro];
   if (de === "neck") return [CALIBRE.ombro, CALIBRE.ombro];
   if (de.startsWith("shoulder")) return [CALIBRE.ombro, CALIBRE.braco];
