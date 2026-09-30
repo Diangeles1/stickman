@@ -49,8 +49,15 @@ export const DUELO_DO_VALE: FightSpec = {
   // o mesmo preset da luta dos ninjas: pose segurada em 2, janela de golpe
   // alargada e preparacao com tempo (ver animation/estilo.ts)
   estilo: "animeDesenhado",
-  nomes: { green: "CIANO", gold: "LARANJA" },
+  nomes: { green: "HELENA", gold: "RAVI" },
   poderes: { green: "MARE", gold: "TEMPESTADE" },
+  /*
+    A COR DO EFEITO SEGUE A COR DO CORPO. Sem isto a ciano lancava uma esfera
+    AZUL e o laranja uma VERMELHA, porque as cenas fixavam a paleta no proprio
+    nome.  e a paleta ciano do motor e  a laranja: as duas ja
+    existiam, so ninguem podia pedi-las.
+  */
+  paletas: { green: "gelo", gold: "fogo" },
   // SEM `cinematico`: e ele que apaga o placar, e esta luta existe para ter um
   beats: [
     // ---- ABERTURA: somem e colidem ---------------------------------------
@@ -102,7 +109,6 @@ export const DUELO_DO_VALE: FightSpec = {
     { type: "tecnica", tecnica: "perseguicaoNoAr", gelo: "green", fogo: "gold" },
 
     // ---- TERCEIRA TROCA: os dois trocam de igual --------------------------
-    { type: "attack", attacker: "green", target: "gold", move: "punch" },
     { type: "attack", attacker: "gold", target: "green", move: "knee" },
 
     /*
@@ -127,7 +133,16 @@ export const DUELO_DO_VALE: FightSpec = {
     { type: "recover", who: "green", duration: 40 },
 
     // ---- A LIBERACAO E A DECISAO -----------------------------------------
-    { type: "tecnica", tecnica: "liberarVermelho", gelo: "green", fogo: "gold" },
+    /*
+      AQUI HAVIA UM `liberarVermelho`: 4,4 segundos para UMA aura.
+
+      Trocado por duas cenas que rendem muito mais na mesma faixa de tempo --
+      a esfera que atravessa o vale e a liberacao do outro lado. A luta tinha
+      13 efeitos contra os 46 da luta dos ninjas, e a diferenca nao era de
+      motor: era de quais cenas estavam sendo chamadas.
+    */
+    { type: "tecnica", tecnica: "azulVermelho", gelo: "green", fogo: "gold" },
+    { type: "tecnica", tecnica: "liberarAzul", gelo: "green", fogo: "gold" },
     { type: "attack", attacker: "gold", target: "green", move: "punchHeavy" },
     /*
       O CIANO DEVOLVE UM ANTES DE CAIR, e isso nao e generosidade com ele: e
@@ -137,7 +152,6 @@ export const DUELO_DO_VALE: FightSpec = {
       de um golpe final.
     */
     { type: "attack", attacker: "green", target: "gold", move: "punchFast" },
-    { type: "blocked", attacker: "gold", target: "green", move: "punch" },
     { type: "attack", attacker: "gold", target: "green", move: "uppercut", targetPoint: "queixo" },
 
     // ---- FINALIZADOR ------------------------------------------------------

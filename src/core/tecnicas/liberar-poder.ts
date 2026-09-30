@@ -19,13 +19,13 @@
  * `quem` é quem libera. A cena inteira é dele: o outro não aparece.
  */
 
-import type { FighterId } from "../types";
+import type { NomeDePaleta, FighterId } from "../types";
 import type { ContextoDeTecnica } from "./contexto";
 
 export const liberarPoder = (
   ctx: ContextoDeTecnica,
   quem: FighterId,
-  paleta: "azul" | "vermelho",
+  paleta: NomeDePaleta,
 ): number => {
   const { G, F, c, s, estado, pose, poder, nome, cameraKeys, ALTURA_QUADRIL, DISTANCIA_DE_ESPERA } =
     ctx;

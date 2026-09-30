@@ -451,7 +451,8 @@ const AuraGelo: React.FC<{ e: PoderEvent; f: number; corpo: Corpo }> = ({ e, f, 
           <path
             key={i}
             d={`M${x} ${y - r} L${x + r * 0.5} ${y} L${x} ${y + r} L${x - r * 0.5} ${y} Z`}
-            fill={i % 2 ? "#ffffff" : GELO.medio}
+            // mesma correcao da aura: a paleta do evento, e nao GELO fixo
+            fill={i % 2 ? "#ffffff" : cor.medio}
             opacity={1 - t}
           />
         );
@@ -475,7 +476,16 @@ const AuraFogo: React.FC<{ e: PoderEvent; f: number; corpo: Corpo }> = ({ e, f, 
         const t = ((f + i * 17) % ciclo) / ciclo;
         const x = corpo.x + (ruido(i * 3) - 0.5) * 160 + Math.sin(t * 6 + i) * 18;
         const y = j.hip.y + 200 - t * 520;
-        return <circle key={i} cx={x} cy={y} r={3 + 3 * ruido(i)} fill={i % 2 ? FOGO.medio : FOGO.claro} opacity={(1 - t) * 0.9} />;
+        /*
+          AS FAISCAS SEGUEM A PALETA PEDIDA, e nao FOGO fixo.
+
+          A elipse do chao logo acima ja usava `cor` (a paleta do evento) e
+          estas usavam as constantes de fogo: num efeito pedido em `gelo`,
+          metade dele saia ciano e a outra metade laranja. Na tela o que
+          dominava eram as faiscas, entao a aura de um lutador ciano lia como
+          quente.
+        */
+        return <circle key={i} cx={x} cy={y} r={3 + 3 * ruido(i)} fill={i % 2 ? cor.medio : cor.claro} opacity={(1 - t) * 0.9} />;
       })}
       {/* chama pequena na mao de tras */}
       <Chama x={j.handBack.x} y={j.handBack.y} tamanho={34 * forca} f={f} semente={7} />

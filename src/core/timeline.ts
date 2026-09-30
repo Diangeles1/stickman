@@ -1105,6 +1105,9 @@ export const compilar = (spec: FightSpec): Timeline => {
       c,
       lado,
       s,
+      // a paleta declarada pela luta, ou a de sempre para o papel
+      paletaG: spec.paletas?.[G] ?? "azul",
+      paletaF: spec.paletas?.[F] ?? "vermelho",
       estado,
       pose,
       poder,
@@ -1138,9 +1141,9 @@ export const compilar = (spec: FightSpec): Timeline => {
       case "sumirEColidir":
         return sumirEColidir(ctx);
       case "liberarAzul":
-        return liberarPoder(ctx, ctx.G, "azul");
+        return liberarPoder(ctx, ctx.G, ctx.paletaG);
       case "liberarVermelho":
-        return liberarPoder(ctx, ctx.F, "vermelho");
+        return liberarPoder(ctx, ctx.F, ctx.paletaF);
       case "choqueDeRajadas":
         return choqueDeRajadas(ctx);
       case "arremessoNoParedao":

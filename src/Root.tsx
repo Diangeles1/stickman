@@ -235,6 +235,23 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ spec: DUELO_DO_VALE }}
       />
 
+      {/*
+        A MESMA LUTA COM A TELA DE ESCOLHA, e e esta que vai para o canal.
+
+        O gancho ("escolha um personagem") e o que faz o espectador ficar ate
+        o fim para saber se acertou -- ver a mesma nota na composicao gerada.
+        A versao sem escolha fica como fonte crua, para conferir a luta.
+      */}
+      <Composition
+        id="DueloDoVale-Escolha"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(DUELO_DO_VALE, { escolha: true })}
+        fps={DUELO_DO_VALE.fps}
+        width={DUELO_DO_VALE.width}
+        height={DUELO_DO_VALE.height}
+        defaultProps={{ spec: DUELO_DO_VALE, escolha: true }}
+      />
+
       {/* DOMINIO: o de branco contra o de marcas */}
       <Composition
         id="Ninjas"

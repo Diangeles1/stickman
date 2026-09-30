@@ -19,6 +19,7 @@ import type {
   CameraKey,
   FighterId,
   ImpactEvent,
+  NomeDePaleta,
   PoderEvent,
   PoseName,
 } from "../types";
@@ -62,6 +63,14 @@ export type ContextoDeTecnica = {
   ) => void;
   /** agenda um efeito de poder */
   poder: (e: PoderEvent) => void;
+  /**
+   * A paleta de cada papel, ja resolvida (ver `paletas` em FightSpec).
+   *
+   * Uma cena deve usar estas em vez de escrever "azul"/"vermelho" na mao: e
+   * o que faz a cor do efeito seguir a cor do personagem.
+   */
+  paletaG: NomeDePaleta;
+  paletaF: NomeDePaleta;
   /** letreiro com o nome do golpe */
   nome: (texto: string, quem: FighterId, quadro: number) => void;
   cameraKeys: CameraKey[];

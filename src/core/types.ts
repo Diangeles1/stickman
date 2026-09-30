@@ -532,6 +532,20 @@ export type FightSpec = {
    * final aberto (logo, "BLACK vs RED", "QUEM DEVE VENCER?").
    */
   cinematico?: boolean;
+  /**
+   * A PALETA DO PODER DE CADA LUTADOR.
+   *
+   * As cenas fixavam a cor do efeito no proprio nome (`azulVermelho` emite
+   * sempre azul e vermelho). Enquanto os lutadores eram o azul e o vermelho
+   * isso passava; no duelo do vale, a ciano lancava uma esfera AZUL e o
+   * laranja uma VERMELHA -- o efeito e do personagem, e cor que discorda do
+   * corpo desfaz essa ligacao.
+   *
+   * Sem o campo vale o de sempre: azul para quem faz o papel de energia a
+   * distancia, vermelho para quem fecha a distancia. Nenhuma luta ja escrita
+   * muda.
+   */
+  paletas?: Partial<Record<FighterId, NomeDePaleta>>;
   beats: Beat[];
 };
 

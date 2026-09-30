@@ -17,6 +17,8 @@ export const azulVermelho: Tecnica = (ctx) => {
     pose,
     poder,
     nome,
+    paletaG,
+    paletaF,
     cameraKeys,
     impacts,
     ALTURA_QUADRIL,
@@ -36,15 +38,15 @@ export const azulVermelho: Tecnica = (ctx) => {
       // do proprio golpe. O raio tambem cede -- o halo do glow ja soma uns
       // 35% ao tamanho aparente.
       const azul = { x: xG + lado * 330, y: ALTURA_QUADRIL - 250 };
-      poder({ tipo: "esferaInferno", a: azul, from: c + s(0.3), to: c + s(1.25), forca: 78, paleta: "azul" });
+      poder({ tipo: "esferaInferno", a: azul, from: c + s(0.3), to: c + s(1.25), forca: 78, paleta: paletaG });
       nome("AZUL", G, c + s(0.45));
       cameraKeys.push({ frame: c + s(0.3), center: { x: (xG + xF) / 2, y: ALTURA_QUADRIL - 240 }, zoom: 1.1, ease: 14, cena: true });
       // puxado: ele vem para frente sem querer
       pose(F, "retreat", c + s(1.0), xF - lado * 190);
-      poder({ tipo: "choque", a: { x: xF, y: ALTURA_QUADRIL - 200 }, from: c + s(0.7), to: c + s(1.2), forca: 120, paleta: "azul" });
+      poder({ tipo: "choque", a: { x: xF, y: ALTURA_QUADRIL - 200 }, from: c + s(0.7), to: c + s(1.2), forca: 120, paleta: paletaG });
       const vermelho = { x: xG + lado * 350, y: ALTURA_QUADRIL - 245 };
       const lanca = c + s(1.35);
-      poder({ tipo: "esferaInferno", a: vermelho, from: lanca, to: lanca + s(0.55), forca: 105, paleta: "vermelho" });
+      poder({ tipo: "esferaInferno", a: vermelho, from: lanca, to: lanca + s(0.55), forca: 105, paleta: paletaF });
       nome("VERMELHO", G, lanca + 4);
       const bate = lanca + s(0.5);
       impacts.push({
@@ -56,7 +58,7 @@ export const azulVermelho: Tecnica = (ctx) => {
         cracksGround: true,
         sound: "explosion",
       });
-      poder({ tipo: "explosaoFogo", a: { x: xF, y: ALTURA_QUADRIL - 210 }, from: bate, to: bate + 34, forca: 330, paleta: "vermelho" });
+      poder({ tipo: "explosaoFogo", a: { x: xF, y: ALTURA_QUADRIL - 210 }, from: bate, to: bate + 34, forca: 330, paleta: paletaF });
       pose(F, "launched", bate, xF + lado * 420);
       for (let k = 0; k < 3; k++) {
         cameraKeys.push({ frame: bate + k * 10, center: { x: m + lado * 120, y: ALTURA_QUADRIL - 160 }, zoom: 0.9 + k * 0.04, ease: 9, shake: 16 + k * 8, cena: true });
