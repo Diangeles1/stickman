@@ -199,16 +199,31 @@ export const Stickman: React.FC<StickmanProps> = ({
   cabeca (ver calibreDoOsso). Com isso o pescoco pode ser o que e: mais fino
   que o tronco.
 */
+/*
+  A CONICIDADE ACHATOU quando os corpos viraram vareta.
+
+  Com membro de 72 a diferenca entre raiz e ponta dava volume a um corpo
+  cheio. Com 40 ela faz outra coisa: 0,66 no antebraco viram 26 unidades
+  contra 43 do tronco, e o braco afila ate quase sumir -- o boneco deixa de
+  ler como traco e passa a ler como massa esculpida, que e o oposto do
+  pedido.
+
+  Boneco de vareta tem TRACO, e traco tem espessura constante. Aqui sobra so
+  o suficiente para as juntas nao virarem bolhas e para o tronco nao ser tao
+  fino quanto o pulso.
+*/
 const CALIBRE = {
-  tronco: 1.08,
-  pescoco: 0.52,
-  ombro: 0.96,
-  braco: 0.84,
-  antebraco: 0.66,
-  coxa: 1.0,
-  canela: 0.78,
-  mao: 0.78,
-  pe: 0.86,
+  tronco: 1.06,
+  // o pescoco continua sendo o mais fino: e ele que separa a cabeca dos
+  // ombros (ver a nota em calibreDoOsso)
+  pescoco: 0.6,
+  ombro: 1.0,
+  braco: 0.96,
+  antebraco: 0.88,
+  coxa: 1.02,
+  canela: 0.92,
+  mao: 1.0,
+  pe: 1.06,
 } as const;
 
 /** calibre das duas pontas de um osso, da raiz para a extremidade */
@@ -225,7 +240,7 @@ const calibreDoOsso = (de: string, para: string): [number, number] => {
     A abertura na base continua, porque e ela que evita o V concavo contra os
     ombros; so que agora e de 0,66 para 0,52 em vez de 0,96 para 1,38.
   */
-  if (para === "head") return [0.66, CALIBRE.pescoco];
+  if (para === "head") return [0.78, CALIBRE.pescoco];
   if (de === "hip" && para === "neck") return [CALIBRE.tronco, CALIBRE.ombro];
   if (de === "neck") return [CALIBRE.ombro, CALIBRE.ombro];
   if (de.startsWith("shoulder")) return [CALIBRE.ombro, CALIBRE.braco];

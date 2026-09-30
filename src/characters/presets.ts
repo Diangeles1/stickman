@@ -125,8 +125,12 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     terco do comprimento da perna -- e a espessura ainda e multiplicada pelo
     calibre do tronco (ver CALIBRE em characters/Stickman). O resultado lia
     como boneco inflado, nao como lutador.
-    72 poe o membro em 27% da perna. A cabeca nao encolhe junto de proposito:
-    e a razao entre ela e o corpo que faz a silhueta parecer mais alta.
+    E DEPOIS AFINARAM DE NOVO, para 40, a pedido de "mais parecidos com
+    stickman". A medida que importa ali nao e contra a perna: e contra o
+    DIAMETRO DA CABECA. Um boneco de vareta classico tem o membro entre 12% e
+    22% dele; com 72 contra 144 estavamos em 50%, que e proporcao de
+    personagem cheio, nao de traco. 40 poe em 28% -- ainda com presenca em
+    tela de celular, e ja lendo como vareta.
   */
   gold: {
     id: "gold",
@@ -135,7 +139,7 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     // dentro do proprio placar. O laranja separa dos tres.
     stroke: "#f2743a",
     auraColor: "#ffb067",
-    limbWidth: 74,
+    limbWidth: 42,
     // a cabeca desce junto, so que menos: com membro de 74 e cabeca de 86 o
     // diametro dela virava 2,3 vezes a espessura do corpo e o boneco lia como
     // cabecudo. 74 poe em 2,0, que e a proporcao de um atleta estilizado.
@@ -150,7 +154,7 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     // era escuro demais para um fundo escuro.
     stroke: "#2fc8d6",
     auraColor: "#74e8f2",
-    limbWidth: 72,
+    limbWidth: 40,
     headRadius: 72,
     scale: 1,
     profile: { speed: 0.65, power: 0.6 },
