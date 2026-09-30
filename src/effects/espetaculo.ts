@@ -157,6 +157,42 @@ const montar = (t: Timeline): Espetaculo => {
 
   // ---- impactos --------------------------------------------------------------
   const impactos = [...t.impacts].sort((a, b) => a.frame - b.frame);
+  /*
+    O DANO E ESCALADO PELO TAMANHO DA LUTA, e sem isso a barra nao mede nada.
+
+    DANO e ARRANHAO sao valores por golpe, calibrados quando as lutas tinham
+    poucos golpes. Numa luta longa eles estouram: medido no duelo do vale,
+    sao 24 golpes que conectam, e com `extreme` valendo 24 isso da mais de
+    400 de dano sobre 100 de vida. As duas barras batiam no piso antes dos
+    30 segundos de um video de 65, e a metade final acontecia com os dois
+    lutadores em 12% -- o K.O. chegava sem que a barra tivesse explicado
+    nada, porque ela ja estava vazia ha meio minuto.
+
+    Uma barra de vida existe para dizer QUANTO FALTA. Aqui o dano de cada
+    golpe e dividido de modo que a soma do que um lutador vai levar durante
+    a luta inteira o leve de 100 ate perto do piso -- nem antes nem depois.
+    A proporcao entre os golpes nao muda: um `extreme` continua doendo o
+    triplo de um `light`.
+
+    O finalizador fica de fora da conta: ele zera a vida por definicao.
+  */
+  const previsto: Record<string, number> = {};
+  for (const imp of impactos) {
+    if (!imp.victim || !imp.attacker || imp.finalizador) continue;
+    previsto[imp.victim] =
+      (previsto[imp.victim] ?? 0) +
+      (imp.bloqueado ? ARRANHAO : DANO[imp.tier as keyof typeof DANO]);
+  }
+  const escala: Record<string, number> = {};
+  for (const [id, total] of Object.entries(previsto)) {
+    // so ENCOLHE: uma luta curta nao deve ter o dano inflado para a barra
+    // esvaziar na marra, porque ali a barra cheia no fim e a verdade
+    escala[id] = total > 0 ? Math.min(1, (100 - VIDA_MINIMA - 4) / total) : 1;
+  }
+  const danoDe = (imp: (typeof impactos)[number]): number =>
+    (imp.bloqueado ? ARRANHAO : DANO[imp.tier as keyof typeof DANO]) *
+    (escala[imp.victim as string] ?? 1);
+
   let combo = { quem: "", n: 0, ultimo: -Infinity };
   let ko: Espetaculo["ko"];
   for (const imp of impactos) {
@@ -188,7 +224,7 @@ const montar = (t: Timeline): Espetaculo => {
     }
 
     if (imp.bloqueado) {
-      vida[vitima] = Math.max(VIDA_MINIMA, vida[vitima] - ARRANHAO);
+      vida[vitima] = Math.max(VIDA_MINIMA, vida[vitima] - danoDe(imp));
       golpes.push({ real: r, vitima, vida: vida[vitima] });
       rotulos.push({
         inicio: r,
@@ -205,7 +241,7 @@ const montar = (t: Timeline): Espetaculo => {
 
     vida[vitima] = imp.finalizador
       ? 0
-      : Math.max(VIDA_MINIMA, vida[vitima] - DANO[imp.tier]);
+      : Math.max(VIDA_MINIMA, vida[vitima] - danoDe(imp));
     golpes.push({ real: r, vitima, vida: vida[vitima] });
 
     if (imp.finalizador) {
