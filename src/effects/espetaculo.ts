@@ -214,8 +214,30 @@ const montar = (t: Timeline): Espetaculo => {
       impactosAnime.push({ real: r, quadros: 14, at: imp.at });
       continue;
     }
-    if (imp.tier === "extreme" && !imp.semFlash) {
-      impactosAnime.push({ real: r, quadros: 8, at: imp.at });
+    /*
+      TODO GOLPE QUE CONECTA ACENDE UM IMPACT FRAME, e nao so os extremos.
+
+      O guia de animacao da comunidade de stickman trata o impact frame como
+      item basico do golpe, nao como enfeite de golpe grande: "impact frames
+      are used to give an impact more power behind it, only lasting for a few
+      seconds... everything radiates from the source of impact". Numa luta de
+      referencia praticamente todo acerto solido tem um.
+
+      Aqui so `extreme` tinha, e extremos sao a minoria: a maior parte dos
+      socos conectava sem NENHUMA marca de impacto, e um golpe sem marca le
+      como o punho passando pelo corpo.
+
+      A DURACAO E QUE SEPARA OS DOIS. Oito quadros para o golpe pesado, tres
+      para o medio -- tempo suficiente para o olho registrar que algo bateu,
+      curto demais para roubar a cena. Dar oito a todos transformaria a luta
+      numa sequencia de clarões e o golpe grande deixaria de ser grande.
+
+      Leve continua sem: golpe de raspao que acende a tela mente sobre o
+      proprio peso.
+    */
+    if (!imp.semFlash && !imp.bloqueado) {
+      if (imp.tier === "extreme") impactosAnime.push({ real: r, quadros: 8, at: imp.at });
+      else if (imp.tier === "medium") impactosAnime.push({ real: r, quadros: 3, at: imp.at });
     }
 
     const esquivou = esquivas.some(
@@ -598,10 +620,15 @@ const montarCinematico = (
       lembrado; os outros marcam e saem.
     */
     impactosAnime: t.impacts
-      .filter((i) => i.tier === "extreme" && !i.bloqueado && !i.semFlash)
+      .filter(
+        (i) =>
+          (i.tier === "extreme" || i.tier === "medium") &&
+          !i.bloqueado &&
+          !i.semFlash,
+      )
       .map((i) => ({
         real: real(i.frame),
-        quadros: i.finalizador ? 14 : 8,
+        quadros: i.finalizador ? 14 : i.tier === "extreme" ? 8 : 3,
         at: i.at,
       })),
     quedas: [],
