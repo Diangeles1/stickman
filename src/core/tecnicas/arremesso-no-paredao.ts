@@ -29,10 +29,31 @@ import { PAREDAO_X } from "../../backgrounds/Vale";
 import type { FighterId } from "../types";
 import type { ContextoDeTecnica } from "./contexto";
 
-/** onde a face da rocha encontra o corpo, em mundo */
-const FACE_X = PAREDAO_X - 60;
-/** altura do ponto de impacto na parede */
-const FACE_Y = -430;
+/**
+ * A SUPERFICIE da rocha, em mundo. PAREDAO_X e a quina direita do paredao ao
+ * nivel do chao (ver backgrounds/Vale): a massa fica toda a ESQUERDA disso.
+ *
+ * A primeira versao punha a face em PAREDAO_X - 60, ou seja SESSENTA UNIDADES
+ * DENTRO DA PEDRA, e as marcas daqui posicionam o QUADRIL. Somando as duas
+ * coisas, o corpo terminava enterrado ate os ombros na rocha.
+ */
+const FACE_X = PAREDAO_X;
+/** altura do contato: onde as costas e a cabeca encontram a pedra */
+const FACE_Y = -300;
+
+/*
+  AS MARCAS SAO MEDIDAS, e nao escolhidas no olho.
+
+  Um corpo nao e um ponto: medido em characters/skeleton, `knockback` com o
+  rosto para a parede estende 263 unidades do quadril ate a ponta mais
+  proxima da rocha, e `downed` estende 272. O quadril tem que ficar ao menos
+  isso longe da superficie para o corpo ENCOSTAR nela em vez de entrar.
+
+  Nao e uma folga: com estes valores a ponta do corpo cai exatamente na
+  pedra. Afastar menos enterra, afastar mais deixa ele parando no ar.
+*/
+const NO_CORPO_DA_FACE = 275; // knockback: extremo a 263
+const DEITADO_NA_FACE = 175; // deitado, o corpo vira e a ponta fica a ~150
 
 export const arremessoNoParedao = (
   ctx: ContextoDeTecnica,
@@ -80,8 +101,8 @@ export const arremessoNoParedao = (
     uma linha reta, da marca de partida ate a face da rocha, e nao ha nada a
     derivar.
   */
-  const NO_CORPO = FACE_X + 95; // o corpo encosta na face, nao entra nela
-  const CAIDO = FACE_X + 165;
+  const NO_CORPO = FACE_X + NO_CORPO_DA_FACE;
+  const CAIDO = FACE_X + DEITADO_NA_FACE;
 
   // ---- 1. O VOO -----------------------------------------------------------
   pose(quem, "launched", c + s(1.5));
@@ -101,23 +122,52 @@ export const arremessoNoParedao = (
 
   // ---- 2. A BATIDA --------------------------------------------------------
   const bate = c + s(2.0);
-  pose(quem, "groundHit", bate, NO_CORPO);
+  /*
+    DE COSTAS NA PEDRA, e nao deitado no chao.
+
+    Isto usava `groundHit`, que e a pose de quem caiu: cabeca no chao, corpo
+    espalhado na horizontal. Contra uma parede ela nao descreve nada -- o
+    corpo aparecia jogado no chao ao lado da rocha no mesmo quadro em que
+    deveria estar se esmagando contra ela.
+
+    `knockback` deixa o corpo EM PE e recuado, com a cabeca no alto e as
+    costas na direcao da pedra. E a queda vem depois, no seu tempo.
+  */
+  pose(quem, "knockback", bate, NO_CORPO);
   impacts.push({
     frame: bate,
-    at: { x: FACE_X + 40, y: FACE_Y },
+    at: { x: FACE_X + 20, y: FACE_Y },
     tier: "extreme",
     direction: -1,
     hitStop: 13,
     cracksGround: true,
+    /*
+      SEM O CLARAO. Esta colisao existe para mostrar a ROCHA, e o flash de
+      tela cheia dos golpes extremos cobria o paredao inteiro justamente no
+      quadro do contato: sobrava um clarao branco do qual o corpo saia caido,
+      sem nada que explicasse por que. A forca do golpe continua a mesma.
+    */
+    semFlash: true,
     sound: "impact",
   });
-  poder({ tipo: "explosaoFogo", a: { x: FACE_X + 40, y: FACE_Y }, from: bate, to: bate + s(0.5), forca: 220, paleta: "sombra" });
-  poder({ tipo: "pedrasFlutuantes", a: { x: FACE_X + 120, y: 0 }, from: bate, to: bate + s(1.1), forca: 380, paleta: "sombra" });
-  poder({ tipo: "rachadura", a: { x: FACE_X + 160, y: 0 }, from: bate, to: bate + s(1.6), forca: 520 });
+  poder({ tipo: "explosaoFogo", a: { x: FACE_X + 20, y: FACE_Y }, from: bate, to: bate + s(0.5), forca: 220, paleta: "sombra" });
+  poder({ tipo: "pedrasFlutuantes", a: { x: FACE_X + 40, y: 0 }, from: bate, to: bate + s(1.1), forca: 380, paleta: "sombra" });
+  poder({ tipo: "rachadura", a: { x: FACE_X + 70, y: 0 }, from: bate, to: bate + s(1.6), forca: 520 });
+  /*
+    O QUADRO PRECISA CABER A PEDRA. Fechado no corpo, o que se ve e alguem
+    parando no ar: a rocha fica fora de quadro e a colisao perde o outro
+    lado. A camera abre e desloca o centro PARA A DIREITA da face, de modo
+    que a massa ocupe a metade esquerda do quadro.
+
+    Medido: com o centro em FACE_X + 420 a pedra ficava com 216 dos 1080
+    pixels, espremida na borda. Trazendo o centro para FACE_X + 180 ela passa
+    de um quinto para mais de um terco do quadro -- deixa de ser cenario ao
+    fundo e vira a coisa em que se bateu.
+  */
   cameraKeys.push({
     frame: bate,
-    center: { x: FACE_X + 200, y: FACE_Y + 150 },
-    zoom: 1.0,
+    center: { x: FACE_X + 180, y: FACE_Y + 60 },
+    zoom: 0.72,
     ease: 0,
     shake: 34,
     cena: true,
@@ -127,21 +177,27 @@ export const arremessoNoParedao = (
     COLADO NA PAREDE. Um punhado de quadros em que ele nao desce: e o que
     separa "bateu na rocha" de "passou perto dela".
   */
-  pose(quem, "groundHit", bate + s(0.24), NO_CORPO);
+  pose(quem, "knockback", bate + s(0.24), NO_CORPO);
 
   // ---- 3. A QUEDA ---------------------------------------------------------
   const cai = bate + s(0.32);
   pose(quem, "downed", cai + s(0.4), CAIDO);
   cameraKeys.push({
     frame: cai,
-    center: { x: FACE_X + 260, y: ALTURA_QUADRIL - 60 },
+    center: { x: FACE_X + 300, y: ALTURA_QUADRIL - 60 },
     zoom: 0.8,
     ease: s(0.5),
     shake: 10,
     cena: true,
   });
 
-  const fim = cai + s(0.9);
+  /*
+    O DEPOIS TEM QUE CABER. Com 0,9s a tecnica devolvia o cursor e a cena
+    seguinte cortava para um close do outro lutador antes de o corpo caido
+    aparecer ao pe da pedra -- a consequencia inteira do arremesso ficava
+    fora do video.
+  */
+  const fim = cai + s(1.5);
   pose(quem, "sitUp", fim - s(0.2));
   return fim;
 };

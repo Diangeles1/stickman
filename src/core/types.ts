@@ -230,6 +230,21 @@ export type FighterPreset = {
 /** Peso do impacto. Governa quais efeitos entram (ver effects/impact). */
 export type ImpactTier = "light" | "medium" | "extreme";
 
+/*
+  UM IMPACTO PODE DISPENSAR O FLASH DE TELA CHEIA.
+
+  Todo golpe `extreme` acende oito quadros de clarao branco com linhas
+  radiais. Num soco isso e exatamente o que se quer: o que importa e a
+  pancada, e o fundo nao faz falta.
+
+  Mas ha colisoes cujo assunto e AQUILO EM QUE SE BATEU -- um corpo contra a
+  rocha existe para mostrar a rocha. Medido no arremesso: o clarao cobria o
+  paredao inteiro justamente no quadro do contato, e o que se via era um
+  flash branco do qual o corpo saia caido, sem nada que explicasse por que.
+
+  A forca do golpe nao muda; muda so quem tem direito de tapar a tela.
+*/
+
 export type AttackName =
   | "punch"
   | "punchHeavy"
@@ -532,6 +547,8 @@ export type ImpactEvent = {
   direction: number;
   hitStop: number;
   cracksGround: boolean;
+  /** nao acende o clarao de tela cheia (ver a nota em ImpactTier) */
+  semFlash?: boolean;
   sound: string;
   /**
    * Quem levou. Sem isto a cena nao sabe em qual dos dois aplicar a

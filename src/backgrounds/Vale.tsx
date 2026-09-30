@@ -205,21 +205,44 @@ export const Paredao: React.FC<{ trincado: number }> = ({ trincado }) => {
         A MASSA. Mais clara que o terreno (#191521) de proposito: encostada
         nele, uma rocha da mesma cor do chao nao tem silhueta e o corpo parece
         bater no nada. O degrau de claridade e o que faz a pedra existir.
+
+        Medido pintando a massa de verde num quadro do impacto: ela SEMPRE
+        esteve no quadro, ocupando 216 dos 1080 pixels na borda esquerda. Nao
+        era ausencia, era valor -- escura demais contra o vale noturno, lia
+        como mais um espigao do fundo. O que faltava era peso, nao presenca.
       */}
-      <path d="M -900 40 L -820 -1300 L -260 -1500 L -40 -900 L 0 40 Z" fill="#2a2438" />
+      <path d="M -900 40 L -820 -1300 L -260 -1500 L -40 -900 L 0 40 Z" fill="#332b44" />
       {/* a face iluminada, virada para a luta: e nela que o corpo bate */}
-      <path d="M -40 -900 L 0 40 L -190 40 L -250 -830 Z" fill="#3b3149" />
+      <path d="M -40 -900 L 0 40 L -190 40 L -250 -830 Z" fill="#493c5b" />
       {/* o gume do alto pega a luz baixa do horizonte */}
       <path
         d="M -820 -1300 L -260 -1500 L -250 -1460 L -812 -1262 Z"
         fill="#5c4a5e"
       />
-      {/* veios na rocha: sem eles a massa e um bloco chapado */}
-      {[0, 1, 2, 3].map((i) => (
+      {/*
+        A QUINA ACESA. O vale ja tem espigoes escuros; sem uma borda que separe
+        a pedra do fundo, o paredao vira mais um deles e o corpo parece bater
+        no nada. E a linha vertical que diz "aqui a rocha termina".
+      */}
+      <path d="M 0 40 L -40 -900 L -12 -900 L 14 40 Z" fill="#6b5570" />
+      {/*
+        VEIOS: textura da superficie, e nao estrutura.
+
+        A primeira versao usava quatro listras escuras (#221c30 contra
+        #332b44) atravessando a altura inteira da pedra. De longe o efeito era
+        o oposto do pretendido: a massa lia como uma PALICADA de espigoes
+        finos, igual aos do vale ao fundo, em vez de um bloco unico -- e um
+        corpo nao bate numa cerca.
+
+        Agora sao poucos, com pouca diferenca de valor, e param na metade da
+        altura. Veio se ve de perto; silhueta se ve de longe, e a silhueta tem
+        precedencia.
+      */}
+      {[0, 1, 2].map((i) => (
         <path
           key={i}
-          d={`M ${-780 + i * 190} 40 L ${-700 + i * 190} ${-500 - i * 160} L ${-660 + i * 190} ${-480 - i * 160} L ${-740 + i * 190} 40 Z`}
-          fill="#221c30"
+          d={`M ${-700 + i * 230} 40 L ${-640 + i * 230} ${-340 - i * 120} L ${-612 + i * 230} ${-326 - i * 120} L ${-672 + i * 230} 40 Z`}
+          fill="#2b2439"
         />
       ))}
       {/* AS FENDAS DO IMPACTO, abrindo com `trincado` */}
@@ -227,8 +250,9 @@ export const Paredao: React.FC<{ trincado: number }> = ({ trincado }) => {
         [0, 1, 2, 3, 4].map((i) => {
           const ang = -2.1 + i * 0.42;
           const comp = (220 + i * 70) * t;
-          const ox = -150;
-          const oy = -430;
+          // na FACE, na altura em que o corpo bate -- nao no meio da massa
+          const ox = -35;
+          const oy = -300;
           return (
             <path
               key={`f${i}`}

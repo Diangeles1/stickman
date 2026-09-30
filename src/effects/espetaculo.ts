@@ -214,7 +214,7 @@ const montar = (t: Timeline): Espetaculo => {
       impactosAnime.push({ real: r, quadros: 14, at: imp.at });
       continue;
     }
-    if (imp.tier === "extreme") {
+    if (imp.tier === "extreme" && !imp.semFlash) {
       impactosAnime.push({ real: r, quadros: 8, at: imp.at });
     }
 
@@ -598,7 +598,7 @@ const montarCinematico = (
       lembrado; os outros marcam e saem.
     */
     impactosAnime: t.impacts
-      .filter((i) => i.tier === "extreme" && !i.bloqueado)
+      .filter((i) => i.tier === "extreme" && !i.bloqueado && !i.semFlash)
       .map((i) => ({
         real: real(i.frame),
         quadros: i.finalizador ? 14 : 8,
