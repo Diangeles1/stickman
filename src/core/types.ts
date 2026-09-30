@@ -471,7 +471,9 @@ export type Beat =
         // o climax: as duas rajadas maximas se encontram no meio
         | "choqueDeRajadas"
         // arremessado contra a rocha do vale, que racha com o impacto
-        | "arremessoNoParedao";
+        | "arremessoNoParedao"
+        // o golpe lanca, o outro sobe atras, e a troca acontece no alto
+        | "perseguicaoNoAr";
       gelo: FighterId;
       fogo: FighterId;
     }

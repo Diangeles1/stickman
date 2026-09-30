@@ -83,10 +83,7 @@ export const NINJAS: FightSpec = {
       a coisa que se entende: o golpe lanca o azul, o vermelho SOBE ATRAS
       dele, e o azul revida la em cima.
     */
-    { type: "attack", attacker: "red", target: "blue", move: "uppercut", targetPoint: "queixo" },
-    { type: "airborne", who: "blue", duration: 58 },
-    { type: "attack", attacker: "red", target: "blue", move: "airAttack" },
-    { type: "attack", attacker: "blue", target: "red", move: "airAttack" },
+    { type: "tecnica", tecnica: "perseguicaoNoAr", gelo: "blue", fogo: "red" },
 
     // ---- 18-25: a esfera do azul ----------------------------------------
     { type: "tecnica", tecnica: "azulVermelho", gelo: "blue", fogo: "red" },
