@@ -461,6 +461,27 @@ const REACAO = 8;
 /** folga minima entre o fim de uma fala e o comeco da proxima */
 const RESPIRO = 8;
 /** falas que nunca sao cortadas por outra: os momentos da historia */
+/**
+ * A FALA DE VITORIA SO EXISTE PARA QUEM TEM FALA GRAVADA.
+ *
+ * O narrador tem duas: "O Preto venceu!" e "O Vermelho venceu!". O codigo
+ * escolhia entre as duas com um ternario -- `vencedor === "red" ? ... : ...`
+ * -- e portanto QUALQUER outro lutador caia em "O Preto venceu!".
+ *
+ * No duelo do vale isso virava um erro na cara do espectador: a placa na tela
+ * escrevia "RAVI VENCE!" e o narrador dizia "O Preto venceu!", num video onde
+ * nao existe nenhum preto. O ternario nasceu num mundo de dois lutadores e
+ * ninguem o revisou quando o motor passou a ter sete.
+ *
+ * Sem fala para o vencedor, o certo e o SILENCIO: a placa ja diz quem ganhou,
+ * e narracao errada e pior que narracao nenhuma. Quando houver gravacao para
+ * os outros lutadores (ver scripts/narrar.py), basta acrescentar aqui.
+ */
+const FALA_DE_VITORIA: Partial<Record<FighterId, Fala>> = {
+  black: "venceu_black",
+  red: "venceu_red",
+};
+
 const IMPORTANTES = new Set<Fala>(["nocaute", "venceu_black", "venceu_red", "like"]);
 
 /**
@@ -488,7 +509,7 @@ const narrar = (
       */
       const tabela = { ...NOMES, ...(t.spec.nomes ?? {}) };
       const vencedor = Object.entries(tabela).find(([, n]) => r.texto.startsWith(n as string))?.[0];
-      fala = vencedor === "red" ? "venceu_red" : "venceu_black";
+      fala = vencedor ? (FALA_DE_VITORIA[vencedor as FighterId] ?? null) : null;
     }
     if (!fala) continue;
     candidatas.push({ real: r.inicio + REACAO, fala });
@@ -636,17 +657,25 @@ const montarCinematico = (
   const falas: { real: number; fala: Fala }[] = [];
   if (final !== undefined) {
     const anuncio = final + ESPERA_DA_PERGUNTA + 6;
-    const resultado: Fala = ko
-      ? ko.vencedor === "red"
-        ? "venceu_red"
-        : "venceu_black"
+    /*
+      Sem K.O. a pergunta fica no ar ("Quem deve vencer?"), que e o fecho de
+      uma luta em aberto. Com K.O. mas sem fala gravada para o vencedor, nao
+      entra nada: a placa na tela ja anunciou.
+    */
+    const resultado: Fala | undefined = ko
+      ? FALA_DE_VITORIA[ko.vencedor]
       : "quem";
-    falas.push({ real: anuncio, fala: resultado });
-    // o pedido entra junto com o botao aparecendo na tela
-    falas.push({
-      real: anuncio + Math.round(FALAS[resultado].segundos * 60) + 26,
-      fala: "like",
-    });
+    if (resultado) falas.push({ real: anuncio, fala: resultado });
+    /*
+      O PEDIDO DE LIKE ENTRA MESMO SEM O ANUNCIO.
+      Sem fala de vitoria nao ha o que esperar terminar, entao ele so respeita
+      a espera da propria placa. Calcular o atraso a partir de uma fala que
+      nao tocou deixaria o pedido cedo ou tarde demais.
+    */
+    const depoisDoAnuncio = resultado
+      ? Math.round(FALAS[resultado].segundos * 60) + 26
+      : 30;
+    falas.push({ real: anuncio + depoisDoAnuncio, fala: "like" });
   }
   return {
     ko,
