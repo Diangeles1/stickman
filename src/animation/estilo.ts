@@ -106,6 +106,27 @@ export type EstiloDeAnimacao = {
    * golpes -- e nao havia como pedir isso. Aqui ha.
    */
   janelaDeGolpe: number;
+  /**
+   * MULTIPLICA SO A PREPARACAO E A RECUPERACAO, deixando o disparo intacto.
+   *
+   * `janelaDeGolpe` estica o golpe inteiro, e esticar o disparo muda a
+   * velocidade do soco -- justamente o que nao se quer mexer. O guia de
+   * animacao e explicito sobre onde o tempo deve ir: "wind-up frames get
+   * longer display times, the action frame gets the shortest, and recovery
+   * frames ease back to normal", e "add more time to the anticipation and
+   * recovery, while the jump up and fall down transitions can be faster".
+   *
+   * O motor fazia o oposto. Medido num soco rapido: TRES quadros entre a
+   * pose de aproximacao e a de carga, e mais dois ate o disparo. A preparacao
+   * inteira em cinco quadros era a parte mais CURTA do golpe, e a
+   * consequencia aparecia como o corpo teleportando para a pose de carga --
+   * num quadro, quadril, pescoco, ombro, cotovelo e punho se deslocando
+   * todos de uma vez, dez vezes mais que nos quadros vizinhos.
+   *
+   * E isso que scripts/cadeia.mts vinha chamando de "corpo se movendo como
+   * bloco". Nao era a corrente comprimida: era a antecipacao inexistente.
+   */
+  antecipacao: number;
 };
 
 /**
@@ -129,6 +150,7 @@ export const STICK_FIGHT: EstiloDeAnimacao = {
   tremor: 1,
   quadrosPorDesenho: 1,
   janelaDeGolpe: 1,
+  antecipacao: 1,
 };
 
 /**
@@ -159,6 +181,7 @@ export const ANIME: EstiloDeAnimacao = {
   */
   quadrosPorDesenho: 1,
   janelaDeGolpe: 1,
+  antecipacao: 1,
 };
 
 /**
@@ -198,6 +221,7 @@ export const ANIME_DESENHADO: EstiloDeAnimacao = {
   tremor: 1.15,
   quadrosPorDesenho: 2,
   janelaDeGolpe: 1.4,
+  antecipacao: 1.3,
 };
 
 /**
@@ -218,6 +242,7 @@ export const REALISTA: EstiloDeAnimacao = {
   // realista e liso: aqui o objetivo e parecer captura, nao desenho
   quadrosPorDesenho: 1,
   janelaDeGolpe: 1,
+  antecipacao: 1,
 };
 
 /**
@@ -236,6 +261,7 @@ export const CARTOON: EstiloDeAnimacao = {
   // ver a nota em ANIME: a pose segurada vive em `animeDesenhado`
   quadrosPorDesenho: 1,
   janelaDeGolpe: 1,
+  antecipacao: 1,
 };
 
 /**
@@ -256,6 +282,7 @@ export const COMBATE_PESADO: EstiloDeAnimacao = {
   tremor: 1.4,
   quadrosPorDesenho: 1,
   janelaDeGolpe: 1,
+  antecipacao: 1,
 };
 
 const POR_NOME: Record<NomeDeEstilo, EstiloDeAnimacao> = {

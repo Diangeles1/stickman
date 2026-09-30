@@ -337,13 +337,20 @@ export const compilar = (spec: FightSpec): Timeline => {
       mesmo numero de quadros, mas com metade dos desenhos, e a cadeia
       cinetica se achata num bloco so.
     */
-    const k =
-      escalaDuracao(preset[quem].profile.speed, spec.intensity) *
-      estiloDe(spec.estilo).janelaDeGolpe;
+    const estilo = estiloDe(spec.estilo);
+    const k = escalaDuracao(preset[quem].profile.speed, spec.intensity) * estilo.janelaDeGolpe;
+    /*
+      A PREPARACAO E A RECUPERACAO GANHAM TEMPO; O DISPARO NAO.
+
+      Esticar tudo por igual muda a velocidade do soco, que e a unica coisa
+      aqui que nao pode ficar mais lenta. O tempo tem que entrar antes e
+      depois do golpe -- ver antecipacao em animation/estilo.
+    */
+    const ka = k * estilo.antecipacao;
     return {
-      windup: Math.max(2, Math.round(a.windup * k)),
+      windup: Math.max(2, Math.round(a.windup * ka)),
       strike: Math.max(2, Math.round(a.strike * k)),
-      recover: Math.max(2, Math.round(a.recover * k)),
+      recover: Math.max(2, Math.round(a.recover * ka)),
       contactAt: Math.max(1, Math.round(a.contactAt * k)),
       def: a,
     };

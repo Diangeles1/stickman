@@ -503,11 +503,66 @@ export const pesoDoLutador = (id: FighterId): number => {
  * punho passaria pelo alvo antes da hora e scripts/contato.mts acusaria. Para
  * tras, o desenho e sempre um que ja aconteceu.
  */
-const quadroDoDesenho = (timeline: Timeline, frame: number): number => {
+/**
+ * Poses que ganham desenho em TODO quadro.
+ *
+ * Sao as de golpe e as de quem leva: os poucos quadros em que a corrente
+ * cinetica tem que aparecer.
+ */
+export const POSES_SOLTAS = new Set<PoseName>([
+  "punch", "punchFast", "punchHeavy", "uppercut",
+  "kick", "kickLow", "kickHigh", "spinKick",
+  "knee", "elbow", "airAttack", "diveAttack",
+  "hitHead", "hitChest", "hitBody", "hitLeg",
+  "knockback", "launched", "stagger",
+]);
+
+export const quadroDoDesenho = (
+  timeline: Timeline,
+  id: FighterId,
+  frame: number,
+): number => {
   const n = estiloDe(timeline.spec.estilo).quadrosPorDesenho;
   if (n <= 1) return frame;
-  return Math.floor(frame / n) * n;
+  const grupo = Math.floor(frame / n) * n;
+  /*
+    DURANTE UM GOLPE, TODO QUADRO GANHA DESENHO.
+
+    A janela e a da MIRA (o AimEvent), e nao a do nome da pose: ela comeca na
+    preparacao e termina depois do contato, cobrindo o golpe inteiro. Pelo
+    nome da pose o inicio ficava de fora, porque nos primeiros quadros o
+    lutador ainda esta rotulado "guard" enquanto o braco ja saiu.
+
+    E O MOTIVO E QUE O BRACO JA ESTAVA EM 1s. A cinematica inversa da mira e
+    aplicada sobre o quadro CRU, enquanto o corpo vinha do quadro quantizado:
+    durante um soco o braco se movia em todos os quadros e o quadril, o
+    pescoco e o ombro so nos pares. Dois relogios no mesmo corpo.
+
+    Medido num soco (contato no 422): quadril, pescoco e ombro com
+    deslocamento ZERO nos quadros impares e todo o movimento nos pares, com
+    cotovelo e punho andando em todos. scripts/cadeia.mts lia isso como
+    "corpo se movendo como bloco" -- e lia certo, so que a causa nao era a
+    corrente estar comprimida, era o degrau juntando tres juntas no mesmo
+    quadro.
+
+    Com o golpe inteiro em 1s os dois relogios viram um so.
+  */
+  const golpeando = timeline.aims.some(
+    (m) => m.who === id && frame >= m.from && frame <= m.to,
+  );
+  if (golpeando) return frame;
+  // e quem LEVA nao tem mira: para ele vale a pose de reacao
+  return POSES_SOLTAS.has(amostrar(timeline.tracks[id], grupo).poseNome)
+    ? frame
+    : grupo;
 };
+
+/** o quadro pedido e um em que o desenho muda? */
+export const ehQuadroDeDesenho = (
+  timeline: Timeline,
+  id: FighterId,
+  frame: number,
+): boolean => quadroDoDesenho(timeline, id, frame) === frame;
 
 const corpoBase = (
   timeline: Timeline,
@@ -530,7 +585,7 @@ const corpoBase = (
     camera e o desenho. A quantizacao deixa de ser uma camada por cima e passa
     a ser o tempo do motor.
   */
-  const frame = quadroDoDesenho(timeline, quadroPedido);
+  const frame = quadroDoDesenho(timeline, id, quadroPedido);
   const { fighterA, fighterB } = timeline.spec;
   const outroId = id === fighterA ? fighterB : fighterA;
   const preset = PRESETS[id];
@@ -867,8 +922,13 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
 
     Com quadrosPorDesenho 1, PASSO e 1 e este laco e identico ao de antes.
   */
-  const PASSO = Math.max(1, estiloDe(timeline.spec.estilo).quadrosPorDesenho);
-  for (let f = 0; f < n; f += PASSO) {
+  const quadros: number[] = [];
+  for (let f = 0; f < n; f++) if (ehQuadroDeDesenho(timeline, id, f)) quadros.push(f);
+  for (let i = 0; i < quadros.length; i++) {
+    const f = quadros[i];
+    // atras: orcamento do limitador. a frente: quantos quadros o plano cobre.
+    const PASSO = i === 0 ? 1 : f - quadros[i - 1];
+    const SEGURA = Math.max(1, (quadros[i + 1] ?? n) - f);
     const c = corpoBase(timeline, id, f);
     const j = juntasDoCorpo(c);
     // Girando no eixo vertical o esqueleto esta achatado: a conversao do alvo
@@ -1002,7 +1062,7 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
 
       st.ultimo = saida;
       // o mesmo alvo vale para os quadros SEGURADOS deste desenho
-      for (let q = f; q < Math.min(n, f + PASSO); q++) {
+      for (let q = f; q < Math.min(n, f + SEGURA); q++) {
         plano.alvo[pe].x[q] = saida.x;
         plano.alvo[pe].y[q] = saida.y;
         plano.alvo[pe].peso[q] = peso;
@@ -1054,7 +1114,7 @@ const corpoPlantado = (
     interpolacao entre f0 e f1 continua existindo para quem nao segura a pose
     (quadrosPorDesenho 1), onde `frame` e o quadro pedido sem alteracao.
   */
-  const frame = quadroDoDesenho(timeline, quadroPedido);
+  const frame = quadroDoDesenho(timeline, id, quadroPedido);
   const eu = corpoBase(timeline, id, frame);
   // na volta do giro nao ha IK de perna (ver `girando` no planejamento)
   if (eu.giro < 0.75) return eu;

@@ -53,7 +53,25 @@ for (const mira of t.aims) {
   // isso media a coisa errada: o passo a frente acontece durante a preparacao,
   // entao o pico do quadril caia fora da janela e o medidor acusava "cadeia
   // invertida" num corpo que estava certo.
-  const de = Math.max(0, mira.from - 24);
+  /*
+    ...MAS A JANELA NAO PODE ALCANCAR O GOLPE ANTERIOR.
+
+    Vinte e quatro quadros antes do disparo sao 0,4 segundo a 60 fps, e isso
+    chega inteiro dentro da acao de antes. Medido num soco com contato no
+    quadro 422: TODAS as juntas apareciam com o pico em 414 -- tres quadros
+    antes de a mira sequer abrir -- e o medidor acusava "corpo se movendo como
+    bloco". O pico era da investida anterior, em que o corpo inteiro translada
+    e todas as juntas se movem juntas POR DEFINICAO.
+
+    Nenhuma corrente cinetica sobrevive a essa comparacao, porque translacao
+    do corpo move tudo igual e com folga mais do que a articulacao de um
+    braco. A janela agora para onde o golpe anterior deste mesmo lutador
+    terminou.
+  */
+  const anterior = t.aims
+    .filter((m) => m.who === mira.who && m.to < mira.contact && m !== mira)
+    .reduce<number>((maior, m) => Math.max(maior, m.to), 0);
+  const de = Math.max(0, anterior, mira.from - 24);
   const ate = mira.contact + 4;
 
   console.log(

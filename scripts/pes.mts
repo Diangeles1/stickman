@@ -17,8 +17,8 @@ import {
   POSES_DE_APOIO,
   corpoNoQuadro,
   juntasDoCorpo,
+  ehQuadroDeDesenho,
 } from "../src/animation/corpo";
-import { estiloDe } from "../src/animation/estilo";
 import { compilar } from "../src/core/timeline";
 import type { FighterId, JointName } from "../src/core/types";
 import { escolherLuta } from "./lutas.mjs";
@@ -53,7 +53,29 @@ const t = compilar(spec);
   Medir no passo do desenho compara o que o espectador ve com o que ele ve em
   seguida, que e a unica comparacao que significa alguma coisa aqui.
 */
-const PASSO = estiloDe(spec.estilo).quadrosPorDesenho;
+/*
+  O PASSO NAO E MAIS UM NUMERO: E PERGUNTADO AO MOTOR.
+
+  Este script supunha o passo fixo do estilo. Isso valia enquanto o motor
+  segurava a pose sempre o mesmo tanto; quando golpe e reacao passaram a
+  ganhar desenho em todo quadro, a suposicao virou o defeito.
+
+  Medido no vermelho entre os quadros 127 e 132: o pe percorre
+  574 -> 459 -> 240 -> 22 -> -82 -> -85, que desenhado quadro a quadro sao
+  passos de 115, 219, 218, 104 e 3. Comparando de dois em dois, o script
+  pulava o quadro do meio e reportava "estalo de 107 unidades" num trecho em
+  que o espectador ve passos MENORES do que antes.
+
+  O estalo era da regua. Perguntar quais quadros mudam de desenho e a unica
+  forma de comparar o que se ve com o que se ve em seguida.
+*/
+const quadrosDesenhados = (id: FighterId): number[] => {
+  const fs: number[] = [];
+  for (let f = 0; f <= t.durationInFrames; f++) {
+    if (ehQuadroDeDesenho(t, id, f)) fs.push(f);
+  }
+  return fs;
+};
 
 console.log(`luta: ${qual}\n`);
 let totalRuim = 0;
@@ -78,13 +100,17 @@ let totalRuim = 0;
   deslocamento de tique duplo contra limite de tique simples reprova o tempo
   do desenho, nao o movimento do pe.
 */
-const ESTALO = 30 * PASSO;
+const ESTALO_POR_QUADRO = 30;
 const PERTO = 15;
 let estalos = 0;
 for (const id of [spec.fighterA, spec.fighterB] as FighterId[]) {
   for (const pe of ["footFront", "footBack"] as JointName[]) {
-    for (let f = PASSO; f <= t.durationInFrames; f += PASSO) {
-      const a = corpoNoQuadro(t, id, f - PASSO);
+    const desenhos = quadrosDesenhados(id);
+    for (let i = 1; i < desenhos.length; i++) {
+      const f = desenhos[i];
+      const passo = f - desenhos[i - 1];
+      void passo;
+      const a = corpoNoQuadro(t, id, desenhos[i - 1]);
       const b = corpoNoQuadro(t, id, f);
       if (a.noAr || b.noAr) continue;
       if (!POSES_DE_APOIO.has(a.poseNome) || !POSES_DE_APOIO.has(b.poseNome)) continue;
@@ -93,7 +119,7 @@ for (const id of [spec.fighterA, spec.fighterB] as FighterId[]) {
       const pb = juntasDoCorpo(b)[pe];
       if (pa.y < -PERTO || pb.y < -PERTO) continue;
       const d = Math.hypot(pb.x - pa.x, pb.y - pa.y);
-      if (d > ESTALO) {
+      if (d > ESTALO_POR_QUADRO * passo) {
         estalos++;
         console.log(
           `  ESTALO ${id} ${pe} quadro ${f}: ${d.toFixed(0)} unidades (${a.poseNome} -> ${b.poseNome})`,
@@ -109,8 +135,12 @@ for (const id of [spec.fighterA, spec.fighterB] as FighterId[]) {
     let arrastado = 0;
     let quadrosRuins = 0;
     let pior = { d: 0, f: 0 };
-    for (let f = PASSO; f <= t.durationInFrames; f += PASSO) {
-      const a = corpoNoQuadro(t, id, f - PASSO);
+    const desenhos = quadrosDesenhados(id);
+    for (let i = 1; i < desenhos.length; i++) {
+      const f = desenhos[i];
+      const passo = f - desenhos[i - 1];
+      void passo;
+      const a = corpoNoQuadro(t, id, desenhos[i - 1]);
       const b = corpoNoQuadro(t, id, f);
       if (a.noAr || b.noAr) continue;
       // corpo deitado, caindo ou levantando nao esta de pe: membro que se move
