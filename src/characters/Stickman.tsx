@@ -173,6 +173,50 @@ export const Stickman: React.FC<StickmanProps> = ({
   */
   const uid = `${preset.id}-${Math.round(baseX)}-${Math.round(baseY)}-${Math.round(spin)}`;
 
+/*
+  O CALIBRE DE CADA PONTA DO OSSO, em multiplos da espessura do preset.
+
+  Ate aqui todo osso era uma `<line>` de espessura unica com ponta redonda, e
+  era isso que fazia o boneco ler como montado com canudos: braco, perna e
+  tronco com o mesmo diametro do ombro ate o punho, cotovelo aparecendo como
+  BOLHA onde dois canudos se encontram, e o pescoco abrindo um ENTALHE entre
+  a cabeca e os ombros.
+
+  Membro que afina da raiz para a ponta e a diferenca entre um traco e um
+  corpo. Os numeros seguem o que o olho espera de proporcao humana: o tronco
+  e o mais grosso, a coxa vem depois, e punho e tornozelo sao os mais finos.
+
+  O PESCOCO E GROSSO DE PROPOSITO (0,95). Ele era o mais fino de todos, e por
+  isso a cabeca parecia colada: entre o circulo da cabeca e a massa dos
+  ombros sobrava uma cintura que nenhum corpo tem. Grosso, a cabeca CRESCE do
+  tronco.
+*/
+const CALIBRE = {
+  tronco: 1.18,
+  pescoco: 1.38,
+  ombro: 1.02,
+  braco: 0.84,
+  antebraco: 0.66,
+  coxa: 1.06,
+  canela: 0.78,
+  mao: 0.78,
+  pe: 0.86,
+} as const;
+
+/** calibre das duas pontas de um osso, da raiz para a extremidade */
+const calibreDoOsso = (de: string, para: string): [number, number] => {
+  // O PESCOCO ALARGA PARA CIMA, em direcao a cabeca: e essa abertura que
+  // fecha o V concavo entre o circulo da cabeca e a massa dos ombros
+  if (para === "head") return [CALIBRE.ombro, CALIBRE.pescoco];
+  if (de === "hip" && para === "neck") return [CALIBRE.tronco, CALIBRE.ombro];
+  if (de === "neck") return [CALIBRE.ombro, CALIBRE.ombro];
+  if (de.startsWith("shoulder")) return [CALIBRE.ombro, CALIBRE.braco];
+  if (de.startsWith("elbow")) return [CALIBRE.braco, CALIBRE.antebraco];
+  if (de === "hip") return [CALIBRE.tronco, CALIBRE.coxa];
+  if (de.startsWith("knee")) return [CALIBRE.coxa, CALIBRE.canela];
+  return [1, 1];
+};
+
   /**
    * O ESQUELETO INTEIRO como uma forma so, numa cor so.
    *
@@ -180,14 +224,58 @@ export const Stickman: React.FC<StickmanProps> = ({
    * de sombra) pede esta mesma funcao. Desenhar cada um por conta propria foi
    * o que produziu o defeito que esta correcao conserta.
    */
-  const ossada = (cor: string, w: number) => (
-    <g stroke={cor} fill={cor} strokeLinecap="round">
-      {ossos.map(([de, para]) => (
-        <line key={`${de}-${para}`} x1={j[de].x} y1={j[de].y} x2={j[para].x} y2={j[para].y} strokeWidth={w} />
-      ))}
-      <circle cx={j.head.x} cy={j.head.y} r={raioCabeca + (w - largura) / 2} />
-    </g>
-  );
+  const ossada = (cor: string, w: number) => {
+    // a diferenca entre a espessura pedida e a do corpo: o contorno e as
+    // mascaras pedem esta mesma forma engordada ou afinada por igual
+    const d = w - largura;
+    return (
+      <g stroke={cor} fill={cor} strokeLinecap="round" strokeLinejoin="round">
+        {ossos.map(([de, para]) => {
+          const [kDe, kPara] = calibreDoOsso(de, para);
+          const a = j[de];
+          const b = j[para];
+          const rA = Math.max(0.4, (largura * kDe + d) / 2);
+          const rB = Math.max(0.4, (largura * kPara + d) / 2);
+          const vx = b.x - a.x;
+          const vy = b.y - a.y;
+          const n = Math.hypot(vx, vy);
+          if (n < 0.01) return null;
+          // perpendicular unitaria: e por ela que a largura varia ao longo do osso
+          const px = -vy / n;
+          const py = vx / n;
+          return (
+            <g key={`${de}-${para}`}>
+              <polygon
+                points={
+                  `${(a.x + px * rA).toFixed(1)},${(a.y + py * rA).toFixed(1)} ` +
+                  `${(b.x + px * rB).toFixed(1)},${(b.y + py * rB).toFixed(1)} ` +
+                  `${(b.x - px * rB).toFixed(1)},${(b.y - py * rB).toFixed(1)} ` +
+                  `${(a.x - px * rA).toFixed(1)},${(a.y - py * rA).toFixed(1)}`
+                }
+                stroke="none"
+              />
+              {/* as juntas ficam redondas: sem elas o cotovelo vira um bico */}
+              <circle cx={a.x} cy={a.y} r={rA} stroke="none" />
+              <circle cx={b.x} cy={b.y} r={rB} stroke="none" />
+            </g>
+          );
+        })}
+        {/*
+          MAOS E PES. Sao so quatro circulos, e mudam mais a leitura do que
+          parece: um membro que termina num toco cortado nao tem ONDE acabar,
+          e o olho le o braco como um tubo. Uma ponta arredondada um pouco
+          maior que o pulso diz "aqui termina a pessoa".
+        */}
+        {(["handFront", "handBack"] as const).map((k) => (
+          <circle key={k} cx={j[k].x} cy={j[k].y} r={Math.max(0.4, (largura * CALIBRE.mao + d) / 2)} stroke="none" />
+        ))}
+        {(["footFront", "footBack"] as const).map((k) => (
+          <circle key={k} cx={j[k].x} cy={j[k].y} r={Math.max(0.4, (largura * CALIBRE.pe + d) / 2)} stroke="none" />
+        ))}
+        <circle cx={j.head.x} cy={j.head.y} r={raioCabeca + d / 2} stroke="none" />
+      </g>
+    );
+  };
 
   /*
     DIRECAO DA LUZ. De cima e ligeiramente da frente -- e de onde vem a luz

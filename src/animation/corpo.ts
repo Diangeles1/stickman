@@ -30,6 +30,7 @@
 import { estiloDe } from "./estilo";
 import {
   alturaDoVoo,
+  amortecimentoDoPulo,
   amostrar,
   disparo,
   inclinacaoDesenhada,
@@ -693,12 +694,22 @@ const corpoBase = (
     a tela mostrar outro.
   */
   const fundo = escalaDaProfundidade(a.z);
+  /*
+    O PESO DO PULO: o corpo se agacha antes de sair do chao e afunda ao
+    pousar (ver amortecimentoDoPulo em animation/sampler). Entra aqui, na
+    mesma linha da compressao do impacto, porque as duas sao a mesma coisa --
+    massa respondendo a uma forca -- e porque assim TODO pulo de TODA luta
+    ganha isso sem nenhuma cena precisar pedir.
+  */
+  const amortece = amortecimentoDoPulo(timeline.tracks[id], frame);
   return {
     x: a.x + pivo + rebolado,
     z: a.z,
-    baseY: (-apoio - voo) * compressao * fundo + alturaDoChao(a.z),
+    baseY:
+      (-apoio - voo + amortece.afunda) * compressao * amortece.compressao * fundo +
+      alturaDoChao(a.z),
     facing,
-    scale: preset.scale * compressao * fundo,
+    scale: preset.scale * compressao * amortece.compressao * fundo,
     spin,
     giro,
     pose,

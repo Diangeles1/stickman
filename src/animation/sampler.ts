@@ -785,6 +785,82 @@ const trechosNoAr = (track: FighterTrack) => {
   return trechos;
 };
 
+/*
+  O QUE ACONTECE NOS DOIS INSTANTES EM QUE O CORPO TOCA O CHAO NUM PULO.
+
+  O motor ja comprimia o corpo de quem LEVA UM GOLPE (ver compressaoDe em
+  animation/corpo), e nao fazia nada nos dois momentos em que a fisica mais
+  pede: sair do chao e voltar a ele. Um corpo caindo de quinhentas unidades
+  pousava com a mesma pose com que estava no ar, e um corpo prestes a saltar
+  subia sem se preparar.
+
+  E o defeito nao aparece como "falta squash": aparece como o boneco NAO TER
+  PESO. Massa que sobe sem se agachar e massa que pousa sem afundar nao e
+  massa, e um desenho sendo movido.
+
+  Toda a pratica de animacao bate nisso, e a de jogo tambem: antecipacao antes
+  da acao, absorcao depois do impacto, e as duas com mais quadros que a acao
+  em si.
+
+  ISTO VALE PARA TODO PULO DE TODA LUTA, porque sai dos trechos no ar da
+  propria trilha -- nenhuma cena precisa pedir, e nenhuma pode esquecer.
+*/
+
+/** quadros de agachamento antes de sair do chao */
+const QUADROS_DE_PREPARO = 7;
+/** quadros de absorcao depois de pousar */
+const QUADROS_DE_ABSORCAO = 11;
+/**
+ * O quanto o quadril afunda, como fracao da altura do pulo.
+ *
+ * Proporcional a altura de proposito: um pulinho de ataque quase nao se
+ * agacha, e uma queda de arremesso afunda fundo. Altura fixa faria os dois
+ * parecerem o mesmo esforco.
+ */
+const FUNDO_DO_PREPARO = 0.1;
+const FUNDO_DA_ABSORCAO = 0.16;
+/** teto em unidades de mundo: agachar mais que isto atravessa o chao */
+const AFUNDAMENTO_MAXIMO = 95;
+
+/**
+ * Quanto o corpo afunda e encolhe perto da decolagem e do pouso.
+ *
+ * `afunda` desce o quadril (unidades de mundo, positivo para baixo) e
+ * `compressao` encolhe o desenho. As duas juntas: so afundar le como o corpo
+ * atravessando o chao, so encolher le como o corpo diminuindo.
+ */
+export const amortecimentoDoPulo = (
+  track: FighterTrack,
+  frame: number,
+  alturaMaxima = 520,
+): { afunda: number; compressao: number } => {
+  const g = (track.estilo ?? STICK_FIGHT).gravidade;
+  for (const t of trechosNoAr(track)) {
+    const dur = Math.max(1, t.ate - t.de);
+    const altura = Math.min(alturaMaxima, (g * dur * dur) / 8);
+
+    // PREPARO: fundo no comeco da janela, zero no quadro em que sai do chao.
+    // O corpo desce e ENTAO dispara -- a energia sobe de onde ela foi juntada.
+    if (frame >= t.de - QUADROS_DE_PREPARO && frame < t.de) {
+      const p = (frame - (t.de - QUADROS_DE_PREPARO)) / QUADROS_DE_PREPARO;
+      const peso = Math.sin(p * Math.PI * 0.5); // cresce ate o instante do salto
+      const afunda = Math.min(AFUNDAMENTO_MAXIMO, altura * FUNDO_DO_PREPARO) * peso;
+      return { afunda, compressao: 1 - (afunda / AFUNDAMENTO_MAXIMO) * 0.05 };
+    }
+
+    // ABSORCAO: fundo no quadro do pouso, subindo de volta.
+    // Mais longa que o preparo porque o corpo leva mais tempo para se
+    // recompor do que para se preparar.
+    if (frame >= t.ate && frame <= t.ate + QUADROS_DE_ABSORCAO) {
+      const p = (frame - t.ate) / QUADROS_DE_ABSORCAO;
+      const peso = (1 - p) * (1 - p); // fundo logo no toque, aliviando depois
+      const afunda = Math.min(AFUNDAMENTO_MAXIMO, altura * FUNDO_DA_ABSORCAO) * peso;
+      return { afunda, compressao: 1 - (afunda / AFUNDAMENTO_MAXIMO) * 0.08 };
+    }
+  }
+  return { afunda: 0, compressao: 1 };
+};
+
 /**
  * Gravidade da descida em relacao a da subida.
  *
