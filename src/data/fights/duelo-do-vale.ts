@@ -29,8 +29,17 @@
  */
 
 import type { FightSpec } from "../../core/types";
+import { trocarVencedor } from "../trocar";
 
-export const DUELO_DO_VALE: FightSpec = {
+/*
+  A LUTA E UMA FABRICA, e nao uma constante.
+
+  O canal publica a MESMA coreografia com nomes e vencedor diferentes: e o
+  que faz a tela de escolha valer, porque quem apostou num nome precisa
+  poder errar. Escrever duas lutas para isso seria manter duas coreografias
+  em sincronia na mao; aqui e a mesma, com dois parametros.
+*/
+const duelo = (nomeA: string, nomeB: string): FightSpec => ({
   fighterA: "green",
   /*
     O ADVERSARIO E O LARANJA, e nao o preset chamado "purple".
@@ -49,7 +58,7 @@ export const DUELO_DO_VALE: FightSpec = {
   // o mesmo preset da luta dos ninjas: pose segurada em 2, janela de golpe
   // alargada e preparacao com tempo (ver animation/estilo.ts)
   estilo: "animeDesenhado",
-  nomes: { green: "MIGUEL", gold: "RAVI" },
+  nomes: { green: nomeA, gold: nomeB },
   poderes: { green: "MARE", gold: "TEMPESTADE" },
   /*
     A COR DO EFEITO SEGUE A COR DO CORPO. Sem isto a ciano lancava uma esfera
@@ -167,4 +176,19 @@ export const DUELO_DO_VALE: FightSpec = {
       linhas: ["DÁ LIKE", "E SE INSCREVE", "NO CANAL!"],
     },
   ],
-};
+});
+
+/** Miguel contra Ravi: vence o laranja. */
+export const DUELO_DO_VALE: FightSpec = duelo("MIGUEL", "RAVI");
+
+/**
+ * Lucas contra Gabriel: a MESMA luta com o outro vencedor.
+ *
+ * `trocarVencedor` inverte quem ataca, quem esquiva, quem cai, quem
+ * finaliza e quem levanta a placa -- inclusive os papeis das cenas, entao
+ * quem e arremessado contra a rocha tambem muda. Os lados da tela nao
+ * mudam: o ciano segue a esquerda.
+ */
+export const DUELO_DO_VALE_2: FightSpec = trocarVencedor(
+  duelo("LUCAS", "GABRIEL"),
+);

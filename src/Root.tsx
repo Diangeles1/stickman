@@ -24,7 +24,7 @@ import { trocarVencedor } from "./data/trocar";
 import { TESTE_KATANA } from "./data/fights/teste-katana";
 import { GELO_VS_FOGO } from "./data/fights/gelo-vs-fogo";
 import { DOMINIO } from "./data/fights/dominio";
-import { DUELO_DO_VALE } from "./data/fights/duelo-do-vale";
+import { DUELO_DO_VALE, DUELO_DO_VALE_2 } from "./data/fights/duelo-do-vale";
 import { NINJAS } from "./data/fights/ninjas";
 import { DUELO } from "./data/fights/duelo";
 import { UM_SOCO } from "./data/fights/um-soco";
@@ -250,6 +250,17 @@ export const RemotionRoot: React.FC = () => {
         width={DUELO_DO_VALE.width}
         height={DUELO_DO_VALE.height}
         defaultProps={{ spec: DUELO_DO_VALE, escolha: true }}
+      />
+
+      {/* A MESMA luta com Lucas e Gabriel, e o outro vencedor */}
+      <Composition
+        id="DueloDoVale2-Escolha"
+        component={Prototype}
+        durationInFrames={duracaoDoPrototipo(DUELO_DO_VALE_2, { escolha: true })}
+        fps={DUELO_DO_VALE_2.fps}
+        width={DUELO_DO_VALE_2.width}
+        height={DUELO_DO_VALE_2.height}
+        defaultProps={{ spec: DUELO_DO_VALE_2, escolha: true }}
       />
 
       {/* DOMINIO: o de branco contra o de marcas */}

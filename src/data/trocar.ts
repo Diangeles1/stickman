@@ -35,7 +35,14 @@ export const trocarVencedor = (spec: FightSpec): FightSpec => {
   const beats = spec.beats.map((beat, i): Beat => {
     if (mantidos.has(i)) return beat;
     const c = { ...beat } as Record<string, unknown>;
-    for (const campo of ["attacker", "target", "who"]) {
+    /*
+      OS PAPEIS DAS CENAS TROCAM JUNTO.
+      Faltava `gelo` e `fogo` aqui, e a consequencia era uma luta incoerente:
+      o mesmo lutador era arremessado contra a rocha, levava o combo aereo e
+      ainda assim vencia no fim, porque so os beats de ataque invertiam. Uma
+      cena tambem tem vencedor e perdedor dentro dela.
+    */
+    for (const campo of ["attacker", "target", "who", "gelo", "fogo"]) {
       if (typeof c[campo] === "string") c[campo] = t(c[campo] as FighterId);
     }
     if (beat.type === "approach") c.toX = -beat.toX;

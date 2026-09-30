@@ -20,7 +20,7 @@ import { BENCHMARK } from "../src/data/fights/benchmark";
 import { BENCHMARK2 } from "../src/data/fights/benchmark2";
 import { DOMINIO } from "../src/data/fights/dominio";
 import { DUELO } from "../src/data/fights/duelo";
-import { DUELO_DO_VALE } from "../src/data/fights/duelo-do-vale";
+import { DUELO_DO_VALE, DUELO_DO_VALE_2 } from "../src/data/fights/duelo-do-vale";
 import { GELO_VS_FOGO } from "../src/data/fights/gelo-vs-fogo";
 import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
 import { NINJAS } from "../src/data/fights/ninjas";
@@ -35,6 +35,7 @@ export const LUTAS: Record<string, FightSpec> = {
   dominio: DOMINIO,
   duelo: DUELO,
   vale: DUELO_DO_VALE,
+  vale2: DUELO_DO_VALE_2,
   gelofogo: GELO_VS_FOGO,
   completa: LUTA_COMPLETA,
   ninjas: NINJAS,
