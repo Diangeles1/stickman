@@ -189,7 +189,22 @@ export const CeuDoVale: React.FC<{ camX: number; extensao?: number }> = ({
  * O paredao fica na camada do chao (sem paralaxe): ali o mundo e o mesmo para
  * o cenario e para os lutadores.
  */
-export const PAREDAO_X = -1450;
+/*
+  A ROCHA FICA LONGE DO PALCO, e nao a um passo dele.
+
+  Com -1450 ela caia bem no meio de onde as lutas acontecem. Numa delas isso
+  nao aparecia; na versao espelhada por trocarVencedor a deriva foi para o
+  outro lado e os corpos passaram de 8s a 49s DENTRO da faixa da pedra --
+  medido, o cerco em profundidade rodava entre x -2513 e -1173 e o que se via
+  atras dos dois era uma laje palida achatando justamente a profundidade que
+  aquela cena existe para mostrar.
+
+  Ela nao precisa estar perto: quem vai ate ela e o arremesso, e aquela cena
+  posiciona os dois em marcas explicitas relativas a FACE_X -- move a rocha e
+  ela se muda junto. Medido depois: os corpos so entram na faixa da pedra
+  durante o arremesso, nas duas versoes.
+*/
+export const PAREDAO_X = -2400;
 
 /**
  * PAREDAO DE ROCHA: a face que recebe o corpo arremessado.

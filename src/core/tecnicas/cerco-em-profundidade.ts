@@ -29,6 +29,7 @@
  * reprova isso, mas a cena e quem tem que evitar.
  */
 
+import { PAREDAO_X } from "../../backgrounds/Vale";
 import type { Tecnica } from "./contexto";
 
 /** o quanto o palco tem de profundidade util, para os dois lados */
@@ -41,7 +42,34 @@ export const cercoEmProfundidade: Tecnica = (ctx) => {
   const xG = estado[G].x;
   const xF = estado[F].x;
   const rumo: 1 | -1 = xG <= xF ? 1 : -1;
-  const meio = (xG + xF) / 2;
+
+  /*
+    A CENA MONTA O PROPRIO PALCO, LONGE DA ROCHA.
+
+    Ela vinha acontecendo onde quer que a luta tivesse derivado, e numa das
+    versoes isso caiu em cima do paredao: medido, o cerco rodava entre
+    x -2513 e -1173 enquanto a pedra ocupa -2350 a -1450. O resultado na tela
+    era uma laje palida atras dos dois, achatando justamente a profundidade
+    que esta cena existe para mostrar -- um corpo que recua para o "fundo do
+    vale" recuava para dentro de uma parede.
+
+    Na outra versao a mesma cena caia em x +1112, chao limpo, e ficava
+    bonita. A diferenca era a deriva da luta, nao a cena: `trocarVencedor`
+    espelha os papeis e a deriva vai para o outro lado.
+
+    Cena que depende do cenario nao pode herdar a posicao que sobrou da
+    anterior. Aqui ela empurra o palco inteiro para a direita o quanto for
+    preciso para o recuo caber em chao livre -- e nao mexe em nada quando ja
+    esta livre, que e o caso da primeira versao.
+  */
+  const meioCru = (xG + xF) / 2;
+  /** o ponto mais a esquerda que a cena usa, relativo ao meio */
+  const ALCANCE_A_ESQUERDA = 700;
+  /** folga entre o corpo e a face da pedra */
+  const LONGE_DA_PEDRA = 260;
+  const limite = PAREDAO_X + ALCANCE_A_ESQUERDA + LONGE_DA_PEDRA;
+  const desvio = Math.max(0, limite - meioCru);
+  const meio = meioCru + desvio;
 
   // ---- 1. UM RECUA PARA O FUNDO -------------------------------------------
   /*
@@ -52,12 +80,12 @@ export const cercoEmProfundidade: Tecnica = (ctx) => {
     corpo descreve um caminho no palco e a mudanca de tamanho vira consequencia
     de ir a algum lugar.
   */
-  pose(G, "retreat", c + s(0.45), xG - rumo * 120, FUNDO * 0.45);
+  pose(G, "retreat", c + s(0.45), xG + desvio - rumo * 120, FUNDO * 0.45);
   pose(G, "sprint1", c + s(0.8), meio - rumo * 640, FUNDO);
   pose(G, "guard", c + s(1.15), meio - rumo * 700, FUNDO);
   // o outro acompanha com o corpo, e nao so com o olhar
-  pose(F, "walk1", c + s(0.9), xF - rumo * 180, FUNDO * 0.2);
-  pose(F, "guard", c + s(1.2), xF - rumo * 220, FUNDO * 0.25);
+  pose(F, "walk1", c + s(0.9), xF + desvio - rumo * 180, FUNDO * 0.2);
+  pose(F, "guard", c + s(1.2), xF + desvio - rumo * 220, FUNDO * 0.25);
 
   /*
     A CAMERA NAO ABRE ENQUANTO ELE RECUA -- e essa foi a primeira licao desta
