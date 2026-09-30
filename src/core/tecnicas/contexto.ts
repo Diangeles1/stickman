@@ -35,10 +35,31 @@ export type ContextoDeTecnica = {
   lado: number;
   /** segundos para quadros, ja na taxa do episodio */
   s: (segundos: number) => number;
-  /** posicao e pose atuais de cada lutador */
-  estado: Record<string, { x: number; pose: PoseName; airborne: boolean }>;
-  /** escreve uma pose (e opcionalmente uma posicao) num quadro */
-  pose: (quem: FighterId, p: PoseName, quadro: number, x?: number) => void;
+  /** posicao, profundidade e pose atuais de cada lutador */
+  estado: Record<
+    string,
+    { x: number; z: number; pose: PoseName; airborne: boolean }
+  >;
+  /**
+   * Escreve uma pose, e opcionalmente uma posicao no palco.
+   *
+   * `z` e a PROFUNDIDADE: 0 e a linha em que a luta sempre aconteceu,
+   * positivo afasta da camera, negativo aproxima. Quem nao passa z mantem a
+   * profundidade em que o corpo ja estava, entao uma cena move um lutador
+   * para o fundo uma vez e as poses seguintes continuam la.
+   *
+   * Um corpo mais ao fundo fica MENOR e MAIS ALTO na tela, e passa ATRAS do
+   * outro (ver escalaDaProfundidade em animation/corpo e a ordenacao em
+   * scenes/FightScene). Nenhuma dessas tres coisas e opcional: sozinhas elas
+   * nao leem como profundidade.
+   */
+  pose: (
+    quem: FighterId,
+    p: PoseName,
+    quadro: number,
+    x?: number,
+    z?: number,
+  ) => void;
   /** agenda um efeito de poder */
   poder: (e: PoderEvent) => void;
   /** letreiro com o nome do golpe */

@@ -72,6 +72,8 @@ export const estalo = (t: number): number => 1 - Math.pow(1 - t, 3.2);
 
 type Amostra = {
   x: number;
+  /** profundidade no palco; 0 e a linha antiga (ver FighterTrack.keys.z) */
+  z: number;
   pose: Pose;
   poseNome: PoseName;
   airborne: boolean;
@@ -598,14 +600,14 @@ const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
   const keys = track.keys;
   if (keys.length === 0) {
     return {
-      x: 0, pose: POSES.idle, poseNome: "idle", airborne: false,
+      x: 0, z: 0, pose: POSES.idle, poseNome: "idle", airborne: false,
       velocidade: 0, aceleracao: 0, inclinacao: 0,
     };
   }
   if (frame <= keys[0].frame) {
     const k = keys[0];
     return {
-      x: k.x, pose: poseDaChave(track, k), poseNome: k.pose, airborne: k.airborne,
+      x: k.x, z: k.z ?? 0, pose: poseDaChave(track, k), poseNome: k.pose, airborne: k.airborne,
       velocidade, aceleracao, inclinacao,
     };
   }
@@ -618,7 +620,7 @@ const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
     // duas chaves no mesmo quadro = corte seco, nao interpolacao
     if (b.frame <= a.frame) {
       return {
-        x: b.x, pose: poseDaChave(track, b), poseNome: b.pose, airborne: b.airborne,
+        x: b.x, z: b.z ?? 0, pose: poseDaChave(track, b), poseNome: b.pose, airborne: b.airborne,
         velocidade, aceleracao, inclinacao,
       };
     }
@@ -633,6 +635,7 @@ const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
       const ciclo = poseDoCiclo(a.pose, distanciaPercorrida(track, frame));
       return {
         x: a.x + (b.x - a.x) * t,
+        z: (a.z ?? 0) + ((b.z ?? 0) - (a.z ?? 0)) * t,
         pose: ciclo.pose,
         poseNome: ciclo.nome,
         airborne: a.airborne,
@@ -646,6 +649,10 @@ const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
     // deslocando 192 unidades de uma vez).
     return {
       x: a.x + (b.x - a.x) * t,
+      // z acompanha a MESMA curva de x: um corpo que atravessa o palco na
+      // diagonal tem que chegar nos dois eixos ao mesmo tempo, senao descreve
+      // uma curva em L
+      z: (a.z ?? 0) + ((b.z ?? 0) - (a.z ?? 0)) * t,
       pose: misturar(
         poseDaChave(track, a),
         poseDaChave(track, b),
@@ -662,6 +669,7 @@ const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
   const ultima = keys[keys.length - 1];
   return {
     x: ultima.x,
+    z: ultima.z ?? 0,
     pose: poseDaChave(track, ultima),
     poseNome: ultima.pose,
     airborne: ultima.airborne,

@@ -210,7 +210,8 @@ export const FightScene: React.FC<FightSceneProps> = ({
   // Estado dos dois lutadores neste quadro, resolvido UMA vez. As camadas de
   // tras (aura, linhas) e a da frente (corpos) leem daqui, entao nao existe a
   // possibilidade de uma camada discordar da outra.
-  const lutadores = [fighterA, fighterB].map((id) => {
+  const lutadores = [fighterA, fighterB]
+    .map((id) => {
     const corpo = corpoNoQuadro(timeline, id, frame);
     return {
       id,
@@ -241,8 +242,26 @@ export const FightScene: React.FC<FightSceneProps> = ({
           : [],
       // so o DESENHO vibra: a mira e a camera continuam no corpo parado
       tremor: tremorDoHitStop(timeline, frameReal, id),
-    };
-  });
+      };
+    })
+    /*
+      QUEM ESTA ATRAS E DESENHADO PRIMEIRO.
+
+      Ate aqui os dois lutadores saiam sempre na mesma ordem -- fighterA e
+      depois fighterB -- e a consequencia era que UM DELES NUNCA PODIA PASSAR
+      ATRAS DO OUTRO. Na perseguicao no ar da para ver: os corpos se cruzam
+      e a sobreposicao e sempre para o mesmo lado, o que le como dois
+      adesivos empilhados em vez de dois corpos no mesmo espaco.
+
+      Ordenar por z e a outra metade da profundidade. Sem isso um corpo pode
+      encolher e subir na tela sem nunca ficar ATRAS de nada, e o olho nao
+      acredita.
+
+      Empate (os dois na mesma linha, que e o caso de toda luta ja escrita)
+      preserva a ordem original: `sort` em JavaScript e estavel, entao nada
+      muda onde z nao foi usado.
+    */
+    .sort((p, q) => q.corpo.z - p.corpo.z);
 
   // poderes: gelo, fogo, sangue, feixes (effects/Poderes.tsx)
   const poderesAtivos = fx && timeline.poderes.length > 0;

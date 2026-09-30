@@ -31,6 +31,7 @@ import { liberarPoder } from "./tecnicas/liberar-poder";
 import { choqueDeRajadas } from "./tecnicas/choque-de-rajadas";
 import { arremessoNoParedao } from "./tecnicas/arremesso-no-paredao";
 import { perseguicaoNoAr } from "./tecnicas/perseguicao-no-ar";
+import { cercoEmProfundidade } from "./tecnicas/cerco-em-profundidade";
 import {
   ALVO_PADRAO,
   POSE_DA_REACAO,
@@ -177,6 +178,8 @@ const perfilDeMovimento = (quem: FighterId) => {
 
 type Estado = {
   x: number;
+  /** profundidade no palco; 0 e a linha da frente (ver animation/corpo) */
+  z: number;
   pose: PoseName;
   airborne: boolean;
 };
@@ -193,8 +196,8 @@ export const compilar = (spec: FightSpec): Timeline => {
     [B]: { id: B, keys: [], estilo },
   };
   const estado: Record<string, Estado> = {
-    [A]: { x: -DISTANCIA_DE_ESPERA, pose: "idle", airborne: false },
-    [B]: { x: DISTANCIA_DE_ESPERA, pose: "idle", airborne: false },
+    [A]: { x: -DISTANCIA_DE_ESPERA, z: 0, pose: "idle", airborne: false },
+    [B]: { x: DISTANCIA_DE_ESPERA, z: 0, pose: "idle", airborne: false },
   };
 
   const scheduled: ScheduledBeat[] = [];
@@ -216,6 +219,9 @@ export const compilar = (spec: FightSpec): Timeline => {
     tracks[quem].keys.push({
       frame,
       x: e.x,
+      // so escreve quando ha profundidade: assim as lutas antigas continuam
+      // com chaves identicas as de antes, byte por byte
+      ...(e.z !== 0 ? { z: e.z } : {}),
       // lutador armado: a guarda, a defesa e a carga viram as de katana
       pose: spec.armas?.[quem] ? (POSES_ARMADAS[e.pose] ?? e.pose) : e.pose,
       airborne: e.airborne,
@@ -1055,8 +1061,23 @@ export const compilar = (spec: FightSpec): Timeline => {
   const poder = (e: Timeline["poderes"][number]) => poderes.push(e);
   const nome = (texto: string, quem: FighterId, quadro: number, dur = s(0.9)) =>
     poder({ tipo: "nomeDaTecnica", texto, quem, from: quadro, to: quadro + dur });
-  const pose = (quem: FighterId, p: PoseName, quadro: number, x?: number) => {
+  /**
+   * Escreve uma pose, e opcionalmente uma posicao no palco.
+   *
+   * `z` e a profundidade: 0 e a linha em que a luta sempre aconteceu, positivo
+   * afasta da camera. Quem nao passa z mantem a profundidade em que o corpo
+   * ja estava -- e por isso que uma cena pode mover um lutador para o fundo e
+   * as poses seguintes continuam la, sem ter que repetir o numero.
+   */
+  const pose = (
+    quem: FighterId,
+    p: PoseName,
+    quadro: number,
+    x?: number,
+    z?: number,
+  ) => {
     if (x !== undefined) estado[quem].x = x;
+    if (z !== undefined) estado[quem].z = z;
     estado[quem].pose = p;
     chave(quem, quadro);
   };
@@ -1119,6 +1140,8 @@ export const compilar = (spec: FightSpec): Timeline => {
         return arremessoNoParedao(ctx, ctx.G);
       case "perseguicaoNoAr":
         return perseguicaoNoAr(ctx);
+      case "cercoEmProfundidade":
+        return cercoEmProfundidade(ctx);
       case "encontro": {
         // os dois parados, cada um no seu elemento; a camera passa entre eles
         // e alterna closes. Silencio antes da luta.

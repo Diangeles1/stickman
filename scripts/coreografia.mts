@@ -52,6 +52,23 @@ const t = compilar(spec);
  * membro ENCOSTA, e isso so se responde olhando o membro.
  */
 const VAO_MAXIMO = 75;
+/**
+ * O QUANTO DE PROFUNDIDADE UM GOLPE ATRAVESSA.
+ *
+ * Esta regra existe por causa de um perigo especifico da profundidade: o IK
+ * mira num ponto de TELA. Dois corpos em planos diferentes podem se
+ * sobrepor perfeitamente no quadro enquanto estao a centenas de unidades um
+ * do outro no palco -- e, sem esta conta, o motor aceitaria feliz um soco
+ * que "encosta" atravessando o cenario.
+ *
+ * O olho nao percebe o erro como erro: percebe como um golpe que acerta sem
+ * encostar, que e o defeito mais dificil de nomear e o mais facil de sentir.
+ *
+ * O valor e a largura de um corpo: dois lutadores trocando golpes estao
+ * praticamente no mesmo plano, e uma diferenca maior que isso significa que
+ * um deles teria que alcancar para dentro da tela.
+ */
+const PROFUNDIDADE_MAXIMA = 160;
 /** abaixo disto os corpos se atravessam */
 const COLADO = 55;
 /** quadros minimos entre levar um golpe pesado e devolver */
@@ -65,7 +82,7 @@ const golpes = t.impacts
   .sort((a, b) => a.frame - b.frame);
 
 console.log(`${nome}: ${golpes.length} golpes que conectam\n`);
-console.log("quadro  quem -> quem    vao  virado  vitima estava      reacao");
+console.log("quadro  quem -> quem    vao    dz  virado  vitima estava      reacao");
 console.log("-".repeat(74));
 
 let ultimoAcerto: Record<string, number> = {};
@@ -97,12 +114,15 @@ for (const g of golpes) {
     String(g.frame).padStart(6) +
       `  ${a.padEnd(5)}-> ${v.padEnd(6)}` +
       String(Math.round(vao)).padStart(5) +
+      String(Math.round(Math.abs((cv.z ?? 0) - (ca.z ?? 0)))).padStart(6) +
       (viradoPara ? "   sim  " : "   NAO  ") +
       ` ${String(antes.poseNome).padEnd(16)} ${reagiu ? depois.poseNome : "NENHUMA"}`,
   );
 
   if (!viradoPara) falhas.push({ frame: g.frame, tipo: "de costas", texto: `${a} acerta ${v} estando virado para o outro lado` });
   if (vao > VAO_MAXIMO) falhas.push({ frame: g.frame, tipo: "nao encosta", texto: `${a} acerta ${v} com ${Math.round(vao)} unidades de vao entre os corpos` });
+  const dz = Math.abs((cv.z ?? 0) - (ca.z ?? 0));
+  if (dz > PROFUNDIDADE_MAXIMA) falhas.push({ frame: g.frame, tipo: "atravessa profundidade", texto: `${a} acerta ${v} estando ${Math.round(dz)} unidades atras/a frente dele no palco` });
   if (vao < COLADO && dist < COLADO) falhas.push({ frame: g.frame, tipo: "colado", texto: `${a} e ${v} a ${Math.round(dist)} unidades de quadril: os corpos se atravessam` });
   if (!reagiu) falhas.push({ frame: g.frame, tipo: "sem reacao", texto: `${v} leva o golpe e segue em ${antes.poseNome}` });
 

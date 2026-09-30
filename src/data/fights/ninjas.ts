@@ -67,6 +67,7 @@ export const NINJAS: FightSpec = {
     { type: "dodged", attacker: "red", target: "blue", move: "kickHigh", targetPoint: "head" },
     { type: "combo", attacker: "blue", target: "red", moves: ["punchFast", "punch", "knee"] },
     { type: "blocked", attacker: "red", target: "blue", move: "elbow" },
+    { type: "tecnica", tecnica: "cercoEmProfundidade", gelo: "blue", fogo: "red" },
     { type: "dodged", attacker: "blue", target: "red", move: "kickLow", targetPoint: "legs", pulo: true },
 
     // ---- 12-18: lança para o alto e persegue ----------------------------

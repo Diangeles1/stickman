@@ -473,7 +473,9 @@ export type Beat =
         // arremessado contra a rocha do vale, que racha com o impacto
         | "arremessoNoParedao"
         // o golpe lanca, o outro sobe atras, e a troca acontece no alto
-        | "perseguicaoNoAr";
+        | "perseguicaoNoAr"
+        // um recua para o fundo do palco e volta em diagonal
+        | "cercoEmProfundidade";
       gelo: FighterId;
       fogo: FighterId;
     }
@@ -623,10 +625,26 @@ export type FighterTrack = {
    * isso e faria duas composicoes na mesma sessao interferirem uma na outra.
    */
   estilo: EstiloDeAnimacao;
-  /** posicao base no eixo x, por quadro-chave */
+  /** posicao base no mundo, por quadro-chave */
   keys: {
     frame: number;
     x: number;
+    /**
+     * PROFUNDIDADE: 0 e a linha em que a luta sempre aconteceu, positivo
+     * afasta da camera, negativo aproxima.
+     *
+     * Ausente significa 0, e 0 e exatamente o comportamento antigo -- e por
+     * isso que nenhuma luta ja escrita muda de aparencia ao ganhar este
+     * campo.
+     *
+     * Ela NAO e uma terceira dimensao de verdade: as poses continuam sendo
+     * pares (x, y) e o esqueleto continua plano. O que z faz e mover o corpo
+     * INTEIRO no palco -- muda a escala, sobe a linha do chao e decide quem
+     * passa na frente de quem. E o mesmo truque de um cenario de teatro com
+     * varios planos, e e o que os desenhos de vareta usam: o suficiente para
+     * a luta ocupar o mapa, sem custar um motor 3D.
+     */
+    z?: number;
     pose: PoseName;
     airborne: boolean;
     /**

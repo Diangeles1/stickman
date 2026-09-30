@@ -125,6 +125,7 @@ const Painel: React.FC<{
         <Katana
           corpo={{
             x: x0 + w / 2,
+            z: 0,
             baseY: quadril,
             facing: (lado < 0 ? 1 : -1) as 1 | -1,
             scale: preset.scale * escalaExtra,

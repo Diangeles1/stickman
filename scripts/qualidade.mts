@@ -86,7 +86,14 @@ for (const id of ids) {
   let anterior = corpoNoQuadro(t, id, INICIO_VALIDO);
   for (let f = INICIO_VALIDO + 1; f < t.durationInFrames; f++) {
     const atual = corpoNoQuadro(t, id, f);
-    const delta = Math.abs(atual.x - anterior.x);
+    /*
+      O SALTO E MEDIDO NO PALCO, e nao so no eixo da tela.
+
+      Com profundidade, um corpo pode atravessar o cenario inteiro recuando
+      sem que `x` mude um numero -- e a medicao em x diria que ele nao saiu do
+      lugar. Distancia percorrida e a hipotenusa dos dois eixos.
+    */
+    const delta = Math.hypot(atual.x - anterior.x, atual.z - anterior.z);
     if (delta > SALTO_MAXIMO && !atual.noAr && !anterior.noAr) {
       quantos++;
       if (delta > pior.delta) pior = { frame: f, delta };

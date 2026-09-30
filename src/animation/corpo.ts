@@ -331,9 +331,53 @@ const pesoDaMira = (aim: AimEvent, frame: number): number => {
   return 1 - suave((frame - aim.contact) / dur);
 };
 
+/*
+  A PERSPECTIVA DO PALCO, num lugar so.
+
+  Nada aqui e projecao 3D: as poses continuam planas e o esqueleto continua
+  sendo pares (x, y). O que estas duas funcoes fazem e mover o corpo INTEIRO
+  no palco a partir de z -- exatamente o que um cenario de teatro faz com
+  planos, e o que os desenhos de vareta usam.
+
+  Duas pistas bastam para o olho ler profundidade, e as duas tem que andar
+  JUNTAS: quem esta longe e menor E esta mais alto na tela. Uma sozinha nao
+  le -- corpo que so encolhe parece um brinquedo, corpo que so sobe parece
+  estar flutuando.
+
+  z = 0 devolve escala 1 e deslocamento 0, que e o comportamento de sempre.
+  E por isso que nenhuma luta ja escrita muda ao ganhar profundidade.
+*/
+
+/**
+ * Distancia da camera ate o plano da luta, em unidades de mundo.
+ *
+ * E ela que decide o quanto a perspectiva "abre": um valor pequeno exagera
+ * (o corpo encolhe muito ao recuar um pouco, como lente grande-angular), um
+ * valor grande achata. Este esta calibrado para o corpo perder um terco do
+ * tamanho ao recuar 700 unidades, que e pouco mais que a largura do palco.
+ */
+export const DISTANCIA_DA_CAMERA = 1400;
+
+/** o quanto a linha do chao sobe na tela por unidade de profundidade */
+const INCLINACAO_DO_CHAO = 0.26;
+
+/** Fator de tamanho de um corpo a profundidade z. 1 na linha da frente. */
+export const escalaDaProfundidade = (z: number): number =>
+  DISTANCIA_DA_CAMERA / (DISTANCIA_DA_CAMERA + Math.max(-DISTANCIA_DA_CAMERA * 0.6, z));
+
+/**
+ * Quanto os pes sobem na tela a profundidade z.
+ *
+ * Negativo porque na tela o eixo y cresce para baixo: quem esta longe tem os
+ * pes MAIS ALTOS, mais perto do horizonte.
+ */
+export const alturaDoChao = (z: number): number => -z * INCLINACAO_DO_CHAO;
+
 export type Corpo = {
   /** posicao do quadril no mundo */
   x: number;
+  /** profundidade no palco (ver escalaDaProfundidade); 0 e a linha da frente */
+  z: number;
   baseY: number;
   facing: 1 | -1;
   /** escala ja pronta para juntasNoMundo */
@@ -641,11 +685,20 @@ const corpoBase = (
     if (pescoco) pose.neck = { x: pescoco.x, y: pescoco.y + oscilacao * 0.2 };
   }
 
+  /*
+    A PROFUNDIDADE ENTRA AQUI, na raiz, pelo mesmo motivo que a pose segurada
+    entra: tudo o que le o corpo -- o plano dos pes, a mira, a camera, o
+    desenho e as auditorias -- tem que enxergar o MESMO corpo. Aplicar a
+    escala so na hora de desenhar faria a mira mirar num corpo de um tamanho e
+    a tela mostrar outro.
+  */
+  const fundo = escalaDaProfundidade(a.z);
   return {
     x: a.x + pivo + rebolado,
-    baseY: (-apoio - voo) * compressao,
+    z: a.z,
+    baseY: (-apoio - voo) * compressao * fundo + alturaDoChao(a.z),
     facing,
-    scale: preset.scale * compressao,
+    scale: preset.scale * compressao * fundo,
     spin,
     giro,
     pose,
