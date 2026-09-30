@@ -74,7 +74,14 @@ const duelo = (nomeA: string, nomeB: string): FightSpec => ({
 
     // ---- PRIMEIRA TROCA: o verde abre vantagem ---------------------------
     { type: "attack", attacker: "green", target: "gold", move: "punchFast" },
-    { type: "blocked", attacker: "gold", target: "green", move: "punch" },
+    /*
+      SAIRAM UM BLOQUEIO E UMA ESQUIVA para caber em Shorts.
+
+      Foram escolhidos por NAO CONECTAREM: o placar continua 6 a 8, que e o
+      de uma luta decidida no fim. Cortar golpe que acerta teria mexido no
+      equilibrio, e uma luta que vira surra perde a graca do finalizador
+      (foi o que scripts/coreografia.mts acusou quando eu montei esta luta).
+    */
     /*
       A COTOVELADA VAI NO TRONCO, e nao na cabeca (que e o alvo padrao). O
       cotovelo tem alcance curto, e com os membros afinados a distancia de
@@ -83,7 +90,7 @@ const duelo = (nomeA: string, nomeB: string): FightSpec => ({
       Cotovelada e golpe de corpo mesmo.
     */
     { type: "attack", attacker: "green", target: "gold", move: "elbow", targetPoint: "chest" },
-    { type: "dodged", attacker: "gold", target: "green", move: "kickHigh", targetPoint: "head" },
+
     { type: "combo", attacker: "green", target: "gold", moves: ["punchFast", "punch", "knee"] },
 
     // ---- O LARANJA USA O MAPA -----------------------------------------------
@@ -152,7 +159,12 @@ const duelo = (nomeA: string, nomeB: string): FightSpec => ({
     */
     { type: "tecnica", tecnica: "azulVermelho", gelo: "green", fogo: "gold" },
     { type: "tecnica", tecnica: "liberarAzul", gelo: "green", fogo: "gold" },
-    { type: "attack", attacker: "gold", target: "green", move: "punchHeavy" },
+    /*
+      SAIU UM `punchHeavy` DO GOLD AQUI, para caber em Shorts com folga: eram
+      2,55 segundos, e o `uppercut` logo abaixo ja e o golpe pesado que
+      prepara o finalizador. Dois pesados seguidos do mesmo lutador nao
+      somam -- o segundo so adia o desfecho.
+    */
     /*
       O CIANO DEVOLVE UM ANTES DE CAIR, e isso nao e generosidade com ele: e
       o que separa luta de surra. scripts/coreografia.mts acusou o roxo
