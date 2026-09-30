@@ -29,6 +29,7 @@ import { choqueDivisor } from "./tecnicas/choque-divisor";
 import { sumirEColidir } from "./tecnicas/sumir-e-colidir";
 import { liberarPoder } from "./tecnicas/liberar-poder";
 import { choqueDeRajadas } from "./tecnicas/choque-de-rajadas";
+import { arremessoNoParedao } from "./tecnicas/arremesso-no-paredao";
 import {
   ALVO_PADRAO,
   POSE_DA_REACAO,
@@ -1102,6 +1103,8 @@ export const compilar = (spec: FightSpec): Timeline => {
         return liberarPoder(ctx, ctx.F, "vermelho");
       case "choqueDeRajadas":
         return choqueDeRajadas(ctx);
+      case "arremessoNoParedao":
+        return arremessoNoParedao(ctx, ctx.G);
       case "encontro": {
         // os dois parados, cada um no seu elemento; a camera passa entre eles
         // e alterna closes. Silencio antes da luta.

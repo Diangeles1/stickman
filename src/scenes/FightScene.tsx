@@ -44,7 +44,7 @@ import { CorpoDividido } from "../effects/Divisao";
 import { CamadaDePoderes, laminaInteira, PoderesNaTela } from "../effects/Poderes";
 import { CeuNoturno, Chuva } from "../backgrounds/Noite";
 import { CeuDeMetropole, RuaMolhada } from "../backgrounds/Metropole";
-import { CeuDoVale, ChaoDoVale, PoeiraDoVale } from "../backgrounds/Vale";
+import { CeuDoVale, ChaoDoVale, PAREDAO_X, Paredao, PoeiraDoVale } from "../backgrounds/Vale";
 import { DebugOverlay } from "../debug/DebugOverlay";
 import { poeiraAmbiente } from "../particles/particles";
 import type { Timeline } from "../core/types";
@@ -318,6 +318,39 @@ export const FightScene: React.FC<FightSceneProps> = ({
           <>
             <CeuDoVale camX={cam.center.x} />
             <ChaoDoVale camX={cam.center.x} />
+            {/*
+              O PAREDAO RACHA A PARTIR DO IMPACTO que acontece nele, e a fenda
+              FICA: rocha que racha e volta ao normal desfaz o golpe que a
+              rachou. A trinca e derivada dos impactos e nao de um evento
+              proprio -- quem sabe que alguem bateu na pedra e a coreografia.
+            */}
+            {/*
+              A TRINCA VEM DA CHUVA DE PEDRAS DA PROPRIA CENA, e nao de "um
+              impacto perto da rocha".
+
+              A primeira versao procurava qualquer impacto a menos de 220
+              unidades do paredao -- e um golpe do combo anterior acontece
+              justamente por ali. A cratera aparecia minutos antes de alguem
+              bater na pedra. Proximidade nao e causa; o que sabe que a rocha
+              foi atingida e a cena que a atingiu.
+
+              O evento de pedras que a tecnica emite serve de marcador porque
+              so ela o emite naquele ponto. E a fenda FICA depois de aberta:
+              rocha que racha e volta ao normal desfaz o golpe que a rachou.
+            */}
+            <Paredao
+              trincado={
+                timeline.poderes.some(
+                  (p) =>
+                    p.tipo === "pedrasFlutuantes" &&
+                    p.a !== undefined &&
+                    Math.abs(p.a.x - (PAREDAO_X + 120)) < 40 &&
+                    frame >= p.from,
+                )
+                  ? 1
+                  : 0
+              }
+            />
           </>
         )}
         {noite && !metropole && !vale && <CeuNoturno camX={cam.center.x} />}

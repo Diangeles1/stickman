@@ -67,7 +67,23 @@ export const NINJAS: FightSpec = {
 
     // ---- 25-32: combo aéreo, azul arremessado ---------------------------
     { type: "combo", attacker: "red", target: "blue", moves: ["punchFast", "knee", "spinKick"] },
-    { type: "knockback", who: "blue", distance: 760, duration: 40 },
+    /*
+      O arremesso agora BATE em alguma coisa. Com `knockback` ele era distância
+      percorrida, e distância sozinha não tem consequência -- o corpo
+      desacelerava e parava. A rocha que racha é a testemunha do golpe.
+    */
+    /*
+      O RESPIRO ENTRE O COMBO E O ARREMESSO NAO E PAUSA: e espaco para as
+      chaves do combo terminarem.
+
+      `golpear` escreve chaves do alvo ALEM do cursor que devolve -- o combo
+      acima escreve ate o quadro 715 e devolve o cursor em ~532. Sem este
+      respiro a tecnica inteira comecava no passado e a amostragem, que
+      percorre as chaves em sequencia, descartava todas elas em silencio: o
+      arremesso nao acontecia e o que se via era a queda do proprio combo.
+    */
+    { type: "hold", duration: 190, label: "respiro antes do arremesso" },
+    { type: "tecnica", tecnica: "arremessoNoParedao", gelo: "blue", fogo: "red" },
 
     // ---- 32-40: vermelho libera tudo ------------------------------------
     { type: "tecnica", tecnica: "liberarVermelho", gelo: "blue", fogo: "red" },

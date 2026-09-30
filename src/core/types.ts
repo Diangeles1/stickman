@@ -454,7 +454,9 @@ export type Beat =
         | "liberarAzul"
         | "liberarVermelho"
         // o climax: as duas rajadas maximas se encontram no meio
-        | "choqueDeRajadas";
+        | "choqueDeRajadas"
+        // arremessado contra a rocha do vale, que racha com o impacto
+        | "arremessoNoParedao";
       gelo: FighterId;
       fogo: FighterId;
     }

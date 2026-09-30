@@ -903,6 +903,9 @@ const Tracos: React.FC<{
  * o borrao vira uma colagem de pedacos translucidos, que e exatamente o que
  * ele nao pode ser. No grupo, tudo achata numa forma so.
  */
+/** o quadro anterior de um varrido */
+const a0 = <T,>(todas: T[], i: number): T => todas[i - 1];
+
 export const StickmanSmear: React.FC<{
   preset: FighterPreset;
   /** do mais antigo ao mais recente, incluindo a posicao atual no fim */
@@ -929,33 +932,56 @@ export const StickmanSmear: React.FC<{
       giro: (q.giro ?? 1) as 1 | -1,
     });
   const todas = quadros.map(juntasDe);
+  /*
+    O RASTRO DESVANECE E AFINA PARA TRAS, e sem isso ele nao e um rastro.
+
+    A primeira versao punha UMA opacidade no grupo inteiro. Num deslocamento
+    curto isso passa, mas num arremesso o corpo atravessa centenas de unidades
+    e os varridos, todos igualmente opacos, se encostam e fecham uma LAJE
+    solida atravessando o quadro -- medido num quadro do arremesso: um bloco
+    chapado de ponta a ponta, com a silhueta do corpo perdida dentro dele.
+
+    O que distingue borrao de mancha e ter direcao no tempo: forte onde o
+    corpo esta agora, quase nada onde ele esteve. O peso desce com o cubo da
+    idade para que a cauda suma rapido em vez de empapar o fundo, e a
+    espessura acompanha, porque tinta que so clareia sem afinar continua
+    lendo como chapa.
+
+    A opacidade fica no <g> de cada varrido, e nunca nos ossos: dentro de um
+    mesmo varrido os ossos se sobrepoem, e pintar peca a peca abriria as
+    emendas de cada junta.
+  */
+  const n = todas.length - 1;
   return (
-    <g data-layer="smear" opacity={forca} fill={preset.stroke} stroke={preset.stroke}>
+    <g data-layer="smear" fill={preset.stroke} stroke={preset.stroke}>
       {todas.map((j, i) => {
         if (i === 0) return null;
-        const a0 = todas[i - 1];
+        // 1 no varrido que encosta no corpo, 0 no mais antigo
+        const novidade = n <= 1 ? 1 : (i - 1) / (n - 1);
+        const peso = 0.12 + 0.88 * novidade * novidade * novidade;
+        const esp = largura * (0.45 + 0.55 * novidade);
         return (
-          <g key={i}>
+          <g key={i} opacity={forca * peso}>
             {OSSOS.map(([de, para]) => (
               <polygon
                 key={`${de}-${para}`}
                 points={
-                  `${a0[de].x.toFixed(1)},${a0[de].y.toFixed(1)} ` +
-                  `${a0[para].x.toFixed(1)},${a0[para].y.toFixed(1)} ` +
+                  `${a0(todas, i)[de].x.toFixed(1)},${a0(todas, i)[de].y.toFixed(1)} ` +
+                  `${a0(todas, i)[para].x.toFixed(1)},${a0(todas, i)[para].y.toFixed(1)} ` +
                   `${j[para].x.toFixed(1)},${j[para].y.toFixed(1)} ` +
                   `${j[de].x.toFixed(1)},${j[de].y.toFixed(1)}`
                 }
-                strokeWidth={largura}
+                strokeWidth={esp}
                 strokeLinejoin="round"
               />
             ))}
             {/* a cabeca varre junto: sem ela o borrao fica sem topo */}
             <line
-              x1={a0.head.x}
-              y1={a0.head.y}
+              x1={a0(todas, i).head.x}
+              y1={a0(todas, i).head.y}
               x2={j.head.x}
               y2={j.head.y}
-              strokeWidth={raioCabeca * 2}
+              strokeWidth={raioCabeca * (0.9 + 1.1 * novidade)}
               strokeLinecap="round"
             />
           </g>

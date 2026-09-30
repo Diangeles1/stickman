@@ -178,6 +178,81 @@ export const CeuDoVale: React.FC<{ camX: number; extensao?: number }> = ({
 };
 
 /**
+ * ONDE O PAREDAO ESTA, em coordenada de mundo.
+ *
+ * Exportado porque a coreografia precisa do numero: para alguem ser
+ * arremessado CONTRA a rocha, o compilador tem que saber onde ela fica. A
+ * montanha do fundo nao serve para isso -- ela tem paralaxe, entao a posicao
+ * dela na tela depende de onde a camera esta, e nao existe um X do mundo em
+ * que um corpo possa bater nela.
+ *
+ * O paredao fica na camada do chao (sem paralaxe): ali o mundo e o mesmo para
+ * o cenario e para os lutadores.
+ */
+export const PAREDAO_X = -1450;
+
+/**
+ * PAREDAO DE ROCHA: a face que recebe o corpo arremessado.
+ *
+ * `trincado` vai de 0 a 1 e abre as fendas do impacto. Elas ficam no desenho
+ * e nao somem: rocha que racha e volta ao normal desfaz o golpe que a rachou.
+ */
+export const Paredao: React.FC<{ trincado: number }> = ({ trincado }) => {
+  const t = Math.max(0, Math.min(1, trincado));
+  return (
+    <g data-layer="paredao" transform={`translate(${PAREDAO_X} 0)`}>
+      {/*
+        A MASSA. Mais clara que o terreno (#191521) de proposito: encostada
+        nele, uma rocha da mesma cor do chao nao tem silhueta e o corpo parece
+        bater no nada. O degrau de claridade e o que faz a pedra existir.
+      */}
+      <path d="M -900 40 L -820 -1300 L -260 -1500 L -40 -900 L 0 40 Z" fill="#2a2438" />
+      {/* a face iluminada, virada para a luta: e nela que o corpo bate */}
+      <path d="M -40 -900 L 0 40 L -190 40 L -250 -830 Z" fill="#3b3149" />
+      {/* o gume do alto pega a luz baixa do horizonte */}
+      <path
+        d="M -820 -1300 L -260 -1500 L -250 -1460 L -812 -1262 Z"
+        fill="#5c4a5e"
+      />
+      {/* veios na rocha: sem eles a massa e um bloco chapado */}
+      {[0, 1, 2, 3].map((i) => (
+        <path
+          key={i}
+          d={`M ${-780 + i * 190} 40 L ${-700 + i * 190} ${-500 - i * 160} L ${-660 + i * 190} ${-480 - i * 160} L ${-740 + i * 190} 40 Z`}
+          fill="#221c30"
+        />
+      ))}
+      {/* AS FENDAS DO IMPACTO, abrindo com `trincado` */}
+      {t > 0.01 &&
+        [0, 1, 2, 3, 4].map((i) => {
+          const ang = -2.1 + i * 0.42;
+          const comp = (220 + i * 70) * t;
+          const ox = -150;
+          const oy = -430;
+          return (
+            <path
+              key={`f${i}`}
+              d={
+                `M${ox} ${oy} ` +
+                `L${(ox + Math.cos(ang) * comp * 0.5).toFixed(0)} ${(oy + Math.sin(ang) * comp * 0.5 + 20).toFixed(0)} ` +
+                `L${(ox + Math.cos(ang) * comp).toFixed(0)} ${(oy + Math.sin(ang) * comp).toFixed(0)}`
+              }
+              fill="none"
+              stroke="#0a0810"
+              strokeWidth={9 * t}
+              strokeLinecap="round"
+            />
+          );
+        })}
+      {/* a cratera no ponto do impacto */}
+      {t > 0.01 && (
+        <ellipse cx={-150} cy={-430} rx={90 * t} ry={110 * t} fill="#0a0810" opacity={0.85} />
+      )}
+    </g>
+  );
+};
+
+/**
  * O CHÃO DO VALE: terra rachada, pedras fincadas e poeira baixa.
  *
  * Desenhado DEPOIS dos lutadores não -- antes. O que fica na frente deles é
