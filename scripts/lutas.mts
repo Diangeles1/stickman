@@ -21,6 +21,7 @@ import { BENCHMARK2 } from "../src/data/fights/benchmark2";
 import { DOMINIO } from "../src/data/fights/dominio";
 import { DUELO } from "../src/data/fights/duelo";
 import { DUELO_DO_VALE, DUELO_DO_VALE_2 } from "../src/data/fights/duelo-do-vale";
+import { duelo, dueloDoDia } from "../src/data/fights/diario";
 import { GELO_VS_FOGO } from "../src/data/fights/gelo-vs-fogo";
 import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
 import { NINJAS } from "../src/data/fights/ninjas";
@@ -61,6 +62,16 @@ export const escolherLuta = (
     // chamadas nao precisa dele
     const { gerarLuta } = require("../src/data/gerador");
     return { nome, spec: gerarLuta(Number(nome.split(":")[1]) || 1, { segundos: 30 }) };
+  }
+  /*
+    "dia:vale", "dia:ar", "dia:rocha" montam o duelo diario com aquele
+    roteiro, para auditar cada um sem esperar a data em que ele cai.
+    "dia" sozinho e o duelo de HOJE, que e o que vai ao ar.
+  */
+  if (nome === "dia" || nome.startsWith("dia:")) {
+    const q = dueloDoDia(new Date());
+    const roteiro = nome.includes(":") ? nome.split(":")[1] : q.roteiro;
+    return { nome, spec: duelo({ ...q, roteiro }) };
   }
   if (nome === "completa-vermelho") {
     const { trocarVencedor } = require("../src/data/trocar");

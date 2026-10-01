@@ -25,6 +25,7 @@ import { TESTE_KATANA } from "./data/fights/teste-katana";
 import { GELO_VS_FOGO } from "./data/fights/gelo-vs-fogo";
 import { DOMINIO } from "./data/fights/dominio";
 import { DUELO_DO_VALE, DUELO_DO_VALE_2 } from "./data/fights/duelo-do-vale";
+import { duelo, dueloDoDia } from "./data/fights/diario";
 import { NINJAS } from "./data/fights/ninjas";
 import { DUELO } from "./data/fights/duelo";
 import { UM_SOCO } from "./data/fights/um-soco";
@@ -250,6 +251,31 @@ export const RemotionRoot: React.FC = () => {
         width={DUELO_DO_VALE.width}
         height={DUELO_DO_VALE.height}
         defaultProps={{ spec: DUELO_DO_VALE, escolha: true }}
+      />
+
+      {/*
+        O DUELO DE HOJE. A composicao le a data na hora de montar, entao o
+        mesmo comando produz um video diferente a cada dia sem ninguem
+        editar nada (ver data/fights/diario.ts e scripts/diario.mts).
+      */}
+      <Composition
+        id="DueloDoDia"
+        component={Prototype}
+        calculateMetadata={() => {
+          const spec = duelo(dueloDoDia(new Date()));
+          return {
+            durationInFrames: duracaoDoPrototipo(spec, { escolha: true }),
+            fps: spec.fps,
+            width: spec.width,
+            height: spec.height,
+            props: { spec, escolha: true },
+          };
+        }}
+        durationInFrames={3600}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{ spec: duelo(dueloDoDia(new Date())), escolha: true }}
       />
 
       {/* A MESMA luta com Lucas e Gabriel, e o outro vencedor */}
