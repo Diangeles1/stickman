@@ -12,3 +12,4 @@ out/
 
 # configuracao local de permissoes do Claude Code (por maquina)
 .claude/settings.local.json
+credenciais/

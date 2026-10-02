@@ -12,18 +12,18 @@
  * assistido para ser conferido -- se tivesse que ser, "um por dia" seria uma
  * promessa que ninguem cumpre.
  *
- * O QUE ELE NAO FAZ: publicar. O upload continua sendo manual, e a razao e
- * medida: a ponte de arquivo deste ambiente tem teto de 10 MB e o master tem
- * ~58. Um encode que cabe nos 10 MB mede SSIM 0,985 contra o master -- a
- * mesma faixa da versao que ja gerou reclamacao de qualidade neste canal.
- * Para publicar sozinho seria preciso a YouTube Data API (ver o README que
- * este script escreve).
+ * PUBLICAR E OPCIONAL: com `--publicar` ele sobe pela YouTube Data API (ver
+ * scripts/youtube.mts, que precisa de um cadastro unico no Google Cloud).
+ * Sem a flag ele so produz, porque um comando que renderiza nao deve publicar
+ * de surpresa: erro de render se descarta, video publicado ja foi visto.
  *
  * Uso:
  *   npx tsx scripts/diario.mts                 o duelo de hoje
  *   npx tsx scripts/diario.mts 2026-10-05      o de uma data
  *   npx tsx scripts/diario.mts --proximos=7    audita a proxima semana
  *   npx tsx scripts/diario.mts --so-auditar
+ *   npx tsx scripts/diario.mts --publicar             produz E publica
+ *   npx tsx scripts/diario.mts --publicar --privado   sobe para conferir
  */
 
 import { execFileSync, spawnSync } from "node:child_process";
@@ -179,6 +179,24 @@ for (let k = 0; k < Math.max(1, proximos); k++) {
     { stdio: "inherit" },
   );
   console.log(`    pronto: out/diario/${nome}.mp4`);
+
+  /*
+    PUBLICAR E OPCIONAL E EXPLICITO.
+
+    `--publicar` sobe pela YouTube Data API (scripts/youtube.mts). Sem a
+    flag, o script so produz -- porque publicar e irreversivel e um comando
+    que renderiza NAO deve publicar de surpresa. Um erro de render se
+    descarta; um video publicado por engano ja foi visto.
+  */
+  if (temFlag("publicar")) {
+    console.log("    publicando...");
+    const extra = args.filter((a) => a === "--privado" || a.startsWith("--agendar="));
+    spawnSync(npx, ["tsx", join("scripts", "youtube.mts"), "publicar", mp4, ...extra], {
+      cwd: RAIZ,
+      stdio: "inherit",
+      shell: process.platform === "win32",
+    });
+  }
 }
 
 console.log(`\nTextos e instrucoes de cada dia em out/diario/*.txt`);
