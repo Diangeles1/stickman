@@ -98,9 +98,25 @@ const lerCliente = (): Cliente => {
 };
 
 const abrirNavegador = (url: string) => {
+  /*
+    NO WINDOWS NAO SE ABRE URL COM `cmd /c start`.
+
+    O cmd.exe trata `&` como separador de comando, e uma URL de OAuth e toda
+    feita de `&`. Medido: a URL chegava cortada no primeiro parametro e o
+    Google respondia "Required parameter is missing: response_type" -- um erro
+    que parece de codigo e e de shell.
+
+    `rundll32 url.dll,FileProtocolHandler` recebe a URL inteira como um
+    argumento so, sem reinterpretar nada.
+  */
   const cmd =
-    process.platform === "win32" ? "cmd" : process.platform === "darwin" ? "open" : "xdg-open";
-  const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
+    process.platform === "win32"
+      ? "rundll32"
+      : process.platform === "darwin"
+        ? "open"
+        : "xdg-open";
+  const args =
+    process.platform === "win32" ? ["url.dll,FileProtocolHandler", url] : [url];
   try {
     spawn(cmd, args, { detached: true, stdio: "ignore" }).unref();
   } catch {
@@ -122,7 +138,14 @@ const login = async () => {
       // offline + consent e o que garante o REFRESH token: sem ele a
       // autorizacao vence em uma hora e a publicacao diaria para sozinha
       access_type: "offline",
-      prompt: "consent",
+      /*
+        `select_account` FORCA A ESCOLHA DE CONTA, e isso nao e preferencia.
+        So com `consent` o Google usa a conta ja ativa no navegador, e quem
+        tem mais de uma logada autoriza a errada sem perceber -- o video
+        acaba publicado em outro canal. Aconteceu nesta maquina: o
+        youtube.com/upload abriu numa conta sem permissao no canal.
+      */
+      prompt: "select_account consent",
     });
 
   const codigo = await new Promise<string>((resolve, reject) => {
