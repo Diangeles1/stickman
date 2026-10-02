@@ -495,7 +495,25 @@ const narrar = (
   lute: number,
   real: (logico: number) => number,
 ): { real: number; fala: Fala }[] => {
-  const candidatas: { real: number; fala: Fala }[] = [{ real: lute + 2, fala: "lutem" }];
+  /*
+    A CHAMADA DO INICIO ESTA MUDA, e nao por esquecimento.
+
+    A gravacao de "Lutem!" nao diz "lutem": diz algo como "luterie". O script
+    manda a pronuncia certa em IPA -- `lˈutẽj!`, que e o brasileiro correto --
+    e o sintetizador le o `j` final como silaba propria em vez de ditongo
+    nasal. O defeito esta na voz, nao na fonetica escrita.
+
+    A tela ja diz a mesma coisa nesse instante, em letras garrafais
+    vermelhas ("LUTE!", ver EspetaculoNaTela). Entao calar nao custa
+    informacao nenhuma -- e narracao que diz outra palavra custa a confianca
+    do espectador no video inteiro.
+
+    Para devolver a fala: regerar com scripts/narrar.py (Kokoro) e, de
+    quebra, gerar o anuncio do vencedor com os nomes de verdade, que hoje
+    tambem esta mudo pelo mesmo motivo de principio.
+  */
+  const candidatas: { real: number; fala: Fala }[] = [];
+  void lute;
   for (const r of [...rotulos].sort((a, b) => a.inicio - b.inicio)) {
     // Os golpes da luta nao sao narrados: cada um tem o seu efeito sonoro
     // (ver efeitosDe). O narrador fica com a abertura e o desfecho.
