@@ -148,9 +148,26 @@ export const SOM_ABERTURA_VS: SomComposto = [
 ];
 
 /** "LUTE!": uma pancada seca, o gongo da luta */
+/**
+ * O COMECO DA LUTA: o sino.
+ *
+ * Eram duas pancadas sinteticas (um impacto pesado e um grave), que diziam
+ * "alguma coisa aconteceu" sem dizer o que. O sino de ringue diz: COMECOU --
+ * e e um codigo que o espectador ja conhece de qualquer luta que ja viu,
+ * sem precisar de palavra nenhuma.
+ *
+ * Isto substitui a narracao "Lutem!", que estava muda porque a gravacao
+ * sintetizada dizia outra palavra ("luterie"). Um sinal sonoro resolve o
+ * mesmo problema e nao depende de voz -- nem de pronuncia, nem de idioma,
+ * nem de regerar nada quando os nomes mudam.
+ *
+ * As pancadas continuam embaixo, baixas: o sino da o sinal e elas dao o
+ * peso. Sozinho, o sino soa leve demais para uma luta deste tamanho.
+ */
 export const SOM_ABERTURA_LUTE: SomComposto = [
-  { arquivo: `${A}/heavy/heavy_hit_01.wav`, volume: 0.55, offset: 0 },
-  { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.5, offset: 0.02 },
+  { arquivo: `${A}/efeitos/sino.wav`, volume: 0.9, offset: 0 },
+  { arquivo: `${A}/heavy/heavy_hit_01.wav`, volume: 0.3, offset: 0 },
+  { arquivo: `${A}/heavy/low_boom_01.wav`, volume: 0.28, offset: 0.02 },
 ];
 
 /** esquiva: o golpe que passa rente corta o ar e nao encosta em nada */
