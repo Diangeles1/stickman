@@ -261,8 +261,17 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="DueloDoDia"
         component={Prototype}
-        calculateMetadata={() => {
-          const spec = duelo(dueloDoDia(new Date()));
+        /*
+          A DATA VEM DAS PROPS, e cair no `new Date()` so quando ninguem pedir.
+
+          Sem isso, renderizar um dia futuro produzia a luta de HOJE com o
+          titulo de amanha -- o script calculava o duelo da data pedida para o
+          texto e a composicao ignorava, porque lia o relogio. Um erro que nao
+          aparece em nada: o video renderiza, publica e esta errado.
+        */
+        calculateMetadata={({ props }) => {
+          const quando = (props as { data?: string }).data;
+          const spec = duelo(dueloDoDia(quando ? new Date(`${quando}T12:00:00Z`) : new Date()));
           return {
             durationInFrames: duracaoDoPrototipo(spec, { escolha: true }),
             fps: spec.fps,

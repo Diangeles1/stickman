@@ -145,9 +145,23 @@ for (let k = 0; k < Math.max(1, proximos); k++) {
   const mp4 = join(SAIDA, `${nome}.mp4`);
   const cru = join(SAIDA, `${nome}-cru.mp4`);
   console.log("    renderizando...");
+  /*
+    A DATA VAI NAS PROPS. A composicao usa o relogio quando ninguem pede, e
+    isso renderizaria a luta de HOJE com o titulo da data pedida -- um erro
+    que nao aparece em lugar nenhum ate o video estar publicado.
+  */
   execFileSync(
     npx,
-    ["remotion", "render", "src/index.ts", "DueloDoDia", cru, "--concurrency=4", "--log=error"],
+    [
+      "remotion",
+      "render",
+      "src/index.ts",
+      "DueloDoDia",
+      cru,
+      `--props={"data":"${iso}"}`,
+      "--concurrency=4",
+      "--log=error",
+    ],
     { cwd: RAIZ, stdio: "inherit", shell: process.platform === "win32" },
   );
 
