@@ -28,7 +28,7 @@
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { compilar } from "../src/core/timeline";
 import { duelo, dueloDoDia, type Duelo } from "../src/data/fights/diario";
 import { duracaoDoPrototipo } from "../src/compositions/Prototype";
@@ -58,13 +58,31 @@ const proximos = Number(opcao("proximos", "1"));
 const dataPedida = args.find((a) => /^\d{4}-\d{2}-\d{2}$/.test(a));
 const base = dataPedida ? new Date(`${dataPedida}T12:00:00Z`) : new Date();
 
-const npx = process.platform === "win32" ? "npx.cmd" : "npx";
+/*
+  NADA AQUI PASSA POR SHELL, e isso nao e preferencia de estilo.
+
+  As chamadas eram `npx.cmd ... { shell: true }` e morriam com
+  `spawnSync C:\Windows\system32\cmd.exe ENOENT`: no Windows `shell: true`
+  manda tudo para o cmd.exe, e um ambiente cujo PATH nao tem System32 nao tem
+  cmd.exe. O erro chegava como "o render falhou, status 1, stdout null" --
+  acusando a ferramenta que nem tinha sido chamada.
+  E quando o cmd.exe existe ele reparte os argumentos de novo: foi ele que
+  cortou a URL do OAuth no `&` (ver scripts/youtube.mts).
+
+  Chamar o JS da ferramenta com o proprio node nao depende de shell, nem de
+  PATH, nem de como o cmd.exe entende aspas.
+*/
+const node = process.execPath;
+/** o CLI do Remotion e dependencia do projeto: da para chamar o arquivo */
+const REMOTION = join(RAIZ, "node_modules", "@remotion", "cli", "remotion-cli.js");
+/** o tsx vem pelo npx, e o npx tambem e um .js ao lado do node */
+const NPX = join(dirname(node), "node_modules", "npm", "bin", "npx-cli.js");
+const comTsx = (args: string[]) => [NPX, "tsx", ...args];
 
 const audita = (chave: string, validador: string) => {
-  const r = spawnSync(npx, ["tsx", join("scripts", `${validador}.mts`), chave], {
+  const r = spawnSync(node, comTsx([join("scripts", `${validador}.mts`), chave]), {
     cwd: RAIZ,
     encoding: "utf8",
-    shell: process.platform === "win32",
   });
   const saida = `${r.stdout ?? ""}${r.stderr ?? ""}`;
   const linha = saida.split("\n").reverse().find((l) => /APROVADO|REPROVADO/.test(l)) ?? "(sem veredito)";
@@ -144,6 +162,8 @@ for (let k = 0; k < Math.max(1, proximos); k++) {
 
   const mp4 = join(SAIDA, `${nome}.mp4`);
   const cru = join(SAIDA, `${nome}-cru.mp4`);
+  const propsJson = join(SAIDA, `${nome}-props.json`);
+  writeFileSync(propsJson, JSON.stringify({ data: iso }), "utf8");
   console.log("    renderizando...");
   /*
     A DATA VAI NAS PROPS. A composicao usa o relogio quando ninguem pede, e
@@ -151,18 +171,20 @@ for (let k = 0; k < Math.max(1, proximos); k++) {
     que nao aparece em lugar nenhum ate o video estar publicado.
   */
   execFileSync(
-    npx,
+    node,
     [
-      "remotion",
+      REMOTION,
       "render",
       "src/index.ts",
       "DueloDoDia",
       cru,
-      `--props={"data":"${iso}"}`,
+      // as props vao por ARQUIVO, e nao na linha de comando: no Windows o
+      // shell come as aspas do JSON e o render morre sem explicar
+      `--props=${propsJson}`,
       "--concurrency=4",
       "--log=error",
     ],
-    { cwd: RAIZ, stdio: "inherit", shell: process.platform === "win32" },
+    { cwd: RAIZ, stdio: "inherit" },
   );
 
   /*
@@ -205,10 +227,9 @@ for (let k = 0; k < Math.max(1, proximos); k++) {
   if (temFlag("publicar")) {
     console.log("    publicando...");
     const extra = args.filter((a) => a === "--privado" || a.startsWith("--agendar="));
-    spawnSync(npx, ["tsx", join("scripts", "youtube.mts"), "publicar", mp4, ...extra], {
+    spawnSync(node, comTsx([join("scripts", "youtube.mts"), "publicar", mp4, ...extra]), {
       cwd: RAIZ,
       stdio: "inherit",
-      shell: process.platform === "win32",
     });
   }
 }
