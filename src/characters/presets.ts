@@ -216,4 +216,127 @@ export const PRESETS: Record<FighterId, FighterPreset> = {
     scale: 0.99,
     profile: { speed: 0.6, power: 0.78 },
   },
+
+  /*
+   * ================= O ELENCO DE VARETA =================
+   *
+   * Os presets acima sao da era de dois corpos grossos (membro de 62 a 102).
+   * Estes nasceram na proporcao que o canal usa: membro entre 40 e 44, cabeca
+   * entre 72 e 76 -- cerca de 28% do diametro da cabeca, que e onde um boneco
+   * de vareta se le como traco e nao como personagem cheio (ver a nota do
+   * laranja acima).
+   *
+   * ELES EXISTEM PARA O VIDEO NAO PARECER O DE ONTEM. Um duelo por dia com o
+   * mesmo par de cores vira o mesmo video com outros nomes; a cor e a
+   * primeira coisa que o espectador usa para dizer "ja vi este".
+   *
+   * O QUE DECIDE CADA HEX E A MEDICAO, e nao o gosto: scripts/elenco.mts
+   * calcula a razao de contraste WCAG de cada corpo contra o fundo de cada
+   * palco e reprova o par que some. Forma grafica precisa de 3.0 para se ler
+   * com folga, e a sombra de borda (escurecer 0.72, ver Stickman) e medida
+   * junto -- foi ela que reprovou meio preset na era anterior.
+   */
+
+  /** CLAROS: so se leem sobre palco escuro (vale, noite, metropole, arena). */
+  violeta: {
+    id: "violeta",
+    // #8a4cf0 media 3.6 no vale e 2.9 na metropole: a metropole tem o ceu
+    // roxeado no pe do quadro (#2a2340) e engole violeta escuro. Clareado
+    // ate passar nos quatro palcos escuros com a sombra junto.
+    stroke: "#a885ff",
+    auraColor: "#c4a8ff",
+    limbWidth: 41,
+    headRadius: 73,
+    scale: 1.01,
+    profile: { speed: 0.72, power: 0.66 },
+  },
+  limao: {
+    id: "limao",
+    // o oposto do violeta no circulo de cor, e o mais claro do elenco: e o
+    // par que mais separa um corpo do outro quando os dois se encostam
+    stroke: "#9ee84a",
+    auraColor: "#c6ff7a",
+    limbWidth: 40,
+    headRadius: 72,
+    scale: 1,
+    profile: { speed: 0.68, power: 0.62 },
+  },
+  magenta: {
+    id: "magenta",
+    stroke: "#ff5c93",
+    auraColor: "#ff9ec0",
+    limbWidth: 42,
+    headRadius: 74,
+    scale: 1.02,
+    profile: { speed: 0.78, power: 0.72 },
+  },
+
+  /**
+   * ESCUROS: so se leem sobre palco claro (limpo, vilarejo, cidade).
+   *
+   * Nao e simetria com os claros, e consequencia: o fundo do rabisco e
+   * branco, e sobre branco qualquer corpo claro perde a silhueta. Foi por
+   * isso que o ciano e o laranja nunca saem do vale -- medido, o ciano da
+   * 1.9 contra o branco, abaixo do 3.0 de que uma forma precisa.
+   */
+  /*
+    VELOCIDADE MINIMA 0.65, E NAO E ESTETICA.
+
+    `contato` reprovou o cotovelo do meio do combo com dois destes corpos:
+    ele parava a 70 unidades do eixo precisando de 30, com a cinematica
+    inversa ja no maximo. Eu culpei a FORCA primeiro (o empurrao escala com
+    `power`) e baixei o valor; nao mudou nada. Medido elenco por elenco, quem
+    reprovava eram os dois mais LENTOS -- 0.60 e 0.64 -- enquanto 0.68, 0.75,
+    0.80 e 0.82 passavam, com forcas que iam de 0.55 a 0.80.
+
+    A razao: a duracao de cada golpe escala com `speed` (ver o compilador).
+    Atacante lento alonga o combo, e o alvo empurrado pelo primeiro golpe
+    continua se afastando durante o tempo a mais -- quando o cotovelo chega,
+    ele ja saiu do alcance. O cotovelo e sempre o que acusa, porque e o golpe
+    de alcance mais curto do motor.
+
+    O motor ja tinha meia regra para isso: `trocarVencedor` reescreve combos
+    de lutador com speed < 0.6 (ver data/trocar). O limiar estava logo abaixo
+    de onde o problema comeca.
+
+    Corpo mais lento que isto pede combo proprio, e nao os que ja existem.
+  */
+  carmim: {
+    id: "carmim",
+    stroke: "#c4213c",
+    auraColor: "#ff6b84",
+    limbWidth: 42,
+    headRadius: 74,
+    scale: 1.02,
+    profile: { speed: 0.68, power: 0.82 },
+  },
+  oceano: {
+    id: "oceano",
+    stroke: "#1a5fbf",
+    auraColor: "#5aa8ff",
+    limbWidth: 41,
+    headRadius: 73,
+    scale: 1,
+    profile: { speed: 0.8, power: 0.58 },
+  },
+  grafite: {
+    id: "grafite",
+    // o mais escuro do elenco, e o unico que chega perto do boneco de
+    // caderno -- que e a referencia do palco de rabisco
+    stroke: "#2f3545",
+    auraColor: "#8fa2c8",
+    limbWidth: 40,
+    headRadius: 72,
+    scale: 1,
+    profile: { speed: 0.82, power: 0.55 },
+  },
+  musgo: {
+    id: "musgo",
+    stroke: "#1f7a4e",
+    auraColor: "#5fe0a0",
+    limbWidth: 43,
+    headRadius: 75,
+    scale: 1.01,
+    profile: { speed: 0.7, power: 0.76 },
+  },
 };

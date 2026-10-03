@@ -33,6 +33,19 @@ export const NOMES: Record<FighterId, string> = {
   green: "VERDE",
   white: "BRANCO",
   purple: "ROXO",
+  /*
+    O elenco de vareta. Estes nomes quase nunca aparecem: o duelo diario
+    passa `nomes` no spec e quem sai na tela e LUCAS, SAMUEL. Eles servem de
+    rede -- uma luta escrita sem nomes continua tendo o que dizer no lugar de
+    "undefined", que foi o que a tabela antiga fazia com qualquer cor nova.
+  */
+  violeta: "VIOLETA",
+  limao: "LIMAO",
+  magenta: "MAGENTA",
+  carmim: "CARMIM",
+  oceano: "OCEANO",
+  grafite: "GRAFITE",
+  musgo: "MUSGO",
 };
 
 export type Rotulo = {

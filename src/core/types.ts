@@ -114,7 +114,24 @@ export type PoseName =
   | "ajoelhado";
 
 /** Identidade visual de um lutador. Adicionar cor nova nao mexe em codigo. */
-export type FighterId = "black" | "red" | "blue" | "gold" | "green" | "white" | "purple";
+/**
+ * OS LUTADORES QUE EXISTEM.
+ *
+ * Os sete primeiros sao da era em que o motor tinha dois corpos grossos; os
+ * de baixo nasceram ja na proporcao de vareta (ver a nota sobre o diametro
+ * da cabeca em characters/presets) e sao os que o video diario usa.
+ *
+ * A divisao que importa nao e de cor, e de FUNDO: os claros so se leem sobre
+ * cenario escuro e os escuros so sobre cenario claro. Quem decide isso e a
+ * medicao, nao o gosto -- ver scripts/elenco.mts, que reprova um elenco
+ * posto num palco onde ele some.
+ */
+export type FighterId =
+  | "black" | "red" | "blue" | "gold" | "green" | "white" | "purple"
+  /** claros, para palco escuro */
+  | "violeta" | "limao" | "magenta"
+  /** escuros, para palco claro */
+  | "carmim" | "oceano" | "grafite" | "musgo";
 
 export type FighterPreset = {
   id: FighterId;

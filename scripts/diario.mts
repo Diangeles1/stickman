@@ -30,7 +30,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { compilar } from "../src/core/timeline";
-import { duelo, dueloDoDia, type Duelo } from "../src/data/fights/diario";
+import { duelo, dueloDoDia, historiaDe, type Duelo } from "../src/data/fights/diario";
 import { duracaoDoPrototipo } from "../src/compositions/Prototype";
 
 const RAIZ = join(import.meta.dirname, "..");
@@ -90,15 +90,25 @@ const audita = (chave: string, validador: string) => {
 };
 
 const titulo = (d: Duelo) => `${d.nomeA} vs ${d.nomeB} — quem vence? #shorts`;
-const descricao = (d: Duelo) =>
-  [
-    `${d.nomeA} contra ${d.nomeB} no Duelo do Vale!`,
+/*
+  A DESCRICAO CONTA A HISTORIA DO DIA, e nao "o Duelo do Vale" sempre.
+
+  Enquanto havia um cenario so, a frase fixa era verdade. Com os palcos
+  girando ela viraria mentira em seis dias de cada sete -- e descricao que
+  nao bate com o video e a primeira coisa que o espectador usa para decidir
+  que o canal e automatico.
+*/
+const descricao = (d: Duelo) => {
+  const { tema, lugar } = historiaDe(d);
+  return [
+    `${d.nomeA} contra ${d.nomeB} ${lugar}: ${tema}!`,
     "",
     "Escolhe o teu personagem no comecinho e comenta quem voce acha que ganha.",
     "Comenta tambem o nome de quem voce quer ver lutar no proximo — a gente usa!",
     "",
     "Novo duelo todo dia no Palitanos.",
   ].join("\n");
+};
 
 if (!existsSync(SAIDA)) mkdirSync(SAIDA, { recursive: true });
 
@@ -111,14 +121,35 @@ for (let k = 0; k < Math.max(1, proximos); k++) {
   const dur = duracaoDoPrototipo(spec, { escolha: true }) / spec.fps;
   const vencedor = q.venceA ? q.nomeA : q.nomeB;
 
-  console.log(`\n=== ${iso}  ${q.nomeA} vs ${q.nomeB}  (roteiro ${q.roteiro}, vence ${vencedor})`);
+  console.log(`\n=== ${iso}  ${q.nomeA} vs ${q.nomeB}  (vence ${vencedor})`);
+  console.log(`    roteiro ${q.roteiro}  palco ${q.palco}  elenco ${q.elenco}`);
   console.log(`    ${dur.toFixed(1)}s com a tela de escolha, ${t.poderes.length} efeitos`);
-  if (dur > 60) console.log("    ATENCAO: passa de 60s");
 
-  // a auditoria le a luta pela chave "dia:<roteiro>", e so vale para HOJE;
-  // para outras datas ela confere o ROTEIRO, que e o que pode quebrar
-  const chave = `dia:${q.roteiro}`;
+  /*
+    A AUDITORIA LE A LUTA PELA DATA, e nao mais pelo roteiro.
+
+    Enquanto so o roteiro girava, auditar "o roteiro de amanha com o elenco
+    de hoje" dava a mesma resposta. Com o elenco girando nao da: corpos
+    diferentes tem espessura diferente, e a distancia de combate deriva da
+    espessura do traco (ver distanciaDeCombate). Auditar outro elenco e
+    auditar outra luta -- e "auditei a luta errada" e o erro que fez
+    scripts/lutas.mts existir.
+  */
+  const chave = `dia:${iso}`;
   let bloqueado = false;
+
+  /*
+    PASSAR DE 60s BLOQUEIA, e nao avisa.
+
+    Era um aviso impresso no meio do relatorio, e aviso em producao
+    automatica e a mesma coisa que nada: ninguem le a saida de um comando
+    que deu certo. O Shorts corta em 60 -- um video de 61s nao fica um
+    segundo mais longo, ele deixa de ser Short.
+  */
+  if (dur > 60) {
+    console.log(`    FALHA duracao     ${dur.toFixed(1)}s passa dos 60s do Shorts`);
+    bloqueado = true;
+  }
   for (const v of BLOQUEIAM) {
     const { ok, linha } = audita(chave, v);
     console.log(`    ${ok ? "ok  " : "FALHA"} ${v.padEnd(12)} ${linha}`);
@@ -139,6 +170,8 @@ for (let k = 0; k < Math.max(1, proximos); k++) {
       `DURACAO     ${dur.toFixed(1)}s`,
       `VENCE       ${vencedor}`,
       `ROTEIRO     ${q.roteiro}`,
+      `PALCO       ${q.palco}`,
+      `ELENCO      ${q.elenco}`,
       "",
       "TITULO",
       titulo(q),
