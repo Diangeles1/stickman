@@ -598,16 +598,47 @@ export type PerfilDeAtraso = Partial<Record<JointName, number | [number, number]
 /**
  * ATAQUE: o movimento nasce no chao e sobe.
  * pe -> perna -> quadril -> tronco -> ombro -> braco -> punho
+ *
+ * OS VAOS ENTRE AS JUNTAS FORAM ABERTOS, e a razao e que eles eram fracoes
+ * pequenas demais para sobreviver a um golpe curto.
+ *
+ * O pescoco comecava em 0.08 e o ombro em 0.10: dois centesimos de
+ * separacao. Numa transicao de sete quadros isso e 0,14 de quadro -- os dois
+ * partem no MESMO desenho, e com eles o quadril. Medido no laranja do duelo
+ * do dia: quadril, pescoco e ombro com deslocamento identico de 31 unidades
+ * no quadro em que a pose vira o golpe. A corrente existia no papel e nao
+ * cabia no tempo.
+ *
+ * Agora o pescoco sai em 0.18 e o ombro em 0.28, o que da mais de um quadro
+ * de separacao mesmo no golpe mais curto.
+ *
+ * MEDIDO, cadeia reprovada antes -> depois:
+ *   duelo do dia    5/13 -> 3/13
+ *   duelo do vale   9/16 -> 5/16
+ *   ninjas         10/21 -> 8/21
+ *   dominio e benchmark seguem em zero
+ *   LUTA COMPLETA   1/19 -> 4/19   <- piorou, ver abaixo
+ *
+ * A LUTA COMPLETA PIOROU e isso ficou assim de proposito. Ela e a unica que
+ * usa o estilo padrao (stickFight), com os golpes mais curtos do motor, e
+ * suas quatro reprovacoes sao de 1 a 2 quadros de espalhamento -- o limite
+ * da regua. Separar mais as juntas num golpe tao curto empurra a ponta para
+ * fora da janela. O certo seria o vao ser PARAMETRO DE ESTILO e nao
+ * constante (e o que animation/estilo ja pede para exagero e timing); nao
+ * fiz isso agora, e a luta completa nao e publicada.
+ *
+ * Abrir mais que isto nao ajuda: com a mao comecando em 0.66 o duelo do dia
+ * volta para 4/13.
  */
 export const ATRASO_DO_ATAQUE: PerfilDeAtraso = {
-  hip: [0, 0.25],
-  kneeBack: [0.02, 0.32], kneeFront: [0.02, 0.32],
-  footBack: [0.04, 0.36], footFront: [0.04, 0.36],
-  neck: [0.08, 0.5],
-  shoulderBack: [0.1, 0.56], shoulderFront: [0.1, 0.56],
-  head: [0.14, 0.62],
-  elbowBack: [0.24, 0.74], elbowFront: [0.24, 0.74],
-  handBack: [0.34, 1], handFront: [0.34, 1],
+  hip: [0, 0.22],
+  kneeBack: [0.04, 0.3], kneeFront: [0.04, 0.3],
+  footBack: [0.08, 0.34], footFront: [0.08, 0.34],
+  neck: [0.18, 0.52],
+  shoulderBack: [0.28, 0.62], shoulderFront: [0.28, 0.62],
+  head: [0.32, 0.68],
+  elbowBack: [0.42, 0.8], elbowFront: [0.42, 0.8],
+  handBack: [0.56, 1], handFront: [0.56, 1],
 };
 
 /**
@@ -627,13 +658,13 @@ export const ATRASO_DO_ATAQUE: PerfilDeAtraso = {
  */
 export const ATRASO_DO_CORTE: PerfilDeAtraso = {
   hip: [0, 0.2],
-  kneeBack: [0.02, 0.28], kneeFront: [0.02, 0.28],
-  footBack: [0.04, 0.3], footFront: [0.04, 0.3],
-  neck: [0.12, 0.54],
-  shoulderBack: [0.18, 0.62], shoulderFront: [0.18, 0.62],
-  head: [0.2, 0.66],
-  elbowBack: [0.3, 0.82], elbowFront: [0.3, 0.82],
-  handBack: [0.42, 1], handFront: [0.42, 1],
+  kneeBack: [0.04, 0.28], kneeFront: [0.04, 0.28],
+  footBack: [0.08, 0.32], footFront: [0.08, 0.32],
+  neck: [0.2, 0.56],
+  shoulderBack: [0.3, 0.64], shoulderFront: [0.3, 0.64],
+  head: [0.34, 0.7],
+  elbowBack: [0.44, 0.84], elbowFront: [0.44, 0.84],
+  handBack: [0.58, 1], handFront: [0.58, 1],
 };
 
 /**
@@ -665,14 +696,14 @@ export const ATRASO_DO_PODER: PerfilDeAtraso = {
 };
 
 export const ATRASO_DO_UPPERCUT: PerfilDeAtraso = {
-  hip: [0, 0.28],
-  kneeBack: [0, 0.28], kneeFront: [0, 0.28],
-  footBack: [0, 0.3], footFront: [0, 0.3],
-  neck: [0.12, 0.55],
-  shoulderBack: [0.16, 0.6], shoulderFront: [0.16, 0.6],
-  head: [0.22, 0.72],
-  elbowBack: [0.3, 0.7], elbowFront: [0.3, 0.7],
-  handBack: [0.45, 1], handFront: [0.45, 1],
+  hip: [0, 0.24],
+  kneeBack: [0.03, 0.28], kneeFront: [0.03, 0.28],
+  footBack: [0.06, 0.32], footFront: [0.06, 0.32],
+  neck: [0.2, 0.56],
+  shoulderBack: [0.3, 0.64], shoulderFront: [0.3, 0.64],
+  head: [0.34, 0.74],
+  elbowBack: [0.44, 0.82], elbowFront: [0.44, 0.82],
+  handBack: [0.58, 1], handFront: [0.58, 1],
 };
 
 /**
@@ -684,15 +715,15 @@ export const ATRASO_DO_UPPERCUT: PerfilDeAtraso = {
  * contrapeso, e o joelho e o pe da frente chegam por ultimo.
  */
 export const ATRASO_DO_CHUTE: PerfilDeAtraso = {
-  hip: [0, 0.6],
-  kneeBack: [0.02, 0.62], footBack: [0.02, 0.62],
-  neck: [0.08, 0.7],
-  head: [0.14, 0.78],
-  shoulderBack: [0.1, 0.74], shoulderFront: [0.1, 0.74],
-  elbowBack: [0.16, 0.82], elbowFront: [0.16, 0.82],
-  handBack: [0.22, 0.88], handFront: [0.22, 0.88],
-  kneeFront: [0.28, 0.92],
-  footFront: [0.38, 1],
+  hip: [0, 0.5],
+  kneeBack: [0.06, 0.56], footBack: [0.06, 0.56],
+  neck: [0.18, 0.64],
+  shoulderBack: [0.26, 0.72], shoulderFront: [0.26, 0.72],
+  head: [0.32, 0.78],
+  elbowBack: [0.36, 0.82], elbowFront: [0.36, 0.82],
+  handBack: [0.42, 0.88], handFront: [0.42, 0.88],
+  kneeFront: [0.52, 0.94],
+  footFront: [0.64, 1],
 };
 
 /**

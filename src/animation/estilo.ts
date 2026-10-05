@@ -195,8 +195,19 @@ export const ANIME: EstiloDeAnimacao = {
  * A CADEIA CINETICA. Um golpe de seis quadros tem tres desenhos distintos, e
  * tres desenhos nao cabem os cinco picos que o quadril, o tronco, o ombro, o
  * cotovelo e o punho deveriam ter em sequencia -- scripts/cadeia.mts acusa
- * isso corretamente. Quem usar este preset deve dar JANELAS MAIORES aos
- * golpes (windup e strike), senao a corrente do corpo deixa de ser lida.
+ * isso corretamente -- mas a explicacao do DESENHO SEGURADO so vale em parte:
+ * durante um golpe o motor ja desenha todo quadro (ver quadroDoDesenho em
+ * animation/corpo), entao a corrente do disparo nao e quantizada.
+ *
+ * A RECEITA QUE ESTAVA AQUI ERA FALSA. Esta nota dizia que quem usasse este
+ * preset devia dar JANELAS MAIORES aos golpes. Medido: subindo
+ * `janelaDeGolpe` de 1.4 para 1.8, 2.2 e 2.8, a cadeia do duelo do dia vai de
+ * 5 para 7, 7 e 9 reprovacoes -- piora, e no sentido contrario ao prometido.
+ * Janela maior da mais tempo para o corpo TRANSLADAR dentro da janela de
+ * medicao, e translacao move todas as juntas juntas.
+ *
+ * O que moveu o numero foi abrir os VAOS entre as juntas nos perfis de atraso
+ * (ver ATRASO_DO_ATAQUE em characters/skeleton), que nao depende deste preset.
  *
  * ESTA NOTA JA AFIRMOU QUE "a luta dos ninjas passa em todos os cinco
  * validadores com ele". Era falso, e vale registrar por que passou tanto

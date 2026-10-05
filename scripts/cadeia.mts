@@ -83,6 +83,74 @@ console.log(`luta: ${qual}\n`);
   ordem certa, mas so dois quadros DISTINTOS. O criterio de "3 dos 5 picos
   distintos" pede mais estagios do que cabem num golpe rapido.
 
+  MAIS TRES EXPLICACOES MEDIDAS E REFUTADAS, todas depois das cinco acima:
+
+  6. "basta dar JANELAS MAIORES aos golpes" -- esta estava ESCRITA como
+     receita no proprio preset (ver ANIME_DESENHADO em animation/estilo). E
+     falsa, e no sentido contrario: subindo `janelaDeGolpe` de 1.4 para 1.8,
+     2.2 e 2.8, o duelo do dia vai de 5 para 7, 7 e 9 reprovacoes. Janela
+     maior da mais tempo para o corpo TRANSLADAR dentro da janela de medicao,
+     e translacao move tudo junto.
+
+  7. "descontar a translacao da raiz do corpo (corpo.x, corpo.baseY)" -- e
+     diferente da ideia 2 acima, que subtraia a JUNTA quadril e por isso
+     zerava a velocidade dela por construcao. Esta preserva o giro do
+     quadril, parecia obviamente certa, e PIORA: duelo do dia 5 -> 11,
+     dominio 0 -> 1, luta completa 1 -> 2.
+
+  8. "a janela nao deve alcancar a CAMINHADA" -- locomocao move todas as
+     juntas juntas de proposito (`atrasoPara` devolve undefined para passo e
+     corrida), e o pico do quadril caia mesmo la: num uppercut com contato em
+     2261, quadril, pescoco e ombro picavam todos em 2230, dentro de um
+     `advance`. Andar a janela para a frente ate sair da locomocao tambem
+     piora: duelo do dia 5 -> 6, luta completa 1 -> 2, duelo do vale 9 -> 10.
+
+  O QUE DE FATO MOVEU O NUMERO foi abrir os VAOS entre as juntas nos perfis
+  de atraso (ver ATRASO_DO_ATAQUE em characters/skeleton): o pescoco comecava
+  dois centesimos depois do ombro, o que num golpe de sete quadros e um
+  setimo de quadro -- os dois partiam no mesmo desenho. Duelo do dia 5 -> 3,
+  duelo do vale 9 -> 5, ninjas 10 -> 8.
+
+  E VALE REGISTRAR O QUE A MEDICAO MOSTROU DE BOM: o disparo em si tem uma
+  corrente exemplar. No mesmo uppercut, entre os quadros 2255 e 2258, o
+  quadril para (0, 0, 0), o pescoco para (2, 3, 0) e a ponta dispara
+  (cotovelo 146, punho 216). A raiz chega primeiro e a ponta por ultimo,
+  que e exatamente o que se pede. O que reprova e onde o pico GLOBAL cai.
+
+  MAIS TRES EXPLICACOES MEDIDAS E REFUTADAS, todas depois das cinco acima:
+
+  6. "basta dar JANELAS MAIORES aos golpes" -- esta estava ESCRITA como
+     receita no proprio preset (ver ANIME_DESENHADO em animation/estilo). E
+     falsa, e no sentido contrario: subindo `janelaDeGolpe` de 1.4 para 1.8,
+     2.2 e 2.8, o duelo do dia vai de 5 para 7, 7 e 9 reprovacoes. Janela
+     maior da mais tempo para o corpo TRANSLADAR dentro da janela de medicao,
+     e translacao move tudo junto.
+
+  7. "descontar a translacao da raiz do corpo (corpo.x, corpo.baseY)" -- e
+     diferente da ideia 2 acima, que subtraia a JUNTA quadril e por isso
+     zerava a velocidade dela por construcao. Esta preserva o giro do
+     quadril, parecia obviamente certa, e PIORA: duelo do dia 5 -> 11,
+     dominio 0 -> 1, luta completa 1 -> 2.
+
+  8. "a janela nao deve alcancar a CAMINHADA" -- locomocao move todas as
+     juntas juntas de proposito (`atrasoPara` devolve undefined para passo e
+     corrida), e o pico do quadril caia mesmo la: num uppercut com contato em
+     2261, quadril, pescoco e ombro picavam todos em 2230, dentro de um
+     `advance`. Andar a janela para a frente ate sair da locomocao tambem
+     piora: duelo do dia 5 -> 6, luta completa 1 -> 2, duelo do vale 9 -> 10.
+
+  O QUE DE FATO MOVEU O NUMERO foi abrir os VAOS entre as juntas nos perfis
+  de atraso (ver ATRASO_DO_ATAQUE em characters/skeleton): o pescoco comecava
+  dois centesimos depois do ombro, o que num golpe de sete quadros e um
+  setimo de quadro -- os dois partiam no mesmo desenho. Duelo do dia 5 -> 3,
+  duelo do vale 9 -> 5, ninjas 10 -> 8.
+
+  E VALE REGISTRAR O QUE A MEDICAO MOSTROU DE BOM: o disparo em si tem uma
+  corrente exemplar. No mesmo uppercut, entre os quadros 2255 e 2258, o
+  quadril para (0, 0, 0), o pescoco para (2, 3, 0) e a ponta dispara
+  (cotovelo 146, punho 216). A raiz chega primeiro e a ponta por ultimo, que
+  e exatamente o que se pede. O que reprova e onde o pico GLOBAL cai.
+
   NAO MEXA NO CRITERIO SO PARA PASSAR. Se algum dia ele for afrouxado, que
   seja com uma razao que valha para golpe lento tambem -- e note que golpe
   lento passa: `punchHeavy` e `uppercut` espalham 20 e 28 quadros.
