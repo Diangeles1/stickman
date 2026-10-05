@@ -887,7 +887,33 @@ const ALTURA_DO_ESTALO = 20;
 /** O mais longe que um pe anda num quadro rente ao chao. */
 const PASSO_MAXIMO_POR_QUADRO = 28;
 /** Altura minima do pe quando o limite acima o obriga a dar um passo. */
+/**
+ * Altura minima do pe quando o PASSO de verdade acontece.
+ *
+ * As levantadas rente ao chao usam LEVANTADA_RENTE, que e outro teto e muito
+ * mais baixo: elas existem para o pe nao raspar, nao para ele dar um passo.
+ */
 const ALTURA_DO_PASSINHO = 10;
+void ALTURA_DO_PASSINHO;
+/**
+ * O MAIS ALTO que um pe sai do chao sem ser um passo de verdade.
+ *
+ * Estas levantadas -- a da soltura e a do limite de arraste -- existem para o
+ * pe nao RASPAR, e nao para ele dar um passo. Elas subiam ate 46 unidades, e
+ * o custo apareceu em scripts/chao.mts: o corpo ficava sem nenhum pe no chao
+ * em 1529 dos 4487 quadros do duelo do dia, contra 767 antes de elas
+ * existirem. O lutador parou de arrastar e passou a flutuar.
+ *
+ * O VALOR SAI DA FOLGA ENTRE OS DOIS MEDIDORES, e nao do gosto: `pes` conta
+ * como apoiado o pe a menos de 1.5 do chao, e `chao` cobra que o pe mais
+ * baixo esteja a menos de 12. Entre 1.5 e 12 existe uma faixa em que o pe
+ * nao raspa E o corpo continua tocando o chao. 10 fica dentro dela com
+ * folga dos dois lados.
+ *
+ * O passo DE VERDADE (`passo`, mais abaixo) nao usa este teto: ali o corpo
+ * esta apoiado no outro pe e a perna tem que descrever um arco visivel.
+ */
+const LEVANTADA_RENTE = 10;
 /**
  * Acima disto, por quadro, o pe tem que SAIR DO CHAO -- mas sem ser segurado.
  *
@@ -1032,6 +1058,34 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
       const outro = estado[pe === "footFront" ? "footBack" : "footFront"];
       const cru = j[pe];
       const noChao = cru.y > -ALTURA_DE_APOIO;
+      /*
+        O OUTRO PE SEGURA O CORPO, OU NINGUEM LEVANTA.
+
+        As duas regras que tiram o pe do chao para ele nao raspar -- o arco da
+        soltura e o limite de arraste, ambas mais abaixo -- nao perguntavam
+        pelo outro pe. O resultado foi trocar um defeito por outro: a
+        patinacao do duelo do dia caiu de 104 para 15 unidades e os quadros
+        com NENHUM pe no chao subiram de 767 para 1529 (scripts/chao.mts). O
+        lutador parou de arrastar e passou a flutuar.
+
+        Um corpo de pe transfere o peso: o apoio velho so sai depois que o
+        novo chega. Aqui isso vira uma condicao -- levantar e permitido
+        enquanto o outro pe estiver sustentando; quando nao estiver, o pe
+        fica no chao e aceita o deslize, que e o mal menor entre os dois.
+
+        A leitura do outro pe e de UM TIQUE ATRAS, porque os dois sao
+        resolvidos na mesma passada. Um tique de atraso num apoio que dura
+        dezenas nao muda a decisao.
+
+        SO A SOLTURA OBEDECE A ISTO, e nao o limite de arraste logo abaixo.
+        Medido: aplicando a regra aos dois, a patinacao do duelo do dia volta
+        de 16 para 67 unidades -- acima do limite de 60 que `pes` cobra, ou
+        seja, a producao diaria pararia. So na soltura, a flutuacao cai de
+        1529 para 787 quadros E a patinacao fica em 16. O arraste levanta o
+        pe por pouco tempo e rente ao chao (ver LEVANTADA_RENTE); a soltura e
+        que o tirava de vez.
+      */
+      const outroSustenta = outro.ultimo.y > -ALTURA_DE_APOIO;
       let saida: Vec2 = cru;
       let peso = 0;
 
@@ -1067,8 +1121,9 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
               luta dos ninjas e 2 no duelo do vale. Os dois so funcionam
               juntos, e por isso estao no mesmo commit.
             */
-            const corrida = Math.abs(cru.x - st.de.x);
-            const altura = Math.min(46, corrida * 0.22 + 14);
+            // so levanta se o outro pe estiver segurando (ver outroSustenta)
+            const corrida = outroSustenta ? Math.abs(cru.x - st.de.x) : 0;
+            const altura = Math.min(LEVANTADA_RENTE, corrida * 0.22 + 6);
             saida = {
               x: st.de.x + (cru.x - st.de.x) * e,
               y:
@@ -1175,7 +1230,7 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
             O x NAO e tocado aqui, e e essa a diferenca que importa: segurar o
             pe cria divida, e divida vira estalo no quadro em que ela e paga.
           */
-          const altura = Math.min(46, d * 0.22 + ALTURA_DO_PASSINHO);
+          const altura = Math.min(LEVANTADA_RENTE, d * 0.22 + 6);
           saida = { x: saida.x, y: Math.min(saida.y, -altura) };
           peso = 1;
         }
