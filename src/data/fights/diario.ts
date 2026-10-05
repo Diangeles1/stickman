@@ -530,6 +530,18 @@ const ROTEIROS: Record<string, Roteiro> = {
       { type: "attack", attacker: B, target: A, move: "punchHeavy" },
       { type: "tecnica", tecnica: "dominioVazio", gelo: A, fogo: B },
       /*
+        O DOMINIO PRENDE E O ESMAGAMENTO APROVEITA, e e essa emenda que faz a
+        dupla valer mais que as duas cenas soltas: `dominioVazio` nao corta,
+        ele PARA quem esta dentro -- e quem para o outro e vai buscar o corpo
+        esta executando um plano.
+
+        Este roteiro tambem era o mais pobre de espaco dos seis (medido com
+        scripts/palco.mts: profundidade ZERO, 461 de altura e 3% dos quadros
+        no ar, contra 520 / 779 / 7% do roteiro do vale). Era luta de luz
+        trocada no mesmo lugar.
+      */
+      { type: "tecnica", tecnica: "esmagarNoChao", gelo: A, fogo: B },
+      /*
         O CHUTE DEPOIS DO DOMINIO MIRA O TRONCO, e nao a cabeca. A cena larga
         os dois mais afastados do que uma troca de socos deixaria, e mirando a
         cabeca o pe parava a 63 unidades do eixo precisando de 29, com a
@@ -563,7 +575,18 @@ const ROTEIROS: Record<string, Roteiro> = {
       { type: "attack", attacker: A, target: B, move: "elbow", targetPoint: "chest" },
       { type: "combo", attacker: B, target: A, moves: ["punchFast", "punch", "knee"] },
       { type: "tecnica", tecnica: "cercoEmProfundidade", gelo: A, fogo: B },
-      { type: "tecnica", tecnica: "barreira", gelo: A, fogo: B },
+      /*
+        AQUI HAVIA UMA `barreira`, que e cena de FEITICEIRO: o golpe chega e
+        para sozinho a um palmo do corpo. Numa briga de rua ela nunca fez
+        sentido -- entrou porque estava disponivel, que e a pior razao para
+        uma cena existir.
+
+        `esmagarNoChao` conta o que este roteiro quer contar: os dois sobem
+        juntos, o alvo e cravado no piso e o piso racha. E a unica cena de
+        cenario que serve a qualquer palco, porque chao todo palco tem (ver
+        core/tecnicas/esmagar-no-chao).
+      */
+      { type: "tecnica", tecnica: "esmagarNoChao", gelo: A, fogo: B },
       { type: "attack", attacker: A, target: B, move: "punchHeavy" },
       /*
         ERA UMA ESQUIVA, e virou golpe que ACERTA. `coreografia` reprovou com

@@ -32,6 +32,7 @@ import { choqueDeRajadas } from "./tecnicas/choque-de-rajadas";
 import { arremessoNoParedao } from "./tecnicas/arremesso-no-paredao";
 import { perseguicaoNoAr } from "./tecnicas/perseguicao-no-ar";
 import { cercoEmProfundidade } from "./tecnicas/cerco-em-profundidade";
+import { esmagarNoChao } from "./tecnicas/esmagar-no-chao";
 import {
   ALVO_PADRAO,
   POSE_DA_REACAO,
@@ -1152,6 +1153,8 @@ export const compilar = (spec: FightSpec): Timeline => {
         return perseguicaoNoAr(ctx);
       case "cercoEmProfundidade":
         return cercoEmProfundidade(ctx);
+      case "esmagarNoChao":
+        return esmagarNoChao(ctx);
       case "encontro": {
         // os dois parados, cada um no seu elemento; a camera passa entre eles
         // e alterna closes. Silencio antes da luta.

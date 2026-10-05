@@ -492,7 +492,10 @@ export type Beat =
         // o golpe lanca, o outro sobe atras, e a troca acontece no alto
         | "perseguicaoNoAr"
         // um recua para o fundo do palco e volta em diagonal
-        | "cercoEmProfundidade";
+        | "cercoEmProfundidade"
+        // sobem juntos e o alvo e cravado no chao, que racha: a unica cena de
+        // cenario que serve a qualquer palco, porque chao todo palco tem
+        | "esmagarNoChao";
       gelo: FighterId;
       fogo: FighterId;
     }
