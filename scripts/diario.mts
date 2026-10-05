@@ -215,22 +215,45 @@ for (let k = 0; k < Math.max(1, proximos); k++) {
     isso renderizaria a luta de HOJE com o titulo da data pedida -- um erro
     que nao aparece em lugar nenhum ate o video estar publicado.
   */
-  execFileSync(
-    node,
-    [
-      REMOTION,
-      "render",
-      "src/index.ts",
-      "DueloDoDia",
-      cru,
-      // as props vao por ARQUIVO, e nao na linha de comando: no Windows o
-      // shell come as aspas do JSON e o render morre sem explicar
-      `--props=${propsJson}`,
-      "--concurrency=4",
-      "--log=error",
-    ],
-    { cwd: RAIZ, stdio: "inherit" },
-  );
+  /*
+    O RENDER TEM UMA SEGUNDA TENTATIVA, e isto nasceu de uma falha de verdade.
+
+    O duelo de 2026-10-05 morreu com status 1 e nenhuma saida; rodando o MESMO
+    comando em seguida, funcionou. O Remotion derruba o render quando o
+    navegador headless demora mais que o limite para subir ("Timed out after
+    30000ms while setting up the headless browser"), e isso depende da maquina
+    estar ocupada, nao do video.
+
+    Numa execucao manual isso e um aborrecimento: roda de novo. Numa tarefa
+    diaria e um dia sem video, e ninguem fica sabendo ate olhar o canal. Dai o
+    limite maior e a repeticao.
+  */
+  const renderizar = () =>
+    execFileSync(
+      node,
+      [
+        REMOTION,
+        "render",
+        "src/index.ts",
+        "DueloDoDia",
+        cru,
+        // as props vao por ARQUIVO, e nao na linha de comando: no Windows o
+        // shell come as aspas do JSON e o render morre sem explicar
+        `--props=${propsJson}`,
+        "--concurrency=4",
+        // o padrao e 30s e nao chega para subir o navegador com a maquina
+        // ocupada; o custo de um limite alto e zero quando nada trava
+        "--timeout=180000",
+        "--log=error",
+      ],
+      { cwd: RAIZ, stdio: "inherit" },
+    );
+  try {
+    renderizar();
+  } catch {
+    console.log("    o render falhou; tentando uma segunda vez...");
+    renderizar();
+  }
 
   /*
     O AUDIO SOBE PARA -14 LUFS, que e onde YouTube e TikTok normalizam. O
