@@ -871,6 +871,22 @@ const ALTURA_DO_ESTALO = 20;
 const PASSO_MAXIMO_POR_QUADRO = 28;
 /** Altura minima do pe quando o limite acima o obriga a dar um passo. */
 const ALTURA_DO_PASSINHO = 10;
+/**
+ * Acima disto, por quadro, o pe tem que SAIR DO CHAO -- mas sem ser segurado.
+ *
+ * Eram a mesma regra, e nao deviam ser. O limitador antigo fazia duas coisas
+ * de uma vez quando o pe andava demais rente ao chao: levantava o pe E
+ * encurtava o passo dele. Baixar o limite para matar a patinacao fazia o pe
+ * ficar PARA TRAS do que a pose pedia, e a divida se pagava de uma vez no
+ * quadro seguinte -- medido: a patinacao do duelo do dia caiu de 104 para 5
+ * unidades e apareceram estalos de 31 e 64 unidades, que e defeito pior.
+ *
+ * Separadas, cada uma faz o seu: acima de ARRASTE o pe levanta (porque pe que
+ * anda isso tudo esta DANDO UM PASSO, e passo sai do chao), e so acima de
+ * PASSO_MAXIMO_POR_QUADRO, que e tres vezes mais, o deslocamento e encurtado
+ * para nao virar teleporte.
+ */
+const ARRASTE_MAXIMO_POR_QUADRO = 8;
 
 /** Quadros para o pe sair do chao sem estalo quando deixa de apoiar. */
 const QUADROS_DE_SOLTURA = 5;
@@ -992,9 +1008,36 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
             st.modo = "livre";
           } else {
             const e = suave(s);
+            /*
+              SOLTAR O PE E DAR UM PASSO, E NAO ARRASTAR.
+
+              A soltura interpolava x e y em linha reta. Quando a origem e o
+              destino estao os DOIS no chao -- o que acontece toda vez que o
+              corpo pivota, porque durante o giro nao ha onde pregar -- a
+              viagem inteira acontece rente ao chao e o pe raspa.
+
+              Medido no laranja do duelo do dia, quadros 2404 a 2412: `coil`
+              entrando num chute giratorio, giro caindo de 0.99 para 0.10 e
+              voltando, o pe indo de -2583 a -2629 com y = 0 o tempo todo.
+
+              SOZINHO ESTE ARCO QUASE NAO MUDA O NUMERO: 104 unidades de
+              patinacao viram 100, porque o pe continua autorizado a andar
+              rente ao chao pelo limitador la embaixo. O que ele faz e
+              impedir o ESTALO quando aquele limitador aperta -- removendo o
+              arco e mantendo o resto, voltam 2 estalos no duelo do dia, 1 na
+              luta dos ninjas e 2 no duelo do vale. Os dois so funcionam
+              juntos, e por isso estao no mesmo commit.
+            */
+            const corrida = Math.abs(cru.x - st.de.x);
+            const altura = Math.min(46, corrida * 0.22 + 14);
             saida = {
               x: st.de.x + (cru.x - st.de.x) * e,
-              y: st.de.y + (cru.y - st.de.y) * e,
+              y:
+                st.de.y +
+                (cru.y - st.de.y) * e -
+                // so levanta se houver chao a percorrer: soltura parada
+                // continua sendo so o pe saindo do apoio
+                (corrida > PASSO_MINIMO ? Math.sin(Math.PI * s) * altura : 0),
             };
             peso = 1;
           }
@@ -1070,18 +1113,29 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
         const dx = saida.x - st.ultimo.x;
         const dy = saida.y - st.ultimo.y;
         const d = Math.hypot(dx, dy);
-        // o limite e por TIQUE do planejador, e um tique vale PASSO quadros
-        const limite = PASSO_MAXIMO_POR_QUADRO * PASSO;
-        if (d > limite) {
-          const k = limite / d;
-          // pe que precisa andar tanto esta DANDO UM PASSO: sai do chao. Preso
-          // na altura em que estava, ele deslizava rente ao chao.
-          saida = {
-            x: st.ultimo.x + dx * k,
-            y: Math.min(st.ultimo.y + dy * k, -ALTURA_DO_PASSINHO),
-          };
+        // os limites sao por TIQUE do planejador, e um tique vale PASSO quadros
+        const teleporte = PASSO_MAXIMO_POR_QUADRO * PASSO;
+        const arraste = ARRASTE_MAXIMO_POR_QUADRO * PASSO;
+        if (d > teleporte) {
+          // ENCURTA: ninguem move o pe isso tudo num quadro. Aqui o pe fica
+          // para tras da pose de proposito, e paga a diferenca nos proximos.
+          const k = teleporte / d;
+          saida = { x: st.ultimo.x + dx * k, y: st.ultimo.y + dy * k };
           peso = 1;
           if (st.modo === "plantado") st.px = saida.x;
+        }
+        if (d > arraste) {
+          /*
+            LEVANTA, SEM SEGURAR. Pe que anda isto rente ao chao esta dando um
+            passo, e passo sai do chao -- preso na altura em que estava, ele
+            raspa. A altura sai da distancia percorrida, como no passo.
+
+            O x NAO e tocado aqui, e e essa a diferenca que importa: segurar o
+            pe cria divida, e divida vira estalo no quadro em que ela e paga.
+          */
+          const altura = Math.min(46, d * 0.22 + ALTURA_DO_PASSINHO);
+          saida = { x: saida.x, y: Math.min(saida.y, -altura) };
+          peso = 1;
         }
       }
 

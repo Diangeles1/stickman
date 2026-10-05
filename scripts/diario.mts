@@ -39,14 +39,21 @@ const SAIDA = join(RAIZ, "out", "diario");
 /**
  * Os validadores que BLOQUEIAM a producao.
  *
- * `pes` e `cadeia` ficam de fora de proposito, e nao por conveniencia: os
- * dois tem defeito conhecido, medido e documentado (ver a nota em
- * scripts/cadeia.mts e o conflito entre pose segurada e apoio em
- * animation/estilo). Bloquear por eles pararia a producao todo dia sem
- * informacao nova; o relatorio continua imprimindo os dois.
+ * `pes` ENTROU na lista. Ele ficava de fora porque reprovava em todo video
+ * publicado -- 60 a 132 unidades de patinacao -- e bloquear por ele pararia a
+ * producao todo dia sem informacao nova. Isso deixou de ser verdade quando a
+ * soltura do pe virou passo e o limitador rente ao chao foi separado em dois
+ * (ver animation/corpo): as 48 combinacoes que o calendario pode produzir
+ * passam. Validador que passa sempre tem que bloquear, senao a melhoria se
+ * perde na primeira regressao.
+ *
+ * `cadeia` continua de fora, e nao por conveniencia: o defeito e conhecido,
+ * medido e documentado, e a causa e o preset de pose segurada em 2s (ver a
+ * nota em scripts/cadeia.mts e em animation/estilo). Trocar o preset custaria
+ * o visual de desenho a mao, que e o que o canal quer.
  */
-const BLOQUEIAM = ["contato", "qualidade", "arcos", "coreografia"];
-const INFORMAM = ["pes", "cadeia"];
+const BLOQUEIAM = ["contato", "qualidade", "arcos", "coreografia", "pes"];
+const INFORMAM = ["cadeia"];
 
 const args = process.argv.slice(2);
 const opcao = (n: string, p: string) =>
