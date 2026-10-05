@@ -18,6 +18,7 @@ import { POSES } from "../characters/poses";
 import { STICK_FIGHT, estiloDe } from "./estilo";
 import {
   ATRASO_DA_REACAO,
+  comEspaco,
   ATRASO_DO_ATAQUE,
   ATRASO_DO_CHUTE,
   ATRASO_DO_PODER,
@@ -657,7 +658,10 @@ const amostrarCru = (track: FighterTrack, frame: number): Amostra => {
         poseDaChave(track, a),
         poseDaChave(track, b),
         Math.min(1, Math.max(0, bruto)),
-        atrasoPara(b.pose),
+        comEspaco(
+          atrasoPara(b.pose),
+          (track.estilo ?? STICK_FIGHT).espacoDaCorrente,
+        ),
         curvaDaPose(a.pose, b.pose),
       ),
       poseNome: t > 0.5 ? b.pose : a.pose,

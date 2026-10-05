@@ -916,6 +916,57 @@ const TEMPO_DO_CANAL: Record<Exclude<keyof Angulos, "raiz">, JointName> = {
   canelaT: "footBack",
 };
 
+/*
+  O VAO DA CORRENTE E PARAMETRO DE ESTILO, e nao constante do motor.
+
+  Os perfis acima dizem em que FRACAO da transicao cada junta parte. A mesma
+  fracao vale quadros diferentes conforme o golpe: 0.10 de vao sao 0,7 de
+  quadro num golpe de sete e 0,4 num de quatro -- abaixo do desenho, e as
+  duas juntas partem juntas. Nao existe um numero que sirva aos dois, e foi
+  por isso que abrir os vaos melhorou tres lutas e PIOROU a luta completa,
+  que e a de golpes mais curtos.
+
+  `espacoDaCorrente` (ver animation/estilo) encolhe ou mantem os vaos. Quem
+  encolhe e o INICIO de cada janela, e nao o fim: o fim e a ordem de CHEGADA,
+  que e o que faz a corrente ser corrente (a raiz termina antes da ponta), e
+  mexer nele desmontaria a cadeia em vez de comprimi-la.
+
+  O CACHE existe porque isto roda por quadro e por junta. A chave e o proprio
+  perfil mais o fator, e perfis sao constantes do modulo: sao seis objetos e
+  meia duzia de fatores.
+*/
+const CACHE_DO_ESPACO = new WeakMap<object, Map<number, PerfilDeAtraso>>();
+
+export const comEspaco = (
+  perfil: PerfilDeAtraso | undefined,
+  fator: number,
+): PerfilDeAtraso | undefined => {
+  if (!perfil || fator === 1) return perfil;
+  let porFator = CACHE_DO_ESPACO.get(perfil);
+  if (!porFator) {
+    porFator = new Map();
+    CACHE_DO_ESPACO.set(perfil, porFator);
+  }
+  const pronto = porFator.get(fator);
+  if (pronto) return pronto;
+  const saida: PerfilDeAtraso = {};
+  for (const [junta, janela] of Object.entries(perfil) as [
+    JointName,
+    number | [number, number],
+  ][]) {
+    if (typeof janela === "number") {
+      saida[junta] = janela * fator;
+      continue;
+    }
+    const [comeca, termina] = janela;
+    // a janela nunca fecha: com fator pequeno o inicio chega perto do fim, e
+    // janela de largura zero dividiria por zero em tempoDaJunta
+    saida[junta] = [Math.min(comeca * fator, termina - 0.05), termina];
+  }
+  porFator.set(fator, saida);
+  return saida;
+};
+
 const tempoDaJunta = (
   junta: JointName,
   t: number,

@@ -94,6 +94,42 @@ export type EstiloDeAnimacao = {
    */
   quadrosPorDesenho: number;
   /**
+   * O VAO ENTRE AS JUNTAS DA CORRENTE, como multiplicador.
+   *
+   * Os perfis de atraso (ATRASO_DO_ATAQUE e companhia, em
+   * characters/skeleton) dizem em que FRACAO da transicao cada junta parte:
+   * o quadril em 0, o pescoco em 0.18, o ombro em 0.28, a mao em 0.56. Esses
+   * numeros eram constantes do motor, e por isso serviam a um golpe so --
+   * mas a mesma fracao vale quadros diferentes conforme o estilo: num golpe
+   * de sete quadros 0.10 de vao e 0,7 de quadro, e num de quatro e 0,4,
+   * abaixo do desenho.
+   *
+   * Dai o parametro. Estilo de golpe LONGO quer o vao inteiro (1), porque
+   * ha tempo para a corrente aparecer; estilo de golpe CURTO quer menos,
+   * porque separar demais empurra a ponta para fora da janela e o golpe
+   * chega atrasado.
+   *
+   * DOIS VALORES FORAM MEDIDOS, VARRENDO (ver scripts/cadeia.mts):
+   *
+   *   stickFight       0.3 -> 2/19   0.5 -> 1/19   0.7 -> 3/19   1 -> 4/19
+   *   animeDesenhado   os tres numeros sao dia / vale / ninjas
+   *                    0.7 -> 3,8,9   1 -> 3,5,8   1.3 -> 3,6,8   1.6 -> 3,5,4
+   *
+   * O ANIME DESENHADO FICOU EM 1 E NAO EM 1.6, que pontua melhor. O 1.6
+   * encolhe a janela da mao para um decimo da transicao, e medido ali a mao
+   * passa a fazer 63% do percurso num quadro so, contra 56% em 1 -- isso e
+   * golpe que aparece estendido de uma vez. E a melhora de 1.6 acontece so
+   * na luta dos ninjas: nas duas que o canal publica, 1 e 1.6 dao o mesmo
+   * numero. Pagar concentracao da ponta por um ganho fora da producao nao
+   * vale.
+   *
+   * OS OUTROS QUATRO ESTILOS NAO FORAM MEDIDOS, porque nenhuma luta do
+   * repositorio os usa de forma que o medidor alcance. Os valores saem da
+   * mesma regra: quanto mais longo o golpe do estilo, mais vao ele aguenta.
+   * Quem for usa-los deve varrer, nao confiar.
+   */
+  espacoDaCorrente: number;
+  /**
    * MULTIPLICA AS JANELAS DOS GOLPES (windup, strike, recover).
    *
    * Existe por causa do conflito descrito em ANIME_DESENHADO: segurar a pose
@@ -149,6 +185,8 @@ export const STICK_FIGHT: EstiloDeAnimacao = {
   hitStop: 1,
   tremor: 1,
   quadrosPorDesenho: 1,
+  // golpe curto: vao inteiro empurraria a ponta para fora da janela
+  espacoDaCorrente: 0.5,
   janelaDeGolpe: 1,
   antecipacao: 1,
 };
@@ -180,6 +218,7 @@ export const ANIME: EstiloDeAnimacao = {
     deve mudar por baixo.
   */
   quadrosPorDesenho: 1,
+  espacoDaCorrente: 0.9,
   janelaDeGolpe: 1,
   antecipacao: 1,
 };
@@ -231,6 +270,8 @@ export const ANIME_DESENHADO: EstiloDeAnimacao = {
   hitStop: 1.5,
   tremor: 1.15,
   quadrosPorDesenho: 2,
+  // a pose segurada em 2s pede o vao inteiro (ver a nota acima)
+  espacoDaCorrente: 1,
   janelaDeGolpe: 1.4,
   antecipacao: 1.3,
 };
@@ -252,6 +293,7 @@ export const REALISTA: EstiloDeAnimacao = {
   tremor: 0.6,
   // realista e liso: aqui o objetivo e parecer captura, nao desenho
   quadrosPorDesenho: 1,
+  espacoDaCorrente: 0.8,
   janelaDeGolpe: 1,
   antecipacao: 1,
 };
@@ -271,6 +313,7 @@ export const CARTOON: EstiloDeAnimacao = {
   tremor: 1.3,
   // ver a nota em ANIME: a pose segurada vive em `animeDesenhado`
   quadrosPorDesenho: 1,
+  espacoDaCorrente: 0.7,
   janelaDeGolpe: 1,
   antecipacao: 1,
 };
@@ -292,6 +335,8 @@ export const COMBATE_PESADO: EstiloDeAnimacao = {
   hitStop: 1.9,
   tremor: 1.4,
   quadrosPorDesenho: 1,
+  // golpe pesado e longo: ha tempo de sobra para a corrente aparecer
+  espacoDaCorrente: 1,
   janelaDeGolpe: 1,
   antecipacao: 1,
 };
