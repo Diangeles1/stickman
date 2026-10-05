@@ -863,7 +863,24 @@ const DISTANCIA_DO_PASSO = 55;
  * sai do lugar nao e passo: e tremor.
  */
 const PASSO_MINIMO = 18;
-/** Fracao do alcance da perna acima da qual o pe precisa se mover. */
+/**
+ * Fracao do alcance da perna acima da qual o pe precisa se mover.
+ *
+ * SUBIU DE 0.97 PARA 1.01, e o motivo e que 0.97 ficava DENTRO do alcance: a
+ * perna nao estava esticada de verdade, e qualquer deriva de meia duzia de
+ * unidades na pose ligava e desligava o gatilho. O pe subia, pousava onde a
+ * pose queria, a pose andava mais um tanto, e ele subia de novo -- marcha no
+ * lugar, que e exatamente o defeito que scripts/tremor.mts foi escrito para
+ * pegar.
+ *
+ * Medido no duelo do dia, com REPOUSO_DO_PASSO ja valendo: 0.97 da 3 trechos
+ * de perna tremendo, 0.99 da 4, 1.01 da 2. Acima disso nao melhora mais
+ * (1.04 tambem da 2) e so atrasa o ajuste de base.
+ *
+ * PASSAR DE 1 NAO ESTICA OSSO NENHUM: quem resolve a perna e a cinematica
+ * inversa, que simplesmente nao alcanca e deixa o pe aquem. `esqueleto.mts`
+ * continua aprovando, e e ele que reprovaria um osso mudando de tamanho.
+ */
 const ALCANCE_UTIL = 1.01;
 /** Perto do chao (unidades de mundo) o pe esta sujeito ao limite abaixo. */
 const ALTURA_DO_ESTALO = 20;
@@ -900,6 +917,11 @@ const ARRASTE_MAXIMO_POR_QUADRO = 8;
  *
  * O repouso nao vale para o outro gatilho: erro maior que DISTANCIA_DO_PASSO
  * e o corpo tendo ido embora de verdade, e ai o pe TEM que ir atras na hora.
+ *
+ * O VALOR 18 E UM MINIMO LOCAL NUM TERRENO BARULHENTO, e isso precisa ser
+ * dito: varrido no duelo do dia, 0 da 5 trechos, 12 da 5, 15 da 4, 18 da 3,
+ * 21 da 4 e 32 da 4. Nao ha conta que produza 18 -- ha uma varredura. Quem
+ * mexer aqui deve varrer de novo em vez de raciocinar a partir do numero.
  */
 const REPOUSO_DO_PASSO = 18;
 
