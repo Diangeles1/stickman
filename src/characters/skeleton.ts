@@ -617,15 +617,18 @@ export type PerfilDeAtraso = Partial<Record<JointName, number | [number, number]
  *   duelo do vale   9/16 -> 5/16
  *   ninjas         10/21 -> 8/21
  *   dominio e benchmark seguem em zero
- *   LUTA COMPLETA   1/19 -> 4/19   <- piorou, ver abaixo
+ *   luta completa   1/19 -> 1/19
  *
- * A LUTA COMPLETA PIOROU e isso ficou assim de proposito. Ela e a unica que
- * usa o estilo padrao (stickFight), com os golpes mais curtos do motor, e
- * suas quatro reprovacoes sao de 1 a 2 quadros de espalhamento -- o limite
- * da regua. Separar mais as juntas num golpe tao curto empurra a ponta para
- * fora da janela. O certo seria o vao ser PARAMETRO DE ESTILO e nao
- * constante (e o que animation/estilo ja pede para exagero e timing); nao
- * fiz isso agora, e a luta completa nao e publicada.
+ * OS NUMEROS ACIMA SAO COM O VAO INTEIRO, e a luta completa so fica igual
+ * porque o vao virou PARAMETRO. Abrir os vaos a tinha piorado para 4/19:
+ * ela e a unica no estilo padrao (stickFight), de golpes mais curtos, e
+ * separar as juntas num golpe de poucos quadros empurra a ponta para fora
+ * da janela. Nao existe um numero que sirva aos dois estilos.
+ *
+ * Dai `espacoDaCorrente` (ver animation/estilo, aplicado por `comEspaco`
+ * logo abaixo). Os valores escritos aqui sao os do estilo que precisa de
+ * MAIS corrente; com fator 0.5 a luta completa volta a 1/19 sem custar nada
+ * as outras.
  *
  * Abrir mais que isto nao ajuda: com a mao comecando em 0.66 o duelo do dia
  * volta para 4/13.
