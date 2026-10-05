@@ -864,7 +864,7 @@ const DISTANCIA_DO_PASSO = 55;
  */
 const PASSO_MINIMO = 18;
 /** Fracao do alcance da perna acima da qual o pe precisa se mover. */
-const ALCANCE_UTIL = 0.97;
+const ALCANCE_UTIL = 1.01;
 /** Perto do chao (unidades de mundo) o pe esta sujeito ao limite abaixo. */
 const ALTURA_DO_ESTALO = 20;
 /** O mais longe que um pe anda num quadro rente ao chao. */
@@ -888,11 +888,28 @@ const ALTURA_DO_PASSINHO = 10;
  */
 const ARRASTE_MAXIMO_POR_QUADRO = 8;
 
+/**
+ * Quadros de REPOUSO depois de um passo, antes que o mesmo pe de outro por
+ * estar com a perna esticada.
+ *
+ * Sem isto o ajuste de base vira MARCHA NO LUGAR. O passo cai onde a pose
+ * quer, a pose continua andando alguns pixels, a perna fica "esticada" de
+ * novo e o pe sobe outra vez -- medido em scripts/tremor.mts no duelo do
+ * dia: o laranja levantava o pe de tras TRES vezes entre os quadros 888 e
+ * 938 tendo andado 3 unidades no total.
+ *
+ * O repouso nao vale para o outro gatilho: erro maior que DISTANCIA_DO_PASSO
+ * e o corpo tendo ido embora de verdade, e ai o pe TEM que ir atras na hora.
+ */
+const REPOUSO_DO_PASSO = 18;
+
 /** Quadros para o pe sair do chao sem estalo quando deixa de apoiar. */
 const QUADROS_DE_SOLTURA = 5;
 
 type EstadoDoPe = {
   modo: "livre" | "plantado" | "passo" | "soltando";
+  /** quadro em que o ultimo passo terminou, para o repouso abaixo */
+  fimDoPasso: number;
   /** x onde esta pregado */
   px: number;
   /** passo ou soltura: de onde saiu e quando */
@@ -931,8 +948,8 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
     },
   };
   const estado: Record<(typeof PES)[number], EstadoDoPe> = {
-    footFront: { modo: "livre", px: 0, de: { x: 0, y: 0 }, ini: 0, dur: 1, ultimo: { x: 0, y: 0 } },
-    footBack: { modo: "livre", px: 0, de: { x: 0, y: 0 }, ini: 0, dur: 1, ultimo: { x: 0, y: 0 } },
+    footFront: { modo: "livre", px: 0, de: { x: 0, y: 0 }, ini: 0, dur: 1, fimDoPasso: -999, ultimo: { x: 0, y: 0 } },
+    footBack: { modo: "livre", px: 0, de: { x: 0, y: 0 }, ini: 0, dur: 1, fimDoPasso: -999, ultimo: { x: 0, y: 0 } },
   };
   const perna =
     (distancia(POSE_BASE.hip, POSE_BASE.kneeFront) +
@@ -1067,9 +1084,11 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
           // dai que vinha a perna tremendo: um lutador parado levantava um pe
           // a cada seis quadros, alternando, sem sair do lugar.
           const esticada = alcance > perna * ALCANCE_UTIL;
+          // ver REPOUSO_DO_PASSO: ajuste de base que se repete e marcha
+          const descansado = f - st.fimDoPasso >= REPOUSO_DO_PASSO;
           const precisa =
             Math.abs(erro) > DISTANCIA_DO_PASSO ||
-            (esticada && Math.abs(erro) > PASSO_MINIMO);
+            (esticada && descansado && Math.abs(erro) > PASSO_MINIMO);
           // um pe de cada vez: os dois no ar ao mesmo tempo e pulo, nao passo
           if (precisa && outro.modo !== "passo") {
             st.modo = "passo";
@@ -1093,6 +1112,7 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
           if (s >= 1) {
             st.modo = "plantado";
             st.px = cru.x;
+            st.fimDoPasso = f;
             saida = { x: st.px, y: 0 };
           }
         }

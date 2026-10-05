@@ -18,13 +18,8 @@
 import { corpoNoQuadro, juntasDoCorpo } from "../src/animation/corpo";
 import { amostrar } from "../src/animation/sampler";
 import { compilar } from "../src/core/timeline";
-import { BENCHMARK } from "../src/data/fights/benchmark";
-import { BENCHMARK2 } from "../src/data/fights/benchmark2";
-import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
-import { trocarVencedor } from "../src/data/trocar";
-import { gerarLuta } from "../src/data/gerador";
-import { UM_SOCO } from "../src/data/fights/um-soco";
 import type { FighterId, PoseName } from "../src/core/types";
+import { escolherLuta } from "./lutas.mjs";
 
 /** Poses em que o personagem NAO esta apoiado nos pes. */
 const NO_AR = new Set<PoseName>([
@@ -35,25 +30,16 @@ const NO_AR = new Set<PoseName>([
 /** Tolerancia em unidades de mundo. 12 e menos de meia espessura de membro. */
 const TOLERANCIA = 12;
 
-const qual = process.argv[2] ?? "benchmark";
-/**
- * Qual luta auditar. "gerada:7" audita a luta que a semente 7 produz.
- *
- * E este o ponto de ter auditoria automatica: uma luta gerada pode ser
- * conferida SEM ninguem assistir a ela. Sem isso, gerar cem lutas seria gerar
- * cem lutas nao verificadas.
- */
-const spec = qual.startsWith("gerada:")
-  ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
-  : qual === "completa-vermelho"
-    ? trocarVencedor(LUTA_COMPLETA)
-  : qual === "completa"
-    ? LUTA_COMPLETA
-    : qual === "benchmark2"
-    ? BENCHMARK2
-    : qual === "um-soco"
-    ? UM_SOCO
-    : BENCHMARK;
+/*
+  A ESCADA DE TERNARIOS SAIU DAQUI, e tarde: este script auditava BENCHMARK
+  quando pediam qualquer nome que ela nao conhecia, e imprimia APROVADO com a
+  mesma cara de sempre. scripts/lutas.mts foi escrito justamente para matar
+  esse padrao -- e tres scripts nunca foram convertidos, este entre eles.
+
+  Medido ao converter: rodar `chao.mts dia` vinha devolvendo o numero do
+  benchmark. Nome desconhecido agora PARA o script.
+*/
+const { nome: qual, spec } = escolherLuta(process.argv[2], "dia");
 const t = compilar(spec);
 console.log(`luta: ${qual}`);
 

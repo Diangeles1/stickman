@@ -16,15 +16,8 @@
 
 import { corpoNoQuadro, juntasDoCorpo } from "../src/animation/corpo";
 import { compilar } from "../src/core/timeline";
-import { BENCHMARK } from "../src/data/fights/benchmark";
-import { BENCHMARK2 } from "../src/data/fights/benchmark2";
-import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
-import { GELO_VS_FOGO } from "../src/data/fights/gelo-vs-fogo";
-import { DUELO } from "../src/data/fights/duelo";
-import { UM_SOCO } from "../src/data/fights/um-soco";
-import { trocarVencedor } from "../src/data/trocar";
-import { gerarLuta } from "../src/data/gerador";
 import type { FighterId, JointName } from "../src/core/types";
+import { escolherLuta } from "./lutas.mjs";
 
 /** abaixo desta velocidade o corpo conta como parado */
 const PARADO = 3;
@@ -49,22 +42,16 @@ const POSES_PARADAS = new Set([
   "bloqueioKatana",
 ]);
 
-const qual = process.argv[2] ?? "duelo";
-const spec = qual.startsWith("gerada:")
-  ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
-  : qual === "duelo"
-    ? DUELO
-    : qual === "gelofogo"
-      ? GELO_VS_FOGO
-      : qual === "completa-vermelho"
-        ? trocarVencedor(LUTA_COMPLETA)
-        : qual === "completa"
-          ? LUTA_COMPLETA
-          : qual === "benchmark2"
-            ? BENCHMARK2
-            : qual === "um-soco"
-              ? UM_SOCO
-              : BENCHMARK;
+/*
+  A ESCADA DE TERNARIOS SAIU DAQUI, e tarde: este script auditava DUELO
+  quando pediam qualquer nome que ela nao conhecia, e imprimia APROVADO com a
+  mesma cara de sempre. scripts/lutas.mts foi escrito justamente para matar
+  esse padrao -- e tres scripts nunca foram convertidos, este entre eles.
+
+  Medido ao converter: rodar `tremor.mts dia` vinha devolvendo o numero do
+  benchmark. Nome desconhecido agora PARA o script.
+*/
+const { nome: qual, spec } = escolherLuta(process.argv[2], "dia");
 const t = compilar(spec);
 
 console.log(`luta: ${qual}\n`);

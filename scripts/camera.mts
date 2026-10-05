@@ -16,13 +16,7 @@ import { amostrar } from "../src/animation/sampler";
 import { cameraNoQuadro } from "../src/camera/camera";
 import { ALTURA_QUADRIL } from "../src/characters/skeleton";
 import { compilar } from "../src/core/timeline";
-import { BENCHMARK } from "../src/data/fights/benchmark";
-import { BENCHMARK2 } from "../src/data/fights/benchmark2";
-import { LUTA_COMPLETA } from "../src/data/fights/luta-completa";
-import { GELO_VS_FOGO } from "../src/data/fights/gelo-vs-fogo";
-import { trocarVencedor } from "../src/data/trocar";
-import { gerarLuta } from "../src/data/gerador";
-import { UM_SOCO } from "../src/data/fights/um-soco";
+import { escolherLuta } from "./lutas.mjs";
 
 /** Altura do corpo em unidades de mundo, para virar porcentagem de tela. */
 const CORPO = 597;
@@ -37,27 +31,16 @@ const MINIMO_LEGIVEL = 25;
  */
 const MINIMO_ARMADO = 20;
 
-const qual = process.argv[2] ?? "benchmark";
-/**
- * Qual luta auditar. "gerada:7" audita a luta que a semente 7 produz.
- *
- * E este o ponto de ter auditoria automatica: uma luta gerada pode ser
- * conferida SEM ninguem assistir a ela. Sem isso, gerar cem lutas seria gerar
- * cem lutas nao verificadas.
- */
-const spec = qual.startsWith("gerada:")
-  ? gerarLuta(Number(qual.split(":")[1]) || 1, { segundos: 30 })
-  : qual === "gelofogo"
-    ? GELO_VS_FOGO
-  : qual === "completa-vermelho"
-    ? trocarVencedor(LUTA_COMPLETA)
-  : qual === "completa"
-    ? LUTA_COMPLETA
-    : qual === "benchmark2"
-    ? BENCHMARK2
-    : qual === "um-soco"
-    ? UM_SOCO
-    : BENCHMARK;
+/*
+  A ESCADA DE TERNARIOS SAIU DAQUI, e tarde: este script auditava BENCHMARK
+  quando pediam qualquer nome que ela nao conhecia, e imprimia APROVADO com a
+  mesma cara de sempre. scripts/lutas.mts foi escrito justamente para matar
+  esse padrao -- e tres scripts nunca foram convertidos, este entre eles.
+
+  Medido ao converter: rodar `camera.mts dia` vinha devolvendo o numero do
+  benchmark. Nome desconhecido agora PARA o script.
+*/
+const { nome: qual, spec } = escolherLuta(process.argv[2], "dia");
 const t = compilar(spec);
 const padrao = { center: { x: 0, y: -ALTURA_QUADRIL - 120 }, zoom: 0.95 };
 
