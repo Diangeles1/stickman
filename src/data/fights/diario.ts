@@ -268,13 +268,41 @@ const ROTEIROS: Record<string, Roteiro> = {
       { type: "combo", attacker: A, target: B, moves: ["punchFast", "punch", "knee"] },
       { type: "tecnica", tecnica: "cercoEmProfundidade", gelo: B, fogo: A },
       { type: "attack", attacker: B, target: A, move: "punchHeavy" },
-      { type: "dodged", attacker: A, target: B, move: "kickHigh", targetPoint: "head", pulo: true },
-      { type: "attack", attacker: A, target: B, move: "kickHigh", targetPoint: "head" },
+      /*
+        A ESQUIVA PERDEU O PULO -- e isso NAO foi o que consertou o contato.
+
+        Eu tirei o pulo achando que o problema era o corpo pousar longe: o
+        chute de resposta parava a 54 unidades do eixo precisando de 29, com
+        a cinematica inversa no maximo. Medido sem o pulo: exatamente as
+        mesmas 54 unidades. A distancia vinha do `cercoEmProfundidade` tres
+        beats antes, que termina com os dois afastados, e nao do salto.
+
+        Quem consertou foi baixar o alvo do contra-ataque para o TRONCO (ver
+        o beat logo abaixo). O pulo ficou de fora assim mesmo, por leitura e
+        nao por medida: quem pula para tras fugiu; quem inclina o corpo e
+        devolve na sequencia leu o golpe -- e e disso que esta sequencia
+        trata.
+      */
+      { type: "dodged", attacker: B, target: A, move: "kickHigh", targetPoint: "head" },
+      { type: "attack", attacker: A, target: B, move: "kickHigh", targetPoint: "chest" },
       { type: "combo", attacker: B, target: A, moves: ["punchFast", "elbow", "spinKick"] },
       { type: "recover", who: A, duration: 34 },
       { type: "tecnica", tecnica: "perseguicaoNoAr", gelo: A, fogo: B },
       { type: "attack", attacker: B, target: A, move: "knee" },
-      { type: "blocked", attacker: A, target: B, move: "punchFast" },
+      /*
+        A DEFESA TEM QUE RENDER ALGUMA COISA.
+
+        Quem bloqueia ou esquiva aqui e quem age em seguida. Estava ao
+        contrario: o defensor segurava o golpe e o atacante simplesmente
+        continuava -- medido, 5 das 10 defesas dos seis roteiros nao viravam
+        nada. Defesa que nao abre nada le como enfeite, e lutador que se
+        defende para nada le como burro.
+
+        Nao custa tempo nem muda o placar: golpe bloqueado ou esquivado ja
+        nao contava como acerto (ver scripts/coreografia.mts). O que muda e
+        de quem e o golpe que nao conecta.
+      */
+      { type: "blocked", attacker: B, target: A, move: "punchFast" },
       { type: "tecnica", tecnica: "arremessoNoParedao", gelo: A, fogo: B },
       { type: "recover", who: A, duration: 40 },
       { type: "tecnica", tecnica: "azulVermelho", gelo: A, fogo: B },
@@ -336,7 +364,20 @@ const ROTEIROS: Record<string, Roteiro> = {
     beats: [
       { type: "tecnica", tecnica: "sumirEColidir", gelo: A, fogo: B },
       { type: "combo", attacker: B, target: A, moves: ["punchFast", "punch", "knee"] },
-      { type: "blocked", attacker: A, target: B, move: "punchFast" },
+      /*
+        A DEFESA TEM QUE RENDER ALGUMA COISA.
+
+        Quem bloqueia ou esquiva aqui e quem age em seguida. Estava ao
+        contrario: o defensor segurava o golpe e o atacante simplesmente
+        continuava -- medido, 5 das 10 defesas dos seis roteiros nao viravam
+        nada. Defesa que nao abre nada le como enfeite, e lutador que se
+        defende para nada le como burro.
+
+        Nao custa tempo nem muda o placar: golpe bloqueado ou esquivado ja
+        nao contava como acerto (ver scripts/coreografia.mts). O que muda e
+        de quem e o golpe que nao conecta.
+      */
+      { type: "blocked", attacker: B, target: A, move: "punchFast" },
       { type: "tecnica", tecnica: "arremessoNoParedao", gelo: A, fogo: B },
       { type: "recover", who: A, duration: 44 },
       { type: "attack", attacker: A, target: B, move: "punchHeavy" },
@@ -409,7 +450,20 @@ const ROTEIROS: Record<string, Roteiro> = {
       { type: "attack", attacker: A, target: B, move: "kickHigh", targetPoint: "head" },
       { type: "tecnica", tecnica: "cercoEmProfundidade", gelo: B, fogo: A },
       { type: "attack", attacker: B, target: A, move: "punchHeavy" },
-      { type: "dodged", attacker: A, target: B, move: "kickHigh", targetPoint: "head", pulo: true },
+      /*
+        A DEFESA TEM QUE RENDER ALGUMA COISA.
+
+        Quem bloqueia ou esquiva aqui e quem age em seguida. Estava ao
+        contrario: o defensor segurava o golpe e o atacante simplesmente
+        continuava -- medido, 5 das 10 defesas dos seis roteiros nao viravam
+        nada. Defesa que nao abre nada le como enfeite, e lutador que se
+        defende para nada le como burro.
+
+        Nao custa tempo nem muda o placar: golpe bloqueado ou esquivado ja
+        nao contava como acerto (ver scripts/coreografia.mts). O que muda e
+        de quem e o golpe que nao conecta.
+      */
+      { type: "dodged", attacker: B, target: A, move: "kickHigh", targetPoint: "head", pulo: true },
       /*
         SAIU UM `liberarAzul` DAQUI, e o motivo e o relogio: com ele o roteiro
         dava 61,7s no pior elenco, e Shorts corta em 60. A duracao depende do
@@ -448,7 +502,20 @@ const ROTEIROS: Record<string, Roteiro> = {
       { type: "tecnica", tecnica: "encontroFeiticeiros", gelo: A, fogo: B },
       { type: "tecnica", tecnica: "barreira", gelo: A, fogo: B },
       { type: "tecnica", tecnica: "corteADistancia", gelo: A, fogo: B },
-      { type: "blocked", attacker: B, target: A, move: "punchHeavy" },
+      /*
+        A DEFESA TEM QUE RENDER ALGUMA COISA.
+
+        Quem bloqueia ou esquiva aqui e quem age em seguida. Estava ao
+        contrario: o defensor segurava o golpe e o atacante simplesmente
+        continuava -- medido, 5 das 10 defesas dos seis roteiros nao viravam
+        nada. Defesa que nao abre nada le como enfeite, e lutador que se
+        defende para nada le como burro.
+
+        Nao custa tempo nem muda o placar: golpe bloqueado ou esquivado ja
+        nao contava como acerto (ver scripts/coreografia.mts). O que muda e
+        de quem e o golpe que nao conecta.
+      */
+      { type: "blocked", attacker: A, target: B, move: "punchHeavy" },
       /*
         ERA UM `kickLow` NAS PERNAS, e `arcos` reprovou: o pe percorria 142
         unidades com curvatura 0,06, praticamente em linha reta. Nao e defeito
@@ -532,6 +599,18 @@ const ROTEIROS: Record<string, Roteiro> = {
       */
       { type: "combo", attacker: A, target: B, moves: ["punchFast", "punch", "spinKick"] },
       { type: "recover", who: B, duration: 30 },
+      /*
+        A UNICA DEFESA DESTE ROTEIRO, e ele estava sem nenhuma.
+
+        `rua` era troca pura: dezesseis beats e nenhum bloqueio, nenhuma
+        esquiva. Dois lutadores que so trocam golpes nao leem como dois
+        lutadores -- leem como dois bonecos revezando.
+
+        Ela esta aqui e nao em outro lugar porque e daqui que sai a cena
+        seguinte: B deixa o chute passar e emenda a perseguicao no ar. A
+        esquiva vira a PARTIDA da cena, em vez de um beat solto.
+      */
+      { type: "dodged", attacker: A, target: B, move: "kickHigh", targetPoint: "head", pulo: true },
       { type: "tecnica", tecnica: "perseguicaoNoAr", gelo: B, fogo: A },
       { type: "tecnica", tecnica: "azulVermelho", gelo: A, fogo: B },
       { type: "attack", attacker: B, target: A, move: "knee" },

@@ -52,7 +52,12 @@ const SAIDA = join(RAIZ, "out", "diario");
  * nota em scripts/cadeia.mts e em animation/estilo). Trocar o preset custaria
  * o visual de desenho a mao, que e o que o canal quer.
  */
-const BLOQUEIAM = ["contato", "qualidade", "arcos", "coreografia", "pes"];
+/*
+  `defesa` NAO OLHA A DATA: ele audita os ROTEIROS, que sao os mesmos todo
+  dia. Roda aqui mesmo assim, e de proposito -- validador que nao esta no
+  caminho de ninguem apodrece, e o custo de repeti-lo e de milissegundos.
+*/
+const BLOQUEIAM = ["contato", "qualidade", "arcos", "coreografia", "pes", "defesa"];
 const INFORMAM = ["cadeia"];
 
 const args = process.argv.slice(2);
