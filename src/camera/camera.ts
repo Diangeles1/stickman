@@ -14,6 +14,7 @@
  */
 
 import { interpolate } from "remotion";
+import { ALTURA_QUADRIL } from "../characters/skeleton";
 import { amostrar } from "../animation/sampler";
 import { hashRng } from "../core/rng";
 import type { CameraKey, Timeline, Vec2 } from "../core/types";
@@ -120,6 +121,30 @@ export const enquadrarDois = (
     center: { x: foco * 0.72 + meio * 0.28, y: alturaQuadril - 120 },
     zoom: minimo,
   };
+};
+
+/**
+ * O ENQUADRAMENTO INICIAL, antes da primeira chave de camera.
+ *
+ * MORA AQUI E NAO NA CENA porque tres validadores precisam do MESMO valor, e
+ * copia de numero entre cena e regua ja custou caro: scripts/enquadramento
+ * media com a camera em y -300 e zoom 1 enquanto a cena desenhava com
+ * y -387 e zoom 0.95. Oitenta e sete unidades mais baixo e 5% mais fechado --
+ * e com isso o script acusava 114 quadros de "cabeca fora do quadro" que no
+ * video nao existem. Renderizado o pior deles (o quadro 2284, 194 unidades
+ * fora segundo a regua), os dois lutadores aparecem inteiros.
+ *
+ * E a quinta vez neste projeto que a MEDIDA, e nao a animacao, era o defeito.
+ * Numero que a cena e a regua precisam compartilhar nao pode ser escrito duas
+ * vezes.
+ *
+ * O zoom 0.62 original deixava o corpo com 19% da altura da tela, pequeno
+ * demais para Shorts. Em 0.95 ele ocupa cerca de 30%, que e onde a acao se le
+ * no celular.
+ */
+export const CAMERA_PADRAO = {
+  center: { x: 0, y: -ALTURA_QUADRIL - 120 },
+  zoom: 0.95,
 };
 
 export const cameraNoQuadro = (

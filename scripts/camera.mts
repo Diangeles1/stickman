@@ -13,7 +13,7 @@
 
 import { corpoNoQuadro } from "../src/animation/corpo";
 import { amostrar } from "../src/animation/sampler";
-import { cameraNoQuadro } from "../src/camera/camera";
+import { CAMERA_PADRAO, cameraNoQuadro } from "../src/camera/camera";
 import { ALTURA_QUADRIL } from "../src/characters/skeleton";
 import { compilar } from "../src/core/timeline";
 import { escolherLuta } from "./lutas.mjs";
@@ -42,7 +42,8 @@ const MINIMO_ARMADO = 20;
 */
 const { nome: qual, spec } = escolherLuta(process.argv[2], "dia");
 const t = compilar(spec);
-const padrao = { center: { x: 0, y: -ALTURA_QUADRIL - 120 }, zoom: 0.95 };
+// o MESMO enquadramento que a cena desenha (ver src/camera/camera)
+const padrao = CAMERA_PADRAO;
 
 const real = (f: number) => {
   let soma = 0;

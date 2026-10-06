@@ -20,6 +20,7 @@ import {
 import { Arena } from "../backgrounds/Arena";
 import { Rabisco } from "../backgrounds/Rabisco";
 import {
+  CAMERA_PADRAO,
   cameraNoQuadro,
   enquadrarDois,
   transformDaCamera,
@@ -57,13 +58,6 @@ export type FightSceneProps = {
   semEfeitos?: boolean;
 };
 
-/** Enquadramento inicial, usado antes da primeira chave de camera. */
-const CAMERA_PADRAO = {
-  center: { x: 0, y: -ALTURA_QUADRIL - 120 },
-  // 0.62 deixava o corpo com 19% da altura da tela, pequeno demais para
-  // Shorts. Em 0.95 ele ocupa ~30%, que e onde a acao se le no celular.
-  zoom: 0.95,
-};
 
 /**
  * Acima desta velocidade (unidades por quadro) aparecem linhas de velocidade.

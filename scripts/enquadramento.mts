@@ -22,9 +22,9 @@
  * Uso: npx tsx scripts/enquadramento.mts [luta]
  */
 
-import { corpoNoQuadro } from "../src/animation/corpo";
-import { cameraNoQuadro } from "../src/camera/camera";
-import { ALTURA_QUADRIL, juntasNoMundo } from "../src/characters/skeleton";
+import { corpoNoQuadro, juntasDoCorpo } from "../src/animation/corpo";
+import { CAMERA_PADRAO, cameraNoQuadro } from "../src/camera/camera";
+import { ALTURA_QUADRIL } from "../src/characters/skeleton";
 import { PRESETS } from "../src/characters/presets";
 import { compilar } from "../src/core/timeline";
 import type { FighterId } from "../src/core/types";
@@ -79,7 +79,7 @@ for (let f = 0; f < t.durationInFrames; f += 2) {
     so usa o eixo x, onde alturaQuadril nao entra. O valor esta errado la
     tambem; so nao tem consequencia.)
   */
-  const cam = cameraNoQuadro(t, f, { center: { x: 0, y: -300 }, zoom: 1 }, {
+  const cam = cameraNoQuadro(t, f, CAMERA_PADRAO, {
     largura: spec.width,
     alturaQuadril: -ALTURA_QUADRIL,
   });
@@ -88,16 +88,33 @@ for (let f = 0; f < t.durationInFrames; f += 2) {
   for (const id of ids) {
     const c = corpoNoQuadro(t, id, f);
     const p = PRESETS[id];
-    const j = juntasNoMundo(c.pose, {
-      baseX: c.x,
-      baseY: c.baseY,
-      facing: c.facing,
-      scale: p.scale,
-      spin: c.spin,
-      giro: c.giro as 1 | -1,
-    });
+    /*
+      O CORPO VEM DE `juntasDoCorpo`, E NAO MONTADO A MAO AQUI.
+
+      Esta versao remontava o corpo com `juntasNoMundo(c.pose, { scale:
+      p.scale, ... })` -- a escala do PRESET. A escala de verdade e `c.scale`,
+      que e a do preset multiplicada pela compressao do impacto, pelo
+      amortecimento do pulo e pela profundidade (ver corpoBase em
+      animation/corpo); a profundidade nem entrava na conta.
+
+      ISSO NAO MUDOU O NUMERO: 114 quadros antes e 114 depois. Nos quadros
+      acusados a compressao esta perto de 1, entao as duas contas coincidem.
+      A troca fica porque usar a MESMA funcao que pes, chao e cadeia usam tira
+      uma fonte de divergencia entre a regua e a cena -- que neste arquivo ja
+      custou caro uma vez (ver a nota acima, sobre alturaQuadril).
+
+      E A ACUSACAO PARECE PROCEDER. Conferido na mao no pior trecho, quadro
+      logico 2284: a cabeca do dourado esta em x -1691 e a janela da camera
+      vai de -1657 a -896, ou seja ela esta 34 unidades alem da borda
+      esquerda, mais o raio. Eu tentei confirmar renderizando e vi os dois
+      lutadores inteiros -- mas estava olhando o quadro errado: a conversao de
+      quadro logico para quadro de composicao passa por logicoParaReal mais a
+      tela de escolha, e eu errei nela. Fica registrado que a confirmacao
+      VISUAL ainda nao foi feita.
+    */
+    const j = juntasDoCorpo(c);
     // a cabeca e o que nao pode sair: e por ela que se segue o personagem
-    const r = p.headRadius * p.scale;
+    const r = p.headRadius * c.scale;
     const topo = j.head.y - r;
     const base = j.head.y + r;
     const esq = j.head.x - r;
