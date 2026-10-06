@@ -913,10 +913,19 @@ export const compilar = (spec: FightSpec): Timeline => {
         O FECHAMENTO NAO PODE PERDER UM LUTADOR INTEIRO.
 
         Esta chave fechava no ponto de contato sem perguntar se os dois ainda
-        cabiam. Medido no duelo do dia, quadro 2481 do video: a camera fecha
-        em 1.42 centrada no golpe e BENICIO some da tela -- ISAAC aparece
-        sozinho, socando o nada, no quadro do impacto. Renderizado, nao ha o
-        que discutir.
+        cabiam. Medido no duelo do dia, quadro LOGICO 2284: a camera fecha em
+        1.42 centrada no golpe, a janela em unidades de mundo fica em
+        [-1657, -896] e a cabeca do dourado esta em -1691 -- fora pela
+        esquerda. Com o teto ela fecha em 0.82, a janela vira [-1935, -618] e
+        os dois cabem.
+
+        (Eu tentei confirmar isso renderizando e errei o quadro TRES vezes: a
+        conversao de quadro logico para quadro de video passa por
+        logicoParaReal mais a tela de escolha, e eu nao acertei nenhuma das
+        vezes. A confirmacao que vale e a contagem de `enquadramento`, que
+        vive no mesmo espaco de quadros do motor, mais a faixa 2760-2830
+        renderizada antes e depois, em que os quadros de impacto visivelmente
+        abrem.)
 
         O teto abaixo e geometrico: com a camera em `contato.x`, a meia-tela
         em unidades de mundo vale (largura / 2) / zoom, entao o zoom que ainda
