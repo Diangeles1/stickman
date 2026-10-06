@@ -909,10 +909,38 @@ export const compilar = (spec: FightSpec): Timeline => {
 
       // 1. FECHA NO PONTO DE CONTATO, rapido. E o movimento que mais vale numa
       //    luta: a tela vem para onde o golpe aconteceu.
+      /*
+        O FECHAMENTO NAO PODE PERDER UM LUTADOR INTEIRO.
+
+        Esta chave fechava no ponto de contato sem perguntar se os dois ainda
+        cabiam. Medido no duelo do dia, quadro 2481 do video: a camera fecha
+        em 1.42 centrada no golpe e BENICIO some da tela -- ISAAC aparece
+        sozinho, socando o nada, no quadro do impacto. Renderizado, nao ha o
+        que discutir.
+
+        O teto abaixo e geometrico: com a camera em `contato.x`, a meia-tela
+        em unidades de mundo vale (largura / 2) / zoom, entao o zoom que ainda
+        cabe o corpo mais distante e (largura / 2) / (distancia + margem). A
+        margem e meia silhueta, para o corpo entrar inteiro e nao de raspao.
+
+        O PISO DE 0.82 CONTINUA MANDANDO: se os dois estao longe demais, abrir
+        mais que isso deixaria o corpo abaixo de 25% da altura da tela, que e
+        o piso da diretiva. Entre perder um lutador e ter os dois pequenos, a
+        luta prefere os dois pequenos -- mas quando nem isso cabe, o
+        fechamento vale e o corte e assumido.
+      */
+      const MARGEM_DO_CORPO = 150;
+      const maisLonge = Math.max(
+        Math.abs(estado[atacante].x - contato.x),
+        Math.abs(estado[alvo].x - contato.x),
+      );
+      const zoomQueCabe = spec.width / 2 / (maisLonge + MARGEM_DO_CORPO);
+      const zoomDoImpacto =
+        def.tier === "extreme" ? 1.42 : def.tier === "medium" ? 1.28 : 1.18;
       cameraKeys.push({
         frame: frameContato,
         center: { x: contato.x, y: ALTURA_QUADRIL - 60 },
-        zoom: def.tier === "extreme" ? 1.42 : def.tier === "medium" ? 1.28 : 1.18,
+        zoom: Math.min(zoomDoImpacto, Math.max(0.82, zoomQueCabe)),
         ease: 3,
         shake: def.tier === "extreme" ? 46 : def.tier === "medium" ? 24 : 10,
       });
