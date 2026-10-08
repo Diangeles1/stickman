@@ -663,6 +663,105 @@ const ROTEIROS: Record<string, Roteiro> = {
       { type: "attack", attacker: B, target: A, move: "uppercut", targetPoint: "queixo" },
     ],
   },
+
+  /**
+   * A CRATERA: a pancada mais pesada acontece no COMECO.
+   *
+   * Os outros roteiros guardam a cena grande para o meio ou o fim. Aqui o
+   * esmagamento no chao e o terceiro beat, e tudo que vem depois acontece
+   * em volta do buraco -- a luta inteira e a recuperacao de quem foi
+   * cravado no piso.
+   *
+   * Ela nao precisa da rocha, e esse e o ponto: metade dos roteiros do canal
+   * so pode acontecer no vale, e por isso o vale levava metade do calendario
+   * (medido, 22 de 45 dias). Cada roteiro sem rocha devolve dias aos outros
+   * oito palcos.
+   */
+  cratera: {
+    nome: "cratera",
+    rocha: false,
+    tema: "cravado no chao logo de cara",
+    beats: [
+      { type: "tecnica", tecnica: "sumirEColidir", gelo: A, fogo: B },
+      { type: "attack", attacker: A, target: B, move: "punchFast" },
+      { type: "blocked", attacker: A, target: B, move: "punch" },
+      // quem bloqueou e quem age: a defesa abre o esmagamento (ver defesa.mts)
+      { type: "tecnica", tecnica: "esmagarNoChao", gelo: B, fogo: A },
+      { type: "recover", who: A, duration: 40 },
+      { type: "attack", attacker: A, target: B, move: "punchHeavy" },
+      { type: "dodged", attacker: B, target: A, move: "kickHigh", targetPoint: "head" },
+      { type: "combo", attacker: A, target: B, moves: ["punchFast", "punch", "spinKick"] },
+      { type: "recover", who: B, duration: 30 },
+      { type: "tecnica", tecnica: "cercoEmProfundidade", gelo: B, fogo: A },
+      { type: "attack", attacker: B, target: A, move: "knee" },
+      { type: "tecnica", tecnica: "liberarAzul", gelo: A, fogo: B },
+      { type: "attack", attacker: A, target: B, move: "punchFast" },
+      { type: "attack", attacker: B, target: A, move: "uppercut", targetPoint: "queixo" },
+    ],
+  },
+
+  /**
+   * OS DOMINIOS: a luta em que o CENARIO vira arma.
+   *
+   * `dominio` cobre a tela de cortes e `dominioVazio` PARA quem esta dentro.
+   * Sao as duas unicas cenas do motor em que o espaco em volta dos dois muda
+   * de natureza, e ate agora so o `feiticeiros` usava metade disso.
+   *
+   * O roteiro e quase todo de cena grande de proposito: ele e o contraponto
+   * do `rua`, que e quase todo soco. Um canal que publica todo dia precisa
+   * dos dois extremos, senao a media vira sempre a mesma luta.
+   */
+  dominios: {
+    nome: "dominios",
+    rocha: false,
+    tema: "duelo de dominios",
+    beats: [
+      { type: "tecnica", tecnica: "chegada", gelo: A, fogo: B },
+      { type: "tecnica", tecnica: "encontroFeiticeiros", gelo: A, fogo: B },
+      { type: "attack", attacker: A, target: B, move: "punchFast" },
+      { type: "blocked", attacker: A, target: B, move: "punchHeavy" },
+      { type: "tecnica", tecnica: "dominio", gelo: B, fogo: A },
+      { type: "recover", who: A, duration: 34 },
+      { type: "attack", attacker: A, target: B, move: "kickHigh", targetPoint: "chest" },
+      { type: "tecnica", tecnica: "dominioVazio", gelo: A, fogo: B },
+      { type: "attack", attacker: B, target: A, move: "punchHeavy" },
+      { type: "combo", attacker: A, target: B, moves: ["punchFast", "punch", "knee"] },
+      { type: "tecnica", tecnica: "vazioRoxo", gelo: A, fogo: B },
+      { type: "attack", attacker: B, target: A, move: "knee" },
+      { type: "attack", attacker: A, target: B, move: "punchFast" },
+      { type: "attack", attacker: B, target: A, move: "uppercut", targetPoint: "queixo" },
+    ],
+  },
+
+  /**
+   * O RELAMPAGO: a mais rapida, e a unica sem cena de poder no meio.
+   *
+   * Duas cenas grandes so -- a abertura e o climax -- e todo o resto e troca.
+   * Serve ao dia em que o canal quer uma luta curta e seca, e serve tambem
+   * de controle: se uma mudanca no motor estraga o ritmo, e aqui que aparece
+   * primeiro, porque nao ha cena coreografada escondendo o encadeamento.
+   */
+  relampago: {
+    nome: "relampago",
+    rocha: false,
+    tema: "troca seca, do primeiro ao ultimo golpe",
+    beats: [
+      { type: "tecnica", tecnica: "sumirEColidir", gelo: A, fogo: B },
+      { type: "attack", attacker: B, target: A, move: "punchFast" },
+      { type: "attack", attacker: A, target: B, move: "elbow", targetPoint: "chest" },
+      { type: "combo", attacker: B, target: A, moves: ["punchFast", "punch", "knee"] },
+      { type: "recover", who: A, duration: 26 },
+      { type: "dodged", attacker: B, target: A, move: "kickHigh", targetPoint: "head" },
+      { type: "combo", attacker: A, target: B, moves: ["punchFast", "punch", "spinKick"] },
+      { type: "recover", who: B, duration: 26 },
+      { type: "attack", attacker: B, target: A, move: "punchHeavy" },
+      { type: "attack", attacker: A, target: B, move: "kickHigh", targetPoint: "head" },
+      { type: "tecnica", tecnica: "perseguicaoNoAr", gelo: A, fogo: B },
+      { type: "attack", attacker: B, target: A, move: "knee" },
+      { type: "attack", attacker: A, target: B, move: "punchFast" },
+      { type: "attack", attacker: B, target: A, move: "uppercut", targetPoint: "queixo" },
+    ],
+  },
 };
 
 export const ROTEIROS_DISPONIVEIS = Object.keys(ROTEIROS);

@@ -97,6 +97,18 @@ export const RemotionRoot: React.FC = () => {
   return (
     <>
       {/* a luta: os dados vem de data/fights, nao daqui */}
+      {/*
+        A DURACAO SAI DO SPEC QUE CHEGA, e nao do PROTOTIPO.
+
+        Ela era fixa em `duracaoDoPrototipo(PROTOTIPO)`. Como esta composicao
+        aceita um `spec` nas props -- e e por ela que se renderiza uma luta
+        avulsa para conferir --, passar outra luta rendia um video cortado no
+        tamanho do prototipo: 787 quadros, 13 segundos, sem nenhum aviso.
+        Tropecei nisso duas vezes achando que o render tinha falhado.
+
+        Com `calculateMetadata` o padrao continua sendo o prototipo e quem
+        passa outro spec recebe a luta inteira.
+      */}
       <Composition
         id="Prototype"
         component={Prototype}
@@ -105,6 +117,16 @@ export const RemotionRoot: React.FC = () => {
         width={PROTOTIPO.width}
         height={PROTOTIPO.height}
         defaultProps={{ spec: PROTOTIPO }}
+        calculateMetadata={({ props }) => {
+          const p = props as { spec?: typeof PROTOTIPO; escolha?: boolean };
+          const spec = p.spec ?? PROTOTIPO;
+          return {
+            durationInFrames: duracaoDoPrototipo(spec, { escolha: p.escolha ?? false }),
+            fps: spec.fps,
+            width: spec.width,
+            height: spec.height,
+          };
+        }}
       />
 
       {/*
