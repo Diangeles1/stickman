@@ -66,6 +66,11 @@ const FUNDOS: Record<string, string[]> = {
   noite: ["#101319"],
   metropole: ["#101319"],
   vale: ["#141a2e"],
+  // medidos do mesmo jeito, num quadro renderizado de cada um:
+  // o deserto e ESCURO apesar do ceu laranja, porque o que fica atras dos
+  // corpos e a areia; a neve e clara sem ser branca
+  deserto: ["#ebc99a"],
+  neve: ["#d8e4f0"],
   limpo: ["#ffffff"],
   vilarejo: ["#ffffff"],
   cidade: ["#ffffff"],

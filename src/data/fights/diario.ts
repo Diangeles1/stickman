@@ -134,6 +134,28 @@ export const PALCOS: Record<string, Palco> = {
     rocha: false,
     lugar: "no meio da rua",
   },
+  /*
+    `claro` DESTES DOIS FOI MEDIDO e nao suposto, como manda a regra do
+    arquivo -- e no deserto a medicao mudou o CENARIO, nao so a tabela. Com a
+    areia escura que ele tinha primeiro, cinco dos seis elencos claros
+    reprovavam e nenhum escuro serviria: meio-tom nao contrasta com nada. A
+    areia foi clareada (ver backgrounds/Deserto) e o palco virou claro, o que
+    da ao canal o que faltava -- um palco claro e QUENTE, contra tres brancos.
+  */
+  deserto: {
+    nome: "deserto",
+    scenario: "deserto",
+    claro: true,
+    rocha: false,
+    lugar: "no deserto, no fim da tarde",
+  },
+  neve: {
+    nome: "neve",
+    scenario: "neve",
+    claro: true,
+    rocha: false,
+    lugar: "no campo de neve",
+  },
   limpo: {
     nome: "limpo",
     scenario: "limpo",
@@ -648,9 +670,25 @@ export const ROTEIROS_DISPONIVEIS = Object.keys(ROTEIROS);
 /** Um roteiro pelo nome, para quem audita um roteiro especifico. */
 export const roteiroPorNome = (nome: string): Roteiro | undefined => ROTEIROS[nome];
 
-/** Os palcos em que um roteiro pode acontecer sem mentir. */
+/**
+ * Os palcos em que um roteiro pode acontecer sem mentir.
+ *
+ * O VALE SO ENTRA QUANDO A CENA PEDE A ROCHA, e isso nao e preferencia
+ * estetica: metade dos roteiros (`vale`, `ar`, `rocha`) arremessa um corpo
+ * contra o paredao e por isso SO pode acontecer la. Deixando o vale tambem
+ * na lista dos outros tres, ele levava 25 de 45 dias enquanto o deserto
+ * levava ZERO -- medido depois de os cenarios novos entrarem, e foi assim
+ * que se viu que acrescentar palco nao estava adiantando nada.
+ *
+ * Com a exclusao o vale fica com a metade que a coreografia exige dele, e a
+ * outra metade se reparte entre os oito restantes. Baixar mais que isso
+ * depende de escrever roteiros que nao precisem da rocha, e nao de mexer
+ * aqui.
+ */
 export const palcosDoRoteiro = (r: Roteiro): Palco[] =>
-  Object.values(PALCOS).filter((p) => !r.rocha || p.rocha);
+  r.rocha
+    ? Object.values(PALCOS).filter((p) => p.rocha)
+    : Object.values(PALCOS).filter((p) => !p.rocha);
 
 /** Os elencos que se leem num palco (ver scripts/elenco.mts). */
 export const elencosDoPalco = (p: Palco): Elenco[] =>
@@ -793,7 +831,15 @@ export const dueloDoDia = (data: Date): Duelo => {
   );
   const roteiro = ROTEIROS[ROTEIROS_DISPONIVEIS[dia % ROTEIROS_DISPONIVEIS.length]];
   const palcos = palcosDoRoteiro(roteiro);
-  const palco = palcos[Math.floor(dia / 3) % palcos.length];
+  /*
+    O INDICE DO PALCO ANDA DE UM EM UM, e nao de tres em tres.
+
+    Era `Math.floor(dia / 3) % palcos.length`. Os roteiros sem rocha so caem
+    em tres dos seis dias do ciclo, entao `Math.floor(dia / 3)` so assumia
+    parte dos restos possiveis e alguns palcos nunca eram sorteados -- medido
+    em 45 dias: o deserto saiu zero vezes.
+  */
+  const palco = palcos[dia % palcos.length];
   const elencos = elencosDoPalco(palco);
   const elenco = elencos[Math.floor(dia / 5) % elencos.length];
 

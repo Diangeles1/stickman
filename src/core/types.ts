@@ -528,7 +528,11 @@ export type FightSpec = {
     | "noite"
     | "metropole"
     /** vale destruido: serras em quatro planos, montanha partida, terra rachada */
-    | "vale";
+    | "vale"
+    /** deserto ao entardecer: o unico palco QUENTE (ver backgrounds/Deserto) */
+    | "deserto"
+    /** campo de neve: claro sem ser branco (ver backgrounds/Neve) */
+    | "neve";
   /**
    * ESTILO de animacao. Ausente = o da casa (stickFight), que reproduz
    * exatamente o comportamento que o motor sempre teve -- por isso os

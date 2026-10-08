@@ -45,6 +45,8 @@ import { CorpoDividido } from "../effects/Divisao";
 import { CamadaDePoderes, laminaInteira, PoderesNaTela } from "../effects/Poderes";
 import { CeuNoturno, Chuva } from "../backgrounds/Noite";
 import { CeuDeMetropole, RuaMolhada } from "../backgrounds/Metropole";
+import { AreiaAoVento, CeuDoDeserto, ChaoDoDeserto } from "../backgrounds/Deserto";
+import { CeuDaNeve, ChaoDaNeve, NeveCaindo } from "../backgrounds/Neve";
 import { CeuDoVale, ChaoDoVale, PAREDAO_X, Paredao, PoeiraDoVale } from "../backgrounds/Vale";
 import { DebugOverlay } from "../debug/DebugOverlay";
 import { poeiraAmbiente } from "../particles/particles";
@@ -138,12 +140,28 @@ export const FightScene: React.FC<FightSceneProps> = ({
   const { fighterA, fighterB, seed, scenario } = timeline.spec;
   const metropole = scenario === "metropole";
   const vale = scenario === "vale";
+  /*
+    OS PALCOS NOVOS PINTAM O PROPRIO CEU E O PROPRIO CHAO, de ponta a ponta.
+    Nao sao variacoes do claro nem do noturno: o deserto e quente e a neve e
+    clara-fria, e as duas coisas que o motor oferecia (o gradiente `ceu` e o
+    piso da arena) nao servem a nenhum dos dois.
+  */
+  const deserto = scenario === "deserto";
+  const neve = scenario === "neve";
+  const proprios = deserto || neve;
   // os cenarios de rabisco sao o limpo com desenho no fundo
   const limpo =
-    scenario !== "arena" && scenario !== "noite" && !metropole && !vale;
+    scenario !== "arena" && scenario !== "noite" && !metropole && !vale && !proprios;
   // a metropole compartilha a chuva e o piso escuro com a noite
   // o vale tambem e noturno: ceu escuro e o mesmo tratamento de contraste
   const noite = scenario === "noite" || metropole || vale;
+  /*
+    A NEVE USA O TRATAMENTO DE CENARIO CLARO para o que nao e o fundo -- a
+    poeira, o contorno dos corpos e a opacidade dos efeitos. Ela nao e
+    `limpo` (tem ceu e chao proprios) mas tambem nao e noturna, e sem isto
+    cairia no ramo escuro e ganharia contorno preto em volta de todo mundo.
+  */
+  const claroDeLuz = limpo || neve;
   const espetaculo = fx ? espetaculoDe(timeline) : null;
 
   // QUADRO DE IMPACTO (anime): nos golpes mais fortes, um ou dois quadros
@@ -304,7 +322,7 @@ export const FightScene: React.FC<FightSceneProps> = ({
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      style={{ background: limpo ? "#ffffff" : "#06070a" }}
+      style={{ background: limpo ? "#ffffff" : neve ? "#c6d6e6" : deserto ? "#3b2a52" : "#06070a" }}
     >
       <defs>
         <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
@@ -312,11 +330,19 @@ export const FightScene: React.FC<FightSceneProps> = ({
           <stop offset="100%" stopColor={noite ? "#1a2442" : "#0d0f15"} />
         </linearGradient>
       </defs>
-      <rect
-        width={width}
-        height={height}
-        fill={limpo ? "#ffffff" : "url(#ceu)"}
-      />
+      {/*
+        O RETANGULO DO CEU SO VALE PARA QUEM NAO TEM CEU PROPRIO. Deserto e
+        neve desenham o deles dentro da camera, com parallax; pintar este por
+        baixo nao faria mal, mas pintar por CIMA do horizonte deles faria --
+        e e por isso que a condicao esta aqui e nao no estilo.
+      */}
+      {!proprios && (
+        <rect
+          width={width}
+          height={height}
+          fill={limpo ? "#ffffff" : "url(#ceu)"}
+        />
+      )}
 
       <g transform={transformDaCamera(cam, width, height)}>
         {(scenario === "vilarejo" || scenario === "cidade") && (
@@ -373,8 +399,20 @@ export const FightScene: React.FC<FightSceneProps> = ({
             <RuaMolhada camX={cam.center.x} />
           </>
         )}
-        {/* o vale tem piso proprio: a arena por cima cobriria a terra */}
-        {!vale && (
+        {deserto && (
+          <>
+            <CeuDoDeserto camX={cam.center.x} />
+            <ChaoDoDeserto camX={cam.center.x} />
+          </>
+        )}
+        {neve && (
+          <>
+            <CeuDaNeve camX={cam.center.x} />
+            <ChaoDaNeve camX={cam.center.x} />
+          </>
+        )}
+        {/* vale, deserto e neve tem piso proprio: a arena por cima cobriria */}
+        {!vale && !proprios && (
           <Arena
             seed={seed}
             rachaduras={rachaduras}
@@ -425,7 +463,7 @@ export const FightScene: React.FC<FightSceneProps> = ({
           <PoeiraDaQueda
             quedas={espetaculo.quedas}
             frame={frame}
-            cor={limpo ? "#b8b1a4" : "#8d96ab"}
+            cor={claroDeLuz ? "#b8b1a4" : "#8d96ab"}
           />
         )}
         {fx && <Ondas impactos={timeline.impacts} frame={frame} />}
@@ -460,7 +498,7 @@ export const FightScene: React.FC<FightSceneProps> = ({
                   id={id}
                   cor={preset.auraColor}
                   largura={preset.limbWidth * preset.scale * 1.15}
-                  opacidade={limpo ? 0.5 : 0.75}
+                  opacidade={claroDeLuz ? 0.5 : 0.75}
                 />
                 {/*
                   Um OU outro, nunca os dois: copias soltas por baixo de um
@@ -475,14 +513,14 @@ export const FightScene: React.FC<FightSceneProps> = ({
                         { pose: corpo.pose, baseX: corpo.x, baseY: corpo.baseY, spin: corpo.spin, giro: corpo.giro },
                       ]}
                       facing={corpo.facing}
-                      forca={limpo ? 0.6 : 0.45}
+                      forca={claroDeLuz ? 0.6 : 0.45}
                     />
                   ) : (
                     <StickmanTrail
                       preset={preset}
                       quadros={rastro}
                       facing={corpo.facing}
-                      forca={limpo ? 0.34 : 0.22}
+                      forca={claroDeLuz ? 0.34 : 0.22}
                     />
                   ))}
                 {auraDe(id) > 0.02 && (
@@ -535,7 +573,7 @@ export const FightScene: React.FC<FightSceneProps> = ({
               giro={corpo.giro}
               // secondary action: o cabelo atrasa em relacao a cabeca
               velocidade={corpo.velocidade}
-              contorno={!limpo}
+              contorno={!claroDeLuz}
             />
           );
           /*
@@ -657,6 +695,8 @@ export const FightScene: React.FC<FightSceneProps> = ({
           altura={height}
         />
       )}
+      {deserto && <AreiaAoVento frame={frameReal} largura={width} altura={height} />}
+      {neve && <NeveCaindo frame={frameReal} largura={width} altura={height} />}
       {noite && !vale && (
         <Chuva
           frame={frameReal}
