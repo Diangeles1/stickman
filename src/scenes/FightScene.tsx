@@ -47,7 +47,8 @@ import { CeuNoturno, Chuva } from "../backgrounds/Noite";
 import { CeuDeMetropole, RuaMolhada } from "../backgrounds/Metropole";
 import { AreiaAoVento, CeuDoDeserto, ChaoDoDeserto } from "../backgrounds/Deserto";
 import { CeuDaNeve, ChaoDaNeve, NeveCaindo } from "../backgrounds/Neve";
-import { CeuDoVale, ChaoDoVale, PAREDAO_X, Paredao, PoeiraDoVale } from "../backgrounds/Vale";
+import { OBSTACULO_X, Obstaculo } from "../backgrounds/Obstaculo";
+import { CeuDoVale, ChaoDoVale, PoeiraDoVale } from "../backgrounds/Vale";
 import { DebugOverlay } from "../debug/DebugOverlay";
 import { poeiraAmbiente } from "../particles/particles";
 import type { Timeline } from "../core/types";
@@ -377,19 +378,7 @@ export const FightScene: React.FC<FightSceneProps> = ({
               so ela o emite naquele ponto. E a fenda FICA depois de aberta:
               rocha que racha e volta ao normal desfaz o golpe que a rachou.
             */}
-            <Paredao
-              trincado={
-                timeline.poderes.some(
-                  (p) =>
-                    p.tipo === "pedrasFlutuantes" &&
-                    p.a !== undefined &&
-                    Math.abs(p.a.x - (PAREDAO_X + 120)) < 40 &&
-                    frame >= p.from,
-                )
-                  ? 1
-                  : 0
-              }
-            />
+
           </>
         )}
         {noite && !metropole && !vale && <CeuNoturno camX={cam.center.x} />}
@@ -428,6 +417,37 @@ export const FightScene: React.FC<FightSceneProps> = ({
             parte="chao"
           />
         )}
+        {/*
+          A MASSA EXISTE EM TODO PALCO, e nao so no vale.
+
+          Ela era desenhada dentro do bloco do vale, e a cena do arremesso
+          importava a coordenada dela de backgrounds/Vale. Com isso tres dos
+          nove roteiros do canal so podiam acontecer la -- dependencia de ARTE
+          virando restricao de calendario. Agora a forma e a mesma e so a
+          paleta muda (ver backgrounds/Obstaculo).
+
+          A TRINCA VEM DA CHUVA DE PEDRAS DA PROPRIA CENA, e nao de "um
+          impacto perto da massa". A primeira versao procurava qualquer
+          impacto a menos de 220 unidades dela -- e um golpe do combo anterior
+          acontece justamente por ali, entao a cratera aparecia minutos antes
+          de alguem bater. Proximidade nao e causa; o que sabe que a massa foi
+          atingida e a cena que a atingiu. E a fenda FICA depois de aberta.
+        */}
+        <Obstaculo
+          scenario={scenario}
+          trincado={
+            timeline.poderes.some(
+              (p) =>
+                p.tipo === "pedrasFlutuantes" &&
+                p.a !== undefined &&
+                Math.abs(p.a.x - (OBSTACULO_X + 120)) < 40 &&
+                frame >= p.from,
+            )
+              ? 1
+              : 0
+          }
+        />
+
         {poderesAtivos && (
           <CamadaDePoderes timeline={timeline} frame={frame} parte="chao" corpos={corpos} xDe={xDe} />
         )}

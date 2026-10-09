@@ -20,25 +20,15 @@
  *   QUEDA    só então ele escorrega e cai. Cair junto com a batida jogaria
  *            fora o instante em que a colisão acontece.
  *
- * O paredão vive num X fixo do mundo (PAREDAO_X em backgrounds/Vale), e não
+ * A massa vive num X fixo do mundo (OBSTACULO_X em backgrounds/Obstaculo), e nao
  * na montanha do fundo: aquela tem paralaxe, então a posição dela na tela
  * depende da câmera e não existe um ponto do mundo em que um corpo bata nela.
  */
 
-import { PAREDAO_X } from "../../backgrounds/Vale";
 import type { FighterId } from "../types";
 import type { ContextoDeTecnica } from "./contexto";
 
-/**
- * A SUPERFICIE da rocha, em mundo. PAREDAO_X e a quina direita do paredao ao
- * nivel do chao (ver backgrounds/Vale): a massa fica toda a ESQUERDA disso.
- *
- * A primeira versao punha a face em PAREDAO_X - 60, ou seja SESSENTA UNIDADES
- * DENTRO DA PEDRA, e as marcas daqui posicionam o QUADRIL. Somando as duas
- * coisas, o corpo terminava enterrado ate os ombros na rocha.
- */
-const FACE_X = PAREDAO_X;
-/** altura do contato: onde as costas e a cabeca encontram a pedra */
+/** altura do contato: onde as costas e a cabeca encontram a massa */
 const FACE_Y = -300;
 
 /*
@@ -59,8 +49,22 @@ export const arremessoNoParedao = (
   ctx: ContextoDeTecnica,
   quem: FighterId,
 ): number => {
-  const { c, s, pose, poder, cameraKeys, impacts, ALTURA_QUADRIL } = ctx;
+  const { c, s, pose, poder, cameraKeys, impacts, ALTURA_QUADRIL, OBSTACULO_X } = ctx;
   const outro = quem === ctx.G ? ctx.F : ctx.G;
+
+  /*
+    A SUPERFICIE da massa, em mundo. OBSTACULO_X e a quina direita dela ao
+    nivel do chao (ver backgrounds/Obstaculo): a massa fica toda a ESQUERDA
+    disso.
+
+    A primeira versao punha a face em OBSTACULO_X - 60, ou seja SESSENTA
+    UNIDADES DENTRO DA PEDRA, e as marcas daqui posicionam o QUADRIL. Somando
+    as duas coisas, o corpo terminava enterrado ate os ombros.
+
+    ELA VEM DO CONTEXTO e nao de um import: era a dependencia que prendia
+    esta cena ao vale, e com ela tres dos nove roteiros do canal.
+  */
+  const FACE_X = OBSTACULO_X;
 
   /*
     A CENA POSICIONA OS DOIS ANTES DE COMECAR.

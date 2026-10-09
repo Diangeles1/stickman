@@ -11,6 +11,7 @@
  * motion. Quem desenha depois so interpola entre chaves.
  */
 
+import { OBSTACULO_X } from "../backgrounds/Obstaculo";
 import { ATAQUES, escalaDuracao, knockbackEfetivo } from "../attacks/registry";
 import { PRESETS } from "../characters/presets";
 import { s } from "./time";
@@ -1156,6 +1157,7 @@ export const compilar = (spec: FightSpec): Timeline => {
       MAO_Y,
       DISTANCIA_DE_ESPERA,
       PARA_SEMPRE,
+      OBSTACULO_X,
     };
     switch (b.tecnica) {
       case "chegada":

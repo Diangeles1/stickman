@@ -25,9 +25,10 @@
  *                      reprova o par que some. Foi assim que se descobriu que
  *                      o ciano da 2.03 contra o branco -- abaixo do 3.0 de que
  *                      uma forma precisa para se ler.
- *   CENA CONTRA PALCO  `arremessoNoParedao` joga um corpo contra a rocha do
- *                      vale. Em qualquer outro cenario a rocha nao existe, e o
- *                      corpo bate no ar. O roteiro declara que precisa dela.
+ *   CENA CONTRA PALCO  `arremessoNoParedao` joga um corpo contra uma massa.
+ *                      Ela existia so no vale, e por isso tres roteiros so
+ *                      podiam acontecer la; hoje todo palco tem a sua (ver
+ *                      backgrounds/Obstaculo) e a restricao caiu.
  *
  * Declarar a restricao e o que permite girar o resto sem medo: uma combinacao
  * impossivel nao chega a ser renderizada, e o motivo fica escrito.
@@ -85,8 +86,6 @@ export type Palco = {
   scenario: FightSpec["scenario"];
   /** fundo claro? decide qual elenco se le aqui */
   claro: boolean;
-  /** tem o paredao do vale? decide quais cenas cabem */
-  rocha: boolean;
   /** como a descricao do video chama o lugar */
   lugar: string;
 };
@@ -96,42 +95,36 @@ export const PALCOS: Record<string, Palco> = {
     nome: "vale",
     scenario: "vale",
     claro: false,
-    rocha: true,
     lugar: "no Vale Partido",
   },
   noite: {
     nome: "noite",
     scenario: "noite",
     claro: false,
-    rocha: false,
     lugar: "na montanha, de madrugada",
   },
   metropole: {
     nome: "metropole",
     scenario: "metropole",
     claro: false,
-    rocha: false,
     lugar: "nos telhados da cidade grande",
   },
   arena: {
     nome: "arena",
     scenario: "arena",
     claro: false,
-    rocha: false,
     lugar: "na arena subterranea",
   },
   vilarejo: {
     nome: "vilarejo",
     scenario: "vilarejo",
     claro: true,
-    rocha: false,
     lugar: "na praca do vilarejo",
   },
   cidade: {
     nome: "cidade",
     scenario: "cidade",
     claro: true,
-    rocha: false,
     lugar: "no meio da rua",
   },
   /*
@@ -146,21 +139,18 @@ export const PALCOS: Record<string, Palco> = {
     nome: "deserto",
     scenario: "deserto",
     claro: true,
-    rocha: false,
     lugar: "no deserto, no fim da tarde",
   },
   neve: {
     nome: "neve",
     scenario: "neve",
     claro: true,
-    rocha: false,
     lugar: "no campo de neve",
   },
   limpo: {
     nome: "limpo",
     scenario: "limpo",
     claro: true,
-    rocha: false,
     lugar: "no vazio",
   },
 };
@@ -261,8 +251,6 @@ const B: Papel = "gold";
 
 export type Roteiro = {
   nome: string;
-  /** precisa do paredao do vale? */
-  rocha: boolean;
   /** o que esta acontecendo, para o titulo e a descricao */
   tema: string;
   beats: Beat[];
@@ -281,7 +269,6 @@ const ROTEIROS: Record<string, Roteiro> = {
   /** O VALE: recuo para o fundo, perseguicao no ar, arremesso na rocha. */
   vale: {
     nome: "vale",
-    rocha: true,
     tema: "duelo no vale",
     beats: [
       { type: "tecnica", tecnica: "sumirEColidir", gelo: A, fogo: B },
@@ -342,7 +329,6 @@ const ROTEIROS: Record<string, Roteiro> = {
    */
   ar: {
     nome: "ar",
-    rocha: true,
     tema: "a luta que comeca no ar",
     beats: [
       { type: "tecnica", tecnica: "sumirEColidir", gelo: A, fogo: B },
@@ -381,7 +367,6 @@ const ROTEIROS: Record<string, Roteiro> = {
    */
   rocha: {
     nome: "rocha",
-    rocha: true,
     tema: "arremessado contra a montanha",
     beats: [
       { type: "tecnica", tecnica: "sumirEColidir", gelo: A, fogo: B },
@@ -427,7 +412,6 @@ const ROTEIROS: Record<string, Roteiro> = {
    */
   telhados: {
     nome: "telhados",
-    rocha: false,
     tema: "perseguicao pelos telhados",
     beats: [
       { type: "tecnica", tecnica: "sumirEColidir", gelo: A, fogo: B },
@@ -517,7 +501,6 @@ const ROTEIROS: Record<string, Roteiro> = {
    */
   feiticeiros: {
     nome: "feiticeiros",
-    rocha: false,
     tema: "duelo de feiticeiros",
     beats: [
       { type: "tecnica", tecnica: "chegada", gelo: A, fogo: B },
@@ -589,7 +572,6 @@ const ROTEIROS: Record<string, Roteiro> = {
    */
   rua: {
     nome: "rua",
-    rocha: false,
     tema: "briga de rua",
     beats: [
       { type: "tecnica", tecnica: "chegada", gelo: A, fogo: B },
@@ -679,7 +661,6 @@ const ROTEIROS: Record<string, Roteiro> = {
    */
   cratera: {
     nome: "cratera",
-    rocha: false,
     tema: "cravado no chao logo de cara",
     beats: [
       { type: "tecnica", tecnica: "sumirEColidir", gelo: A, fogo: B },
@@ -713,7 +694,6 @@ const ROTEIROS: Record<string, Roteiro> = {
    */
   dominios: {
     nome: "dominios",
-    rocha: false,
     tema: "duelo de dominios",
     beats: [
       { type: "tecnica", tecnica: "chegada", gelo: A, fogo: B },
@@ -743,7 +723,6 @@ const ROTEIROS: Record<string, Roteiro> = {
    */
   relampago: {
     nome: "relampago",
-    rocha: false,
     tema: "troca seca, do primeiro ao ultimo golpe",
     beats: [
       { type: "tecnica", tecnica: "sumirEColidir", gelo: A, fogo: B },
@@ -770,24 +749,20 @@ export const ROTEIROS_DISPONIVEIS = Object.keys(ROTEIROS);
 export const roteiroPorNome = (nome: string): Roteiro | undefined => ROTEIROS[nome];
 
 /**
- * Os palcos em que um roteiro pode acontecer sem mentir.
+ * Os palcos em que um roteiro pode acontecer: TODOS.
  *
- * O VALE SO ENTRA QUANDO A CENA PEDE A ROCHA, e isso nao e preferencia
- * estetica: metade dos roteiros (`vale`, `ar`, `rocha`) arremessa um corpo
- * contra o paredao e por isso SO pode acontecer la. Deixando o vale tambem
- * na lista dos outros tres, ele levava 25 de 45 dias enquanto o deserto
- * levava ZERO -- medido depois de os cenarios novos entrarem, e foi assim
- * que se viu que acrescentar palco nao estava adiantando nada.
+ * Esta funcao filtrava pela rocha. Tres dos nove roteiros arremessam um corpo
+ * contra uma massa, e a massa era desenhada por backgrounds/Vale -- entao
+ * aqueles tres so podiam acontecer la, e o vale levava um terco do calendario
+ * por dependencia de ARTE e nao por escolha de coreografia.
  *
- * Com a exclusao o vale fica com a metade que a coreografia exige dele, e a
- * outra metade se reparte entre os oito restantes. Baixar mais que isso
- * depende de escrever roteiros que nao precisem da rocha, e nao de mexer
- * aqui.
+ * Hoje todo palco tem a sua massa, com a mesma forma e paleta propria (ver
+ * backgrounds/Obstaculo), e a cena le a coordenada do contexto em vez de
+ * importar do vale. A funcao continua existindo porque a pergunta continua
+ * sendo legitima: um palco futuro pode nao comportar alguma cena, e e aqui
+ * que isso se diz.
  */
-export const palcosDoRoteiro = (r: Roteiro): Palco[] =>
-  r.rocha
-    ? Object.values(PALCOS).filter((p) => p.rocha)
-    : Object.values(PALCOS).filter((p) => !p.rocha);
+export const palcosDoRoteiro = (_r: Roteiro): Palco[] => Object.values(PALCOS);
 
 /** Os elencos que se leem num palco (ver scripts/elenco.mts). */
 export const elencosDoPalco = (p: Palco): Elenco[] =>
@@ -852,12 +827,6 @@ export const duelo = (d: Duelo): FightSpec => {
   const palco = PALCOS[d.palco] ?? PALCOS.vale;
   const elenco = ELENCOS.find((e) => e.nome === d.elenco) ?? ELENCOS[0];
 
-  if (roteiro.rocha && !palco.rocha) {
-    throw new Error(
-      `o roteiro "${roteiro.nome}" arremessa um corpo contra o paredao, e o ` +
-        `palco "${palco.nome}" nao tem paredao: o corpo bateria no ar`,
-    );
-  }
   if (elenco.claro !== palco.claro) {
     throw new Error(
       `o elenco "${elenco.nome}" nao se le no palco "${palco.nome}" ` +

@@ -29,14 +29,13 @@
  * reprova isso, mas a cena e quem tem que evitar.
  */
 
-import { PAREDAO_X } from "../../backgrounds/Vale";
 import type { Tecnica } from "./contexto";
 
 /** o quanto o palco tem de profundidade util, para os dois lados */
 const FUNDO = 520;
 
 export const cercoEmProfundidade: Tecnica = (ctx) => {
-  const { G, F, c, s, estado, pose, cameraKeys, impacts, ALTURA_QUADRIL } =
+  const { G, F, c, s, estado, pose, cameraKeys, impacts, ALTURA_QUADRIL, OBSTACULO_X } =
     ctx;
 
   const xG = estado[G].x;
@@ -67,7 +66,7 @@ export const cercoEmProfundidade: Tecnica = (ctx) => {
   const ALCANCE_A_ESQUERDA = 700;
   /** folga entre o corpo e a face da pedra */
   const LONGE_DA_PEDRA = 260;
-  const limite = PAREDAO_X + ALCANCE_A_ESQUERDA + LONGE_DA_PEDRA;
+  const limite = OBSTACULO_X + ALCANCE_A_ESQUERDA + LONGE_DA_PEDRA;
   const desvio = Math.max(0, limite - meioCru);
   const meio = meioCru + desvio;
 

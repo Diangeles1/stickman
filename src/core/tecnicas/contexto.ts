@@ -81,6 +81,16 @@ export type ContextoDeTecnica = {
   MAO_Y: number;
   /** distancia padrao entre os dois na espera */
   DISTANCIA_DE_ESPERA: number;
+  /**
+   * Onde fica a massa contra a qual um corpo pode ser arremessado.
+   *
+   * Vem do CENARIO e nao de um import: ate agora a cena do arremesso
+   * importava a coordenada da rocha de backgrounds/Vale, e com isso tres dos
+   * nove roteiros do canal so podiam acontecer la -- dependencia de ARTE
+   * virando restricao de calendario. Hoje todo palco tem a sua (ver
+   * backgrounds/Obstaculo).
+   */
+  OBSTACULO_X: number;
   /** marcador de efeito que nao acaba */
   PARA_SEMPRE: number;
 };
