@@ -67,6 +67,42 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 /** chega devagar: rapido no comeco e assentando no fim */
 const saiDevagar = (t: number) => 1 - (1 - clamp01(t)) ** 3;
 
+/**
+ * O CONTORNO ACOMPANHA O PREENCHIMENTO, e nao e sempre preto.
+ *
+ * O nome do lutador e escrito na cor do CORPO dele. Nos palcos escuros os
+ * corpos sao claros e o contorno preto recorta a letra; nos palcos claros os
+ * corpos sao escuros (carmim #c4213c, grafite #2f3545, musgo #1f7a4e) e o
+ * contorno preto tem o MESMO valor do preenchimento -- a letra perde a forma
+ * interna e vira um borrao escuro.
+ *
+ * Conferido em resolucao cheia num quadro do campo de neve: "DAVI" em grafite
+ * com contorno preto continua legivel, mas as letras nao se separam umas das
+ * outras. Nao e falta de contraste contra o FUNDO, e contra o proprio
+ * contorno -- e por isso o defeito passou despercebido ate os palcos claros
+ * ganharem elenco escuro.
+ *
+ * A regra e a de qualquer letreiro: o contorno fica do lado oposto da escala.
+ */
+const LIMIAR_DE_CLARIDADE = 0.35;
+const luminancia = (hex: string): number => {
+  const n = parseInt(hex.slice(1), 16);
+  const canal = (c: number) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  };
+  return (
+    0.2126 * canal((n >> 16) & 255) +
+    0.7152 * canal((n >> 8) & 255) +
+    0.0722 * canal(n & 255)
+  );
+};
+/** o contorno que recorta esta cor: branco se ela e escura, preto se e clara */
+export const contornoPara = (cor: string): string =>
+  cor.startsWith("#") && cor.length === 7 && luminancia(cor) < LIMIAR_DE_CLARIDADE
+    ? "#ffffff"
+    : "#000000";
+
 const contorno = (px: number, cor = "#000"): React.SVGProps<SVGTextElement> => ({
   stroke: cor,
   strokeWidth: px,
@@ -167,7 +203,7 @@ const Barra: React.FC<{
         fontFamily={PILHA}
         fontSize={64}
         fill={corDe(id)}
-        {...contorno(10)}
+        {...contorno(10, contornoPara(corDe(id)))}
         letterSpacing={2}
       >
         {nome}
