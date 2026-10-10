@@ -72,5 +72,24 @@ export const trocarVencedor = (spec: FightSpec): FightSpec => {
     }
     return beat;
   });
-  return { ...spec, beats };
+  /*
+    A ARMA TROCA DE MAO JUNTO COM OS GOLPES.
+
+    `armas` e indexado por lutador e ficava de fora da troca. Com isso, numa
+    luta espelhada, os beats de CORTE passavam para o outro lutador e a
+    katana ficava onde estava: o desarmado dava cortes de lamina e o armado
+    socava. Medido no roteiro `laminaNua`, cinco golpes acusados por
+    `coreografia` com 206 a 283 unidades de vao -- o alcance de uma lamina,
+    na mao de quem nao tinha nenhuma.
+
+    E o mesmo esquecimento que ja tinha acontecido com `gelo` e `fogo` nas
+    cenas (ver a nota acima): tudo que e indexado por lutador tem que
+    atravessar esta funcao.
+  */
+  const armas = spec.armas
+    ? Object.fromEntries(
+        Object.entries(spec.armas).map(([id, arma]) => [t(id as FighterId), arma]),
+      )
+    : undefined;
+  return { ...spec, beats, ...(armas ? { armas } : {}) };
 };

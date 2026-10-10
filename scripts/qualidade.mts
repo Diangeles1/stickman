@@ -128,12 +128,40 @@ const CONSEQUENCIAS = new Set([
   "vapor",
 ]);
 const TOLERANCIA_CAUSAL = 2; // quadros de folga: o efeito pode nascer junto
+/*
+  CAUSALIDADE TEM LUGAR, E NAO SO HORA.
+
+  A regra emparelhava efeito com impacto so pelo TEMPO: qualquer explosao a
+  menos de 30 quadros de um impacto tinha que vir depois dele. Isso acusa uso
+  correto, que e o que esta nota logo acima diz para nao fazer -- a cena
+  `investida` solta uma explosao NO CORPO de quem arranca, como propulsao, e
+  o impacto dela acontece meio segundo depois, a meio palco de distancia.
+
+  Medido no roteiro `emboscada`: explosao no quadro 284 contra um impacto no
+  320, com os dois pontos separados por centenas de unidades. Uma explosao
+  longe do golpe nao e consequencia do golpe.
+
+  O raio e generoso de proposito. Ele nao existe para medir o alcance de uma
+  explosao, e sim para separar "aconteceu AQUI" de "aconteceu do outro lado
+  da arena" -- se um dia ele deixar passar um efeito adiantado de verdade, o
+  conserto e apertar, nao remover.
+*/
+const RAIO_CAUSAL = 400;
+const noMesmoLugar = (
+  e: { a?: { x: number; y: number } },
+  i: { at: { x: number; y: number } },
+) => e.a === undefined || Math.abs(e.a.x - i.at.x) <= RAIO_CAUSAL;
 for (const e of t.poderes) {
   if (!CONSEQUENCIAS.has(e.tipo)) continue;
   const perto = t.impacts.some(
-    (i) => Math.abs(i.frame - e.from) <= 30 && e.from >= i.frame - TOLERANCIA_CAUSAL,
+    (i) =>
+      Math.abs(i.frame - e.from) <= 30 &&
+      noMesmoLugar(e, i) &&
+      e.from >= i.frame - TOLERANCIA_CAUSAL,
   );
-  const temImpactoProximo = t.impacts.some((i) => Math.abs(i.frame - e.from) <= 30);
+  const temImpactoProximo = t.impacts.some(
+    (i) => Math.abs(i.frame - e.from) <= 30 && noMesmoLugar(e, i),
+  );
   if (temImpactoProximo && !perto) {
     falhas.push({
       regra: "efeito depois da causa",

@@ -251,6 +251,21 @@ const B: Papel = "gold";
 
 export type Roteiro = {
   nome: string;
+  /**
+   * Quem luta ARMADO. Ausente = os dois de mao limpa.
+   *
+   * O motor tem katana desde cedo -- poses proprias de guarda, defesa e
+   * carga, a lamina desenhada na mao e a distancia de combate medida pelo
+   * ALCANCE DA LAMINA e nao do braco (ver distanciaDeCombate em core/contact).
+   * O duelo diario nunca tinha usado nada disso: dos vinte golpes do motor,
+   * oito estavam em uso e os cinco cortes estavam entre os parados.
+   *
+   * Roteiro armado precisa usar os cortes nos beats. Misturar soco com lamina
+   * no mesmo lutador faz o motor medir a distancia pelo alcance errado -- foi
+   * o que `contato` acusou em data/fights/dominio, onde um `corteSobe` sem
+   * espada parava a 106 unidades do alvo precisando de 83.
+   */
+  armas?: "ambos" | "a" | "b";
   /** o que esta acontecendo, para o titulo e a descricao */
   tema: string;
   beats: Beat[];
@@ -741,6 +756,107 @@ const ROTEIROS: Record<string, Roteiro> = {
       { type: "attack", attacker: B, target: A, move: "uppercut", targetPoint: "queixo" },
     ],
   },
+
+  /**
+   * AS LAMINAS: os dois armados, e quase nenhum soco.
+   *
+   * O motor tem katana desde cedo e o canal nunca tinha usado: cinco dos
+   * vinte golpes sao cortes e os cinco estavam parados. A lamina muda o
+   * COMBATE e nao so o desenho -- ela tem alcance proprio, e por isso os dois
+   * lutam de mais longe que em qualquer outro roteiro.
+   *
+   * `encarar` abre: os dois se medem antes de qualquer coisa acontecer. Era
+   * mais uma cena que existia sem nunca ter sido chamada.
+   */
+  laminas: {
+    nome: "laminas",
+    armas: "ambos",
+    tema: "duelo de laminas",
+    beats: [
+      { type: "tecnica", tecnica: "encarar", gelo: A, fogo: B },
+      { type: "attack", attacker: A, target: B, move: "corteSobe" },
+      { type: "blocked", attacker: B, target: A, move: "corteDesce" },
+      // quem bloqueou e quem age (ver scripts/defesa.mts)
+      { type: "attack", attacker: A, target: B, move: "corteLateral" },
+      { type: "tecnica", tecnica: "corteADistancia", gelo: B, fogo: A },
+      { type: "recover", who: A, duration: 30 },
+      { type: "attack", attacker: B, target: A, move: "corteRapido" },
+      { type: "dodged", attacker: B, target: A, move: "corteSobe" },
+      { type: "attack", attacker: A, target: B, move: "corteDesce" },
+      { type: "tecnica", tecnica: "cercoEmProfundidade", gelo: A, fogo: B },
+      { type: "attack", attacker: B, target: A, move: "corteLateral" },
+      { type: "tecnica", tecnica: "azulVermelho", gelo: A, fogo: B },
+      { type: "attack", attacker: A, target: B, move: "corteRapido" },
+      { type: "attack", attacker: B, target: A, move: "corteSobe" },
+    ],
+  },
+
+  /**
+   * A ESPADA CONTRA O PUNHO: um armado, o outro nao.
+   *
+   * E a assimetria que o motor permite e ninguem tinha pedido: a distancia de
+   * combate e medida por lutador, entao o armado acerta de longe e o desarmado
+   * precisa ENTRAR. A luta vira sobre distancia, e nao sobre troca.
+   */
+  laminaNua: {
+    nome: "laminaNua",
+    armas: "a",
+    tema: "a espada contra as maos",
+    beats: [
+      { type: "tecnica", tecnica: "chegada", gelo: A, fogo: B },
+      { type: "attack", attacker: A, target: B, move: "corteSobe" },
+      { type: "dodged", attacker: A, target: B, move: "corteLateral" },
+      // o desarmado esquiva e ENTRA: e a unica forma de ele existir na luta
+      { type: "combo", attacker: B, target: A, moves: ["punchFast", "punch", "knee"] },
+      { type: "recover", who: A, duration: 30 },
+      /*
+        ERA UM `corteDesce` e virou corte lateral. O corte que desce termina
+        na altura das pernas, e `contato` reprovou: a ponta parava a 72
+        unidades do eixo precisando de 29. Nao e defeito da lamina -- um
+        corte descendente acaba PERTO DO CHAO, e o alvo util dele e a perna,
+        que fica atras do corpo do adversario a partir de qualquer distancia
+        util de espada. O corte lateral chega no tronco, que e o que esta
+        virado para quem ataca.
+      */
+      { type: "attack", attacker: A, target: B, move: "corteLateral" },
+      { type: "tecnica", tecnica: "cercoEmProfundidade", gelo: B, fogo: A },
+      { type: "attack", attacker: B, target: A, move: "punchHeavy" },
+      { type: "attack", attacker: A, target: B, move: "corteRapido" },
+      { type: "tecnica", tecnica: "esmagarNoChao", gelo: B, fogo: A },
+      { type: "recover", who: A, duration: 34 },
+      { type: "attack", attacker: A, target: B, move: "corteLateral" },
+      { type: "attack", attacker: B, target: A, move: "knee" },
+      { type: "attack", attacker: A, target: B, move: "corteSobe" },
+    ],
+  },
+
+  /**
+   * A EMBOSCADA: feita so de cenas que estavam paradas.
+   *
+   * `investida`, `arremessoLongo` e `perseguicao` existiam no motor desde a
+   * luta de gelo contra fogo e nunca tinham entrado num video do canal --
+   * eram tres das onze cenas sem uso. Este roteiro existe para por as tres
+   * no ar, e por isso e o que mais atravessa o palco.
+   */
+  emboscada: {
+    nome: "emboscada",
+    tema: "emboscada e perseguicao",
+    beats: [
+      { type: "tecnica", tecnica: "chegada", gelo: A, fogo: B },
+      { type: "tecnica", tecnica: "investida", gelo: A, fogo: B },
+      { type: "attack", attacker: A, target: B, move: "punchFast" },
+      { type: "blocked", attacker: A, target: B, move: "punch" },
+      { type: "combo", attacker: B, target: A, moves: ["punchFast", "punch", "knee"] },
+      { type: "recover", who: A, duration: 30 },
+      { type: "tecnica", tecnica: "arremessoLongo", gelo: A, fogo: B },
+      { type: "recover", who: B, duration: 34 },
+      { type: "attack", attacker: A, target: B, move: "kickHigh", targetPoint: "chest" },
+      { type: "tecnica", tecnica: "perseguicao", gelo: A, fogo: B },
+      { type: "attack", attacker: B, target: A, move: "punchHeavy" },
+      { type: "attack", attacker: A, target: B, move: "punchFast" },
+      { type: "attack", attacker: B, target: A, move: "uppercut", targetPoint: "queixo" },
+    ],
+  },
 };
 
 export const ROTEIROS_DISPONIVEIS = Object.keys(ROTEIROS);
@@ -835,6 +951,24 @@ export const duelo = (d: Duelo): FightSpec => {
   }
 
   const { a, b } = elenco;
+  /*
+    O ELEMENTO DA LAMINA SEGUE A PALETA DO LUTADOR, pela mesma razao que a cor
+    do efeito segue a cor do corpo: uma espada azul na mao do vermelho desfaz
+    a ligacao entre o personagem e o que ele emite.
+  */
+  const elementoDe = (paleta: NomeDePaleta): "gelo" | "fogo" =>
+    paleta === "fogo" || paleta === "vermelho" ? "fogo" : "gelo";
+  const armas =
+    roteiro.armas === undefined
+      ? undefined
+      : {
+          ...(roteiro.armas !== "b"
+            ? { [a]: { tipo: "katana" as const, elemento: elementoDe(elenco.paletaA) } }
+            : {}),
+          ...(roteiro.armas !== "a"
+            ? { [b]: { tipo: "katana" as const, elemento: elementoDe(elenco.paletaB) } }
+            : {}),
+        };
   const beats = trocarElenco(roteiro.beats, { [A]: a, [B]: b });
   const spec: FightSpec = {
     fighterA: a,
@@ -846,6 +980,7 @@ export const duelo = (d: Duelo): FightSpec => {
     intensity: 9,
     scenario: palco.scenario,
     estilo: "animeDesenhado",
+    ...(armas ? { armas } : {}),
     nomes: { [a]: d.nomeA, [b]: d.nomeB },
     poderes: { [a]: elenco.poderA, [b]: elenco.poderB },
     // a cor do efeito segue a cor do corpo (ver a nota em core/types)

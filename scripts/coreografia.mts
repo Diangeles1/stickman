@@ -30,7 +30,7 @@
 
 import { compilar } from "../src/core/timeline";
 import { corpoNoQuadro } from "../src/animation/corpo";
-import { juntasNoMundo } from "../src/characters/skeleton";
+import { escalaDoMundo, juntasNoMundo } from "../src/characters/skeleton";
 import { PRESETS } from "../src/characters/presets";
 import { escolherLuta } from "./lutas.mjs";
 import type { FighterId } from "../src/core/types";
@@ -52,6 +52,8 @@ const t = compilar(spec);
  * membro ENCOSTA, e isso so se responde olhando o membro.
  */
 const VAO_MAXIMO = 75;
+/** comprimento da lamina em unidades de POSE (ver LAMINA em characters/Katana) */
+const LAMINA_EM_POSE = 100;
 /**
  * O QUANTO DE PROFUNDIDADE UM GOLPE ATRAVESSA.
  *
@@ -99,6 +101,34 @@ for (const g of golpes) {
   const pv: any = (PRESETS as any)[v];
   const ja: any = juntasNoMundo(ca.pose, { baseX: ca.x, baseY: ca.baseY, facing: ca.facing, scale: pa.scale, spin: ca.spin, giro: ca.giro });
   const jv: any = juntasNoMundo(cv.pose, { baseX: cv.x, baseY: cv.baseY, facing: cv.facing, scale: pv.scale, spin: cv.spin, giro: cv.giro });
+  /*
+    QUEM ENCOSTA, NUM LUTADOR ARMADO, E A PONTA DA LAMINA.
+
+    Este medidor comparava JUNTA com JUNTA. Para maos e pes isso esta certo --
+    foi justamente a correcao que tirou a versao quadril-a-quadril daqui. Mas
+    a katana sai da mao e tem cem unidades de pose: as juntas dos dois ficam a
+    duzentas unidades de distancia enquanto a ponta encosta.
+
+    Medido no roteiro `laminas`: sete golpes acusados com vao de 196 a 283
+    unidades, e `contato.mts` -- que ja conhece o alcance da lamina, ver
+    distanciaDeCombate em core/contact -- aprovando os mesmos sete. Quando
+    duas reguas discordam, a que conhece a arma esta certa.
+
+    A ponta sai na direcao cotovelo -> mao, como em core/contact: a lamina nao
+    tem cinematica inversa, e a pose e que define para onde ela aponta.
+  */
+  const armado = t.spec.armas?.[a];
+  if (armado) {
+    const dxl = ja.handFront.x - ja.elbowFront.x;
+    const dyl = ja.handFront.y - ja.elbowFront.y;
+    const n = Math.hypot(dxl, dyl) || 1;
+    const alcance = LAMINA_EM_POSE * escalaDoMundo(pa.scale);
+    ja.pontaDaLamina = {
+      x: ja.handFront.x + (dxl / n) * alcance,
+      y: ja.handFront.y + (dyl / n) * alcance,
+    };
+  }
+
   let vao = Infinity;
   for (const pA of Object.values(ja) as any[])
     for (const pV of Object.values(jv) as any[])
