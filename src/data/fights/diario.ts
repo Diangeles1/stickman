@@ -789,6 +789,20 @@ const ROTEIROS: Record<string, Roteiro> = {
       */
       { type: "tecnica", tecnica: "encarar", gelo: A, fogo: B },
       /*
+        A ENCARADA E UM PAR DE PLANOS, um em cada rosto.
+
+        Guias de montagem de luta descrevem a estrutura como aproximacao,
+        ENCARADA, primeira troca e virada -- e a encarada e feita cortando de
+        um rosto para o outro, nao com os dois no quadro. "O plano da
+        encarada tem que parecer lento."
+
+        Ate aqui a luta inteira era um plano continuo: a camera acompanhava,
+        fechava e abria, mas nunca CORTAVA. Isto e a primeira montagem do
+        canal.
+      */
+      { type: "plano", who: A, duration: 34, escala: "rosto" },
+      { type: "plano", who: B, duration: 30, escala: "rosto" },
+      /*
         O CORTE NA CARA ABRE A LUTA. Nenhum dos quinze cortes dos roteiros
         declarava alvo, entao nenhum ia no rosto -- e o corte ascendente no
         rosto e a imagem mais reconhecivel de um duelo de katana. Conferido
@@ -796,6 +810,12 @@ const ROTEIROS: Record<string, Roteiro> = {
       */
       { type: "attack", attacker: A, target: B, move: "corteSobe", targetPoint: "head" },
       { type: "blocked", attacker: B, target: A, move: "corteDesce" },
+      /*
+        O PLANO FECHADO PERTENCE A QUEM RECEBEU, e nao a quem deu -- e a
+        regra que os guias de montagem repetem. Aqui B acabou de ser cortado
+        no rosto e aparou o contra-golpe; o rosto dele e o que interessa.
+      */
+      { type: "plano", who: B, duration: 26, escala: "rosto" },
       { type: "attack", attacker: A, target: B, move: "corteLateral" },
       { type: "blocked", attacker: A, target: B, move: "corteRapido" },
       { type: "attack", attacker: B, target: A, move: "corteDesce" },

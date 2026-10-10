@@ -430,6 +430,39 @@ export type Beat =
   | { type: "airborne"; who: FighterId; duration: number }
   | { type: "recover"; who: FighterId; duration: number }
   | { type: "hold"; duration: number; label?: string }
+  /**
+   * PLANO FECHADO NUM LUTADOR SO: a camera CORTA, e nao viaja.
+   *
+   * Ate agora a luta inteira era um plano continuo -- a camera acompanhava,
+   * fechava e abria, mas nunca cortava. Animacao de luta e EDITADA: ela
+   * alterna plano de dois, plano fechado num rosto, reacao de quem levou.
+   *
+   * Guias de montagem de luta dao duas regras que valem aqui. A primeira: o
+   * plano fechado pertence a quem RECEBE o golpe, e nao a quem da. A
+   * segunda: a estrutura e aproximacao, encarada, primeira troca e virada --
+   * e a encarada e justamente um par de planos fechados, um em cada rosto.
+   *
+   * O corte e feito com `ease: 0` nas duas pontas: entrar devagar num plano
+   * fechado e um ZOOM, e zoom nao e corte. O que faz ler como montagem e a
+   * troca instantanea de enquadramento.
+   */
+  | {
+      type: "plano";
+      /*
+        O CAMPO E `who` E NAO `quem`, e isso nao e gosto: os dois lugares que
+        espelham uma luta -- `trocarElenco` em data/fights/diario e
+        `trocarVencedor` em data/trocar -- remapeiam uma LISTA de campos
+        indexados por lutador, e `who` ja esta nela. Batizando diferente, o
+        plano fechado apontava para um lutador que nao existia naquele
+        elenco e o compilador quebrava com "cannot read properties of
+        undefined". Campo novo indexado por lutador entra pela lista ou nao
+        entra.
+      */
+      who: FighterId;
+      duration: number;
+      /** "rosto" fecha na cabeca; "meio" pega o corpo da cintura para cima */
+      escala?: "rosto" | "meio";
+    }
   | {
       type: "finisher";
       attacker: FighterId;

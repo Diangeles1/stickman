@@ -1789,6 +1789,43 @@ export const compilar = (spec: FightSpec): Timeline => {
         cursor = tecnica(beat);
         break;
 
+      case "plano": {
+        /*
+          O CORTE DE CAMERA, com `ease: 0` nas duas pontas.
+
+          Entrar devagar num plano fechado e um zoom, e zoom nao e corte: o
+          que faz ler como montagem e a troca instantanea de enquadramento.
+          As duas chaves sao marcadas `cena` porque o outro lutador fica fora
+          do quadro DE PROPOSITO -- e e isso que scripts/camera.mts entende
+          por enquadramento intencional.
+
+          O corpo nao e reposicionado aqui. Um plano fechado e uma decisao de
+          CAMERA; mexer nos lutadores dentro dele faria a montagem mudar a
+          luta, que e o contrario do que ela deve fazer.
+        */
+        const rosto = (beat.escala ?? "rosto") === "rosto";
+        cameraKeys.push({
+          frame: cursor,
+          center: {
+            x: estado[beat.who].x,
+            y: ALTURA_QUADRIL - (rosto ? 330 : 200),
+          },
+          zoom: rosto ? 2.1 : 1.45,
+          ease: 0,
+          cena: true,
+        });
+        cursor += beat.duration;
+        // e corta de volta para o plano de dois, tambem sem transicao
+        cameraKeys.push({
+          frame: cursor,
+          center: { x: 0, y: ALTURA_QUADRIL - 60 },
+          zoom: 0.95,
+          ease: 0,
+          fit: true,
+          cena: true,
+        });
+        break;
+      }
       case "hold":
       case "cta":
       case "hook":
