@@ -208,6 +208,7 @@ const atrasoPara = (destino: PoseName): PerfilDeAtraso | undefined => {
     case "stagger":
     case "downed":
     case "land":
+    case "pousoKatana":
     case "squash":
       return ATRASO_DA_REACAO;
     case "uppercut":
@@ -234,6 +235,28 @@ const atrasoPara = (destino: PoseName): PerfilDeAtraso | undefined => {
     case "charge":
     case "coil":
       return ATRASO_DO_ATAQUE;
+    /*
+      AS POSES ARMADAS PRECISAM ESTAR AQUI PELO NOME DELAS.
+
+      `POSES_ARMADAS` (core/timeline) troca a pose do lutador de espada
+      DEPOIS que o beat foi escrito: quem pede `coil` recebe `cargaKatana`,
+      quem pede `land` recebe `pousoKatana`. Este switch escolhe pelo nome da
+      pose de DESTINO, entao a troca fazia o movimento perder a corrente sem
+      que nada no beat mudasse -- um perfil de 13 juntas virando `undefined`,
+      que e o corpo inteiro assumindo a pose no mesmo quadro.
+
+      Era uma corrente perdida em silencio: nenhum validador aponta para ca,
+      porque `cadeia` mede onde cai o pico GLOBAL do golpe e a carga nao e o
+      pico (ver o log de hipoteses em scripts/cadeia.mts). O efeito foi medido
+      comparando as posicoes de todas as juntas quadro a quadro, com e sem
+      estas duas linhas: `laminas` e `laminaNua` mudam, `emboscada` nao -- ela
+      arma so um dos dois e ele nao carrega golpe nenhum.
+
+      A erguida usa a corrente do corte porque e a mesma corrente: nasce no
+      chao e termina na ponta da lamina. Coil armado continua sendo coil.
+    */
+    case "cargaKatana":
+      return ATRASO_DO_CORTE;
     // corte de katana: a mesma corrente, esticada ate a ponta da lamina
     case "corteSobe":
     case "corteDesce":

@@ -219,7 +219,34 @@ export const compilar = (spec: FightSpec): Timeline => {
     // na amostragem (ja sumiu com um knockback assim). Nunca antes da ultima.
     const keys = tracks[quem].keys;
     if (keys.length > 0) frame = Math.max(frame, keys[keys.length - 1].frame);
-    tracks[quem].keys.push({
+    /*
+      DUAS CHAVES NO MESMO QUADRO NAO SAO UMA TRANSICAO, SAO UM TELEPORTE.
+
+      O travamento de ordem acima resolve a chave fora de ordem colando ela no
+      quadro da ultima -- e empilhando, ficavam duas chaves no mesmo quadro
+      com estados diferentes. Transicao de duracao zero: o quadro mostra a
+      primeira e o quadro seguinte ja esta na segunda, sem nenhum desenho
+      entre as duas.
+
+      Medido nos doze roteiros, 101 chaves empilhadas assim, e duas familias
+      doem:
+
+        - `@0` com 1120 unidades de diferenca em x (cinco roteiros): o
+          lutador aparece a mais de um corpo e meio do lugar dele no primeiro
+          quadro do video e salta para o lugar certo no segundo. Era o maior
+          salto de ponta de lamina de `laminaNua`: 1119 unidades num quadro,
+          mais que o pico do proprio corte.
+
+        - `sprint1 -> coil` com 65 unidades (sete roteiros): a corrida chega e
+          a carga comeca no MESMO quadro.
+
+      Empilhada, a primeira chave so e visivel no proprio quadro dela e nunca
+      interpola para nada. Quem escreveu depois quis aquele estado NAQUELE
+      quadro, entao a chave nova substitui a antiga em vez de se somar a ela,
+      e a transicao passa a vir da chave anterior, que tem tempo.
+    */
+    const colidiu = keys.length > 0 && keys[keys.length - 1].frame === frame;
+    const nova = {
       frame,
       x: e.x,
       // so escreve quando ha profundidade: assim as lutas antigas continuam
@@ -229,7 +256,9 @@ export const compilar = (spec: FightSpec): Timeline => {
       pose: spec.armas?.[quem] ? (POSES_ARMADAS[e.pose] ?? e.pose) : e.pose,
       airborne: e.airborne,
       ...(exagero !== undefined && exagero !== 1 ? { exagero } : {}),
-    });
+    };
+    if (colidiu) keys[keys.length - 1] = nova;
+    else keys.push(nova);
   };
 
   // ambos comecam registrados, senao a interpolacao nao tem de onde partir
@@ -285,9 +314,32 @@ export const compilar = (spec: FightSpec): Timeline => {
     const quadros = Math.max(s(0.12), Math.round(distancia / VELOCIDADE_DE_CORRIDA));
 
     // ---- SAIDA DA PARADA ---------------------------------------------------
-    // Uma chave com a pose ATUAL no quadro em que ele comeca a andar. Sem ela,
-    // a pose de corrida era escrita no mesmo quadro da pose anterior e virava
-    // corte seco: o diagnostico acusava "idle -> run1" no quadro 0.
+    /*
+      Uma chave com a pose ATUAL no quadro em que ele comeca a andar. Sem ela,
+      a pose de corrida era escrita no mesmo quadro da pose anterior e virava
+      corte seco: o diagnostico acusava "idle -> run1" no quadro 0.
+
+      E A ARRANCADA TEM QUE DURAR, nao bastou separar as duas chaves por um
+      quadro. Parado e correndo sao duas posicoes de braco completamente
+      diferentes, e trocar entre elas em UM quadro nao e um movimento rapido,
+      e um pop: nao existe quadro intermediario nenhum para o olho ver.
+
+      Num boneco de palito isso passava. Com espada passou a nao passar,
+      porque a lamina sai cem unidades da mao e multiplica qualquer diferenca
+      de pose: medido com scripts/cadeia.mts, a ponta andava 458 unidades em
+      um quadro na saida da parada, e esse teleporte era o pico mais rapido de
+      toda a janela do golpe -- mais rapido que o proprio corte. Era por isso
+      que o validador acusava "corpo se movendo como bloco" num corte cuja
+      corrente estava certa: teleporte move TODAS as juntas no mesmo quadro,
+      e e isso que o medidor ve.
+
+      O tempo da arrancada nao e somado, e tirado da corrida (como a
+      `travagem` faz no fim), porque a aproximacao tem que terminar no quadro
+      prometido: um beat seguinte escrito contra `cursor + quadros` mira num
+      corpo que nao chegou. E o corpo JA ANDA durante ela, a meia velocidade,
+      porque quem arranca empurra o chao -- parar o corpo e so mexer os bracos
+      faria o passo seguinte ter que correr mais rapido para compensar.
+    */
     chave(atacante, cursor);
 
     // ---- CORRIDA -----------------------------------------------------------
@@ -297,13 +349,22 @@ export const compilar = (spec: FightSpec): Timeline => {
     const travagem = Math.min(s(0.2), Math.max(s(0.07), Math.round(quadros * 0.4)));
     const corrida = Math.max(1, quadros - travagem);
 
+    const arrancada = Math.min(
+      Math.max(1, corrida - 1),
+      Math.max(2, Math.round(quadros * 0.16)),
+    );
+    const inicio = estado[atacante].x;
+    const caminho = destino - inicio;
     estado[atacante].pose = distancia > distanciaAlvo * 1.5 ? "sprint1" : "run1";
-    chave(atacante, cursor + 1);
+    // meia velocidade na arrancada: ele esta ganhando velocidade, nao ja nela
+    const naArrancada = (arrancada / quadros) * 0.5;
+    estado[atacante].x = inicio + caminho * naArrancada;
+    chave(atacante, cursor + arrancada);
     // O trecho de corrida cobre a fracao do caminho PROPORCIONAL ao tempo
     // dele (um pouco mais, porque a travagem e mais lenta). Fixo em 88%, a
     // corrida curta saia a 1,5 vez a velocidade de corrida.
     const fracao = Math.min(0.88, (corrida / quadros) * 1.15);
-    estado[atacante].x = estado[atacante].x + (destino - estado[atacante].x) * fracao;
+    estado[atacante].x = inicio + caminho * Math.max(fracao, naArrancada + 0.02);
     chave(atacante, cursor + corrida);
 
     // ---- DESACELERACAO -----------------------------------------------------
@@ -544,11 +605,23 @@ export const compilar = (spec: FightSpec): Timeline => {
     let frameContato = cursor + contactAt;
     let pouso = 0;
     if (aereo) {
-      // decola AINDA CARREGADO (a pose de carga, no ar): o braco que vai
-      // golpear fica guardado ate o disparo. Com a pose de pulo (bracos para
-      // cima), o movimento mais rapido do golpe era o braco subindo na
-      // decolagem, e o soco em si saia mais lento que ela.
-      estado[atacante].pose = "coil";
+      /*
+        Decola AINDA CARREGADO (a pose de carga, no ar): o braco que vai
+        golpear fica guardado ate o disparo. Com a pose de pulo (bracos para
+        cima), o movimento mais rapido do golpe era o braco subindo na
+        decolagem, e o soco em si saia mais lento que ela.
+
+        E A CARGA E A QUE O GOLPE DECLAROU, nao a genercia. Aqui estava
+        escrito `coil` fixo, que descarta o campo `carga` da definicao tres
+        quadros depois de a preparacao ter acabado de usa-lo -- em
+        `corteMergulho`, cuja carga e a propria pose de mergulho, isso
+        atravessava a espada de um lado do corpo para o outro em tres
+        quadros. Medido com scripts/cadeia.mts: a ponta da lamina andava 671
+        unidades num quadro, contra 253 no pico do corte de verdade, e esse
+        teleporte era o pico mais rapido da janela inteira -- por isso o
+        validador acusava bloco num golpe cuja corrente estava certa.
+      */
+      estado[atacante].pose = def.carga ?? "coil";
       estado[atacante].airborne = true;
       chave(atacante, cursor + 3, perfil.carga);
       frameContato = cursor + 3 + Math.round(TEMPO_NO_AR * 0.6);

@@ -62,6 +62,21 @@ const juntaEm = (id: FighterId, frame: number, junta: JointName) => {
   return juntasDoCorpo(c)[junta];
 };
 
+/**
+ * Para QUAL POSE o corpo estava indo naquele quadro.
+ *
+ * Sem esta coluna o relatorio dizia que o corpo se movia como bloco e nao
+ * dizia onde, e "onde" e a unica informacao que leva a um conserto: o perfil
+ * de atraso e escolhido pela pose de DESTINO (ver `atrasoPara` em
+ * animation/sampler), entao o nome que aparece aqui e o nome da chave do
+ * switch que precisa existir. Foi assim que `cargaKatana` e `cargaBaixa`
+ * apareceram -- duas poses de carga que a troca por arma criou e que ninguem
+ * tinha adicionado ao switch, deixando a ERGUIDA da espada sem corrente
+ * nenhuma enquanto o corte em si tinha a dele.
+ */
+const poseEm = (id: FighterId, frame: number): string =>
+  corpoNoQuadro(t, id, frame).poseNome;
+
 console.log(`luta: ${qual}\n`);
 
 /*
@@ -134,42 +149,50 @@ console.log(`luta: ${qual}\n`);
   E VALE REGISTRAR O QUE A MEDICAO MOSTROU DE BOM: o disparo em si tem uma
   corrente exemplar. No mesmo uppercut, entre os quadros 2255 e 2258, o
   quadril para (0, 0, 0), o pescoco para (2, 3, 0) e a ponta dispara
-  (cotovelo 146, punho 216). A raiz chega primeiro e a ponta por ultimo,
-  que e exatamente o que se pede. O que reprova e onde o pico GLOBAL cai.
-
-  MAIS TRES EXPLICACOES MEDIDAS E REFUTADAS, todas depois das cinco acima:
-
-  6. "basta dar JANELAS MAIORES aos golpes" -- esta estava ESCRITA como
-     receita no proprio preset (ver ANIME_DESENHADO em animation/estilo). E
-     falsa, e no sentido contrario: subindo `janelaDeGolpe` de 1.4 para 1.8,
-     2.2 e 2.8, o duelo do dia vai de 5 para 7, 7 e 9 reprovacoes. Janela
-     maior da mais tempo para o corpo TRANSLADAR dentro da janela de medicao,
-     e translacao move tudo junto.
-
-  7. "descontar a translacao da raiz do corpo (corpo.x, corpo.baseY)" -- e
-     diferente da ideia 2 acima, que subtraia a JUNTA quadril e por isso
-     zerava a velocidade dela por construcao. Esta preserva o giro do
-     quadril, parecia obviamente certa, e PIORA: duelo do dia 5 -> 11,
-     dominio 0 -> 1, luta completa 1 -> 2.
-
-  8. "a janela nao deve alcancar a CAMINHADA" -- locomocao move todas as
-     juntas juntas de proposito (`atrasoPara` devolve undefined para passo e
-     corrida), e o pico do quadril caia mesmo la: num uppercut com contato em
-     2261, quadril, pescoco e ombro picavam todos em 2230, dentro de um
-     `advance`. Andar a janela para a frente ate sair da locomocao tambem
-     piora: duelo do dia 5 -> 6, luta completa 1 -> 2, duelo do vale 9 -> 10.
-
-  O QUE DE FATO MOVEU O NUMERO foi abrir os VAOS entre as juntas nos perfis
-  de atraso (ver ATRASO_DO_ATAQUE em characters/skeleton): o pescoco comecava
-  dois centesimos depois do ombro, o que num golpe de sete quadros e um
-  setimo de quadro -- os dois partiam no mesmo desenho. Duelo do dia 5 -> 3,
-  duelo do vale 9 -> 5, ninjas 10 -> 8.
-
-  E VALE REGISTRAR O QUE A MEDICAO MOSTROU DE BOM: o disparo em si tem uma
-  corrente exemplar. No mesmo uppercut, entre os quadros 2255 e 2258, o
-  quadril para (0, 0, 0), o pescoco para (2, 3, 0) e a ponta dispara
   (cotovelo 146, punho 216). A raiz chega primeiro e a ponta por ultimo, que
   e exatamente o que se pede. O que reprova e onde o pico GLOBAL cai.
+
+  UMA CLASSE DE DEFEITO QUE ESTE MEDIDOR ESTAVA ACUSANDO SEM NOMEAR: o
+  TELEPORTE DE POSE. Duas chaves com poses de braco diferentes separadas por
+  um ou tres quadros nao sao um movimento rapido, sao um salto -- e salto move
+  TODAS as juntas no mesmo quadro, que e exatamente o que o criterio chama de
+  bloco. Num boneco de palito isso passava despercebido; a espada, que sai cem
+  unidades da mao, multiplicou a diferenca e tornou o salto visivel na medida.
+
+  Dois foram encontrados em `laminas` e os dois eram no PREPARO, nunca no
+  disparo (o disparo segue exemplar, ver o paragrafo acima):
+
+    - a saida da parada em `aproximar` escrevia a pose de corrida UM quadro
+      depois da pose parada. Ponta da lamina: 458 unidades num quadro.
+      Consertado dando tempo a arrancada, tirado da corrida e nao somado.
+
+    - a decolagem do golpe aereo sobrescrevia a carga declarada pelo golpe com
+      `coil` fixo, tres quadros depois de a preparacao ter usado a carga certa.
+      Em `corteMergulho` isso atravessava a espada de um lado do corpo ao
+      outro: ponta a 671 unidades num quadro, contra 253 no pico do corte de
+      verdade. Consertado respeitando `def.carga`, e a ponta caiu para 101.
+
+  A COLUNA "indo para" EXISTE POR CAUSA DISSO. Sem ela o relatorio dizia que o
+  corpo virava bloco e nao dizia ONDE, e "onde" e a unica informacao que leva a
+  um conserto -- os dois teleportes acima apareceram no primeiro relatorio que
+  imprimiu o nome da pose de destino no quadro do pico.
+
+  9. E O RESULTADO NEGATIVO, que importa tanto quanto: consertar os dois
+     teleportes NAO MOVEU O TOTAL. Somando os doze roteiros, 51 antes e 51
+     depois -- `vale` 7->6, `ar` 5->4 e `laminas` 3->2 melhoraram, `rua` 3->4,
+     `relampago` 5->6 e `laminaNua` 2->3 pioraram. Nao e contradicao: o
+     criterio olha onde cai o pico GLOBAL, entao qualquer mudanca de timing
+     troca golpes individuais de lado. A CONTAGEM DESTE MEDIDOR NAO E SENSIVEL
+     A ESTA CLASSE DE DEFEITO; quem mediu o conserto foi a velocidade da ponta
+     da lamina, nao o total de reprovacoes. Nao use este total para decidir se
+     um teleporte foi consertado -- meca a ponta.
+
+  10. "a lamina e um elo de qualquer corrente do lutador armado" -- era assim
+      que este script media, e e falso: a lamina e extensao do BRACO. A
+      corrente quadril -> joelho -> pe de um CHUTE terminava na espada, que
+      naquele golpe esta parada na outra ponta do corpo, e isso reprovava um
+      chute cuja corrente estava correta. Agora a ponta so entra quando a
+      junta que golpeia e uma mao.
 
   NAO MEXA NO CRITERIO SO PARA PASSAR. Se algum dia ele for afrouxado, que
   seja com uma razao que valha para golpe lento tambem -- e note que golpe
@@ -208,11 +231,20 @@ for (const mira of t.aims) {
   console.log(
     `--- ${mira.who} -> ${mira.alvo} ${mira.ponto}, contato no quadro ${mira.contact}`,
   );
-  console.log("  junta            pico  desvio do contato  velocidade");
+  console.log("  junta            pico  desvio do contato  velocidade   indo para");
 
   const CADEIA = cadeiaDe(mira.joint);
-  // o lutador armado tem um elo a mais: a lamina (ver PONTA_DA_LAMINA)
-  if (t.spec.armas?.[mira.who]) CADEIA.push(PONTA_DA_LAMINA);
+  /*
+    O LUTADOR ARMADO TEM UM ELO A MAIS, MAS SO QUANDO GOLPEIA COM A MAO.
+
+    A lamina e extensao do BRACO, e nao do corpo. Anexar a ponta a qualquer
+    corrente de um lutador armado punia os CHUTES dele: a corrente
+    hip -> joelho -> pe terminava na espada, que naquele golpe esta parada na
+    outra ponta do corpo. Era assim que `cadeia` reprovava um chute correto em
+    `laminas`, com a ponta cravando pico 9 quadros depois do pe.
+  */
+  const comLamina = mira.joint === "handFront" || mira.joint === "handBack";
+  if (t.spec.armas?.[mira.who] && comLamina) CADEIA.push(PONTA_DA_LAMINA);
   const picos: { junta: JointName; frame: number; v: number }[] = [];
   for (const junta of CADEIA) {
     let melhor = { v: 0, f: de };
@@ -226,7 +258,7 @@ for (const mira of t.aims) {
     console.log(
       `  ${junta.padEnd(15)} ${String(melhor.f).padStart(4)}  ` +
         `${String(melhor.f - mira.contact).padStart(8)}          ` +
-        `${melhor.v.toFixed(0).padStart(5)}`,
+        `${melhor.v.toFixed(0).padStart(5)}   ${poseEm(mira.who, melhor.f)}`,
     );
   }
 
