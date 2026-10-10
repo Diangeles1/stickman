@@ -773,35 +773,41 @@ const ROTEIROS: Record<string, Roteiro> = {
     armas: "ambos",
     tema: "duelo de laminas",
     beats: [
+      /*
+        UM DUELO DE ESPADA E FEITO DE APARAS, e nao de golpes alternados.
+
+        A primeira versao deste roteiro tinha UM bloqueio em catorze beats:
+        os dois revezavam cortes que sempre entravam, e o resultado lia como
+        dois bonecos se acertando em turnos. Lamina contra lamina e a imagem
+        que define uma luta de espada, e o motor ja sabe faze-la -- ha
+        tratamento proprio para corte alto aparado acima da cabeca (ver
+        core/contact).
+
+        Agora sao quatro defesas em dezesseis beats, e cada uma abre a acao
+        de quem defendeu (ver scripts/defesa.mts). A luta vira pergunta e
+        resposta.
+      */
       { type: "tecnica", tecnica: "encarar", gelo: A, fogo: B },
-      { type: "attack", attacker: A, target: B, move: "corteSobe" },
+      /*
+        O CORTE NA CARA ABRE A LUTA. Nenhum dos quinze cortes dos roteiros
+        declarava alvo, entao nenhum ia no rosto -- e o corte ascendente no
+        rosto e a imagem mais reconhecivel de um duelo de katana. Conferido
+        em `contato`: ele fecha.
+      */
+      { type: "attack", attacker: A, target: B, move: "corteSobe", targetPoint: "head" },
       { type: "blocked", attacker: B, target: A, move: "corteDesce" },
-      // quem bloqueou e quem age (ver scripts/defesa.mts)
       { type: "attack", attacker: A, target: B, move: "corteLateral" },
+      { type: "blocked", attacker: A, target: B, move: "corteRapido" },
+      { type: "attack", attacker: B, target: A, move: "corteDesce" },
       { type: "tecnica", tecnica: "corteADistancia", gelo: B, fogo: A },
       { type: "recover", who: A, duration: 30 },
-      { type: "attack", attacker: B, target: A, move: "corteRapido" },
       { type: "dodged", attacker: B, target: A, move: "corteSobe" },
-      /*
-        O CORTE QUE DESCE NAO FECHA NESTA POSICAO, e as duas saidas foram
-        medidas antes de eu escolher.
-
-        Sem alvo declarado ele termina na altura das PERNAS, e a perna fica
-        atras do corpo do adversario a qualquer distancia util de espada:
-        `contato` acusou a ponta parando a 68 unidades do eixo precisando de
-        29. Declarando `targetPoint: "chest"` fica MUITO pior -- 219 unidades
-        --, porque a distancia de combate passa a ser calculada para um ponto
-        alto enquanto a lamina de um corte descendente acaba baixa.
-
-        O corte LATERAL chega no tronco pelo lado, que e o que esta virado
-        para quem ataca. O corte que desce continua existindo no motor e no
-        roteiro `laminaNua`, onde a posicao de onde ele sai e outra.
-      */
       { type: "attack", attacker: A, target: B, move: "corteLateral" },
+      { type: "blocked", attacker: A, target: B, move: "corteSobe" },
+      { type: "attack", attacker: B, target: A, move: "corteRapido" },
       { type: "tecnica", tecnica: "cercoEmProfundidade", gelo: A, fogo: B },
-      { type: "attack", attacker: B, target: A, move: "corteLateral" },
+      { type: "attack", attacker: A, target: B, move: "corteSobe", targetPoint: "head" },
       { type: "tecnica", tecnica: "azulVermelho", gelo: A, fogo: B },
-      { type: "attack", attacker: A, target: B, move: "corteRapido" },
       { type: "attack", attacker: B, target: A, move: "corteSobe" },
     ],
   },
