@@ -16,6 +16,7 @@
 
 import { corpoNoQuadro, juntasDoCorpo } from "../src/animation/corpo";
 import { CADEIA_DO_MEMBRO } from "../src/characters/skeleton";
+import { geometriaDaLamina } from "../src/characters/Katana";
 import { compilar } from "../src/core/timeline";
 import type { FighterId, JointName } from "../src/core/types";
 import { escolherLuta } from "./lutas.mjs";
@@ -28,6 +29,19 @@ import { escolherLuta } from "./lutas.mjs";
  * quadril -> tronco -> ombro -> cotovelo -> punho; a do chute e
  * quadril -> tronco -> joelho -> pe.
  */
+/**
+ * A CORRENTE DE UM LUTADOR ARMADO TERMINA NA LAMINA, e nao no punho.
+ *
+ * A katana sai cem unidades de pose da mao e e o ultimo elo do chicote: a
+ * energia vai do chao ate a ponta. Medir ate o punho e parar a conta um elo
+ * antes do fim -- e justamente o elo que mais se move.
+ *
+ * E a mesma correcao que scripts/coreografia.mts precisou: as reguas foram
+ * escritas quando o motor so tinha maos e pes, e a arma ficou de fora das
+ * duas.
+ */
+const PONTA_DA_LAMINA = "pontaDaLamina" as JointName;
+
 const cadeiaDe = (ponta: JointName): JointName[] => {
   const membro = CADEIA_DO_MEMBRO[ponta] ?? ["hip", ponta];
   const lista: JointName[] = ["hip", "neck"];
@@ -39,8 +53,14 @@ const { nome: qual, spec } = escolherLuta(process.argv[2], "benchmark");
 const t = compilar(spec);
 
 /** Posicao de uma junta no mundo, no quadro pedido. */
-const juntaEm = (id: FighterId, frame: number, junta: JointName) =>
-  juntasDoCorpo(corpoNoQuadro(t, id, frame))[junta];
+const juntaEm = (id: FighterId, frame: number, junta: JointName) => {
+  const c = corpoNoQuadro(t, id, frame);
+  if (junta === PONTA_DA_LAMINA) {
+    const g = geometriaDaLamina(c);
+    return { x: g.mao.x + g.dir.x * g.comprimento, y: g.mao.y + g.dir.y * g.comprimento };
+  }
+  return juntasDoCorpo(c)[junta];
+};
 
 console.log(`luta: ${qual}\n`);
 
@@ -191,6 +211,8 @@ for (const mira of t.aims) {
   console.log("  junta            pico  desvio do contato  velocidade");
 
   const CADEIA = cadeiaDe(mira.joint);
+  // o lutador armado tem um elo a mais: a lamina (ver PONTA_DA_LAMINA)
+  if (t.spec.armas?.[mira.who]) CADEIA.push(PONTA_DA_LAMINA);
   const picos: { junta: JointName; frame: number; v: number }[] = [];
   for (const junta of CADEIA) {
     let melhor = { v: 0, f: de };

@@ -547,6 +547,26 @@ export const quadroDoDesenho = (
 
     Com o golpe inteiro em 1s os dois relogios viram um so.
   */
+  /*
+    QUEM ESTA ARMADO DESENHA EM TODO QUADRO, e nao so durante o golpe.
+
+    A lamina e uma ALAVANCA: ela sai cem unidades de pose da mao, entao uma
+    mudanca de angulo que leva o punho a cem unidades leva a ponta a
+    trezentas. Segurar a pose de dois em dois quadros e o que da ao resto do
+    motor a leitura de desenho a mao -- com a espada na mao vira outra coisa.
+
+    Medido num corte do roteiro `laminas`: durante a ELEVACAO, que acontece
+    fora da janela da mira e por isso caia no desenho em 2s, a ponta andava
+    148, 259, 345, 329 e 211 unidades POR DESENHO, com os quadros impares
+    todos em zero. Trezentas unidades de salto por desenho nao leem como
+    corte rapido, leem como lamina teleportando.
+
+    O golpe em si ja era desenhado em todo quadro (a excecao logo abaixo).
+    Esta regra estende isso ao lutador armado inteiro, porque com a espada a
+    parte lenta do movimento tambem tem ponta rapida.
+  */
+  if (timeline.spec.armas?.[id]) return frame;
+
   const golpeando = timeline.aims.some(
     (m) => m.who === id && frame >= m.from && frame <= m.to,
   );
