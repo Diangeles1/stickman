@@ -782,7 +782,22 @@ const ROTEIROS: Record<string, Roteiro> = {
       { type: "recover", who: A, duration: 30 },
       { type: "attack", attacker: B, target: A, move: "corteRapido" },
       { type: "dodged", attacker: B, target: A, move: "corteSobe" },
-      { type: "attack", attacker: A, target: B, move: "corteDesce" },
+      /*
+        O CORTE QUE DESCE NAO FECHA NESTA POSICAO, e as duas saidas foram
+        medidas antes de eu escolher.
+
+        Sem alvo declarado ele termina na altura das PERNAS, e a perna fica
+        atras do corpo do adversario a qualquer distancia util de espada:
+        `contato` acusou a ponta parando a 68 unidades do eixo precisando de
+        29. Declarando `targetPoint: "chest"` fica MUITO pior -- 219 unidades
+        --, porque a distancia de combate passa a ser calculada para um ponto
+        alto enquanto a lamina de um corte descendente acaba baixa.
+
+        O corte LATERAL chega no tronco pelo lado, que e o que esta virado
+        para quem ataca. O corte que desce continua existindo no motor e no
+        roteiro `laminaNua`, onde a posicao de onde ele sai e outra.
+      */
+      { type: "attack", attacker: A, target: B, move: "corteLateral" },
       { type: "tecnica", tecnica: "cercoEmProfundidade", gelo: A, fogo: B },
       { type: "attack", attacker: B, target: A, move: "corteLateral" },
       { type: "tecnica", tecnica: "azulVermelho", gelo: A, fogo: B },

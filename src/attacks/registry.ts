@@ -36,7 +36,7 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     name: "corteSobe",
     pose: "corteSobe",
     carga: "cargaBaixa",
-    windup: 12,
+    windup: 24,
     strike: 12,
     recover: 14,
     contactAt: 5,
@@ -49,11 +49,40 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     lamina: 100,
     seguimento: { x: 0.6, y: -1 },
   }),
+/*
+  A PREPARACAO DE UM CORTE E LONGA, E ISSO VEIO DE REFERENCIA.
+
+  Guias de animacao de luta com lamina convergem num numero: a preparacao
+  dura cerca de CINCO VEZES o trecho que vai do inicio do golpe ao contato, e
+  "se o ataque parece flutuante, e essa razao que esta errada". A mesma
+  referencia diz que o peso mora no SEGUIMENTO -- depois do contato a lamina
+  continua viajando e arrasta o corpo, em vez de voltar para a guarda.
+  (mocaponline.com/blogs/mocap-news/sword-melee-animation-guide e
+  animationreference.org/blog/sword-animation-reference-guide)
+
+  Medido no que o motor tinha, como razao windup : contactAt:
+
+    punchHeavy      24 : 6  = 4.0    <- o golpe mais pesado ja estava certo
+    uppercut        16 : 8  = 2.0
+    corteDesce      14 : 5  = 2.8
+    corteSobe       12 : 5  = 2.4
+    corteLateral    12 : 5  = 2.4
+    corteRapido      5 : 3  = 1.67
+    punchFast        4 : 4  = 1.0    <- jab, e certo que seja assim
+
+  Ou seja, um corte de katana estava sendo preparado como golpe MEDIO, entre
+  o jab e o soco pesado. Um corte e a acao mais comprometida que existe numa
+  luta de espada: o corpo inteiro arma e nao da para desarmar no meio.
+
+  O `corteRapido` fica de fora desta conta de proposito. Ele existe para
+  contrastar com o corte pesado, e o contraste de TEMPO e a razao de ele
+  existir -- so subiu o bastante para nao ler como flutuante.
+*/
   corteDesce: def({
     name: "corteDesce",
     pose: "corteDesce",
     carga: "cargaKatana",
-    windup: 14,
+    windup: 24,
     strike: 12,
     recover: 16,
     contactAt: 5,
@@ -76,7 +105,7 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     name: "corteRapido",
     pose: "corteRapido",
     carga: "guardaKatana",
-    windup: 5,
+    windup: 9,
     strike: 7,
     recover: 7,
     contactAt: 3,
@@ -115,7 +144,7 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     name: "corteLateral",
     pose: "corteLateral",
     carga: "cargaKatana",
-    windup: 12,
+    windup: 22,
     strike: 12,
     recover: 14,
     contactAt: 5,
