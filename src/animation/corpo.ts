@@ -514,6 +514,7 @@ export const POSES_SOLTAS = new Set<PoseName>([
   "kick", "kickLow", "kickHigh", "spinKick",
   "knee", "elbow", "airAttack", "diveAttack",
   "hitHead", "hitChest", "hitBody", "hitLeg",
+  "cortadoAlto", "cortadoTronco", "cortadoPerna",
   "knockback", "launched", "stagger",
 ]);
 

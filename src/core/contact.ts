@@ -115,6 +115,26 @@ export const POSE_DA_REACAO: Record<TipoDeReacao, PoseName> = {
 };
 
 /**
+ * Pose de reacao de quem leva um corte, em vez de um soco.
+ *
+ * Um soco EMPURRA e uma lamina ABRE, e as poses de cima sao todas de
+ * empurrao: cabeca, bracos e quadril recuando juntos. O motor ja distinguia
+ * as duas coisas na FORCA (um corte empurra 170 a 220 unidades contra 620 do
+ * soco pesado) e nao distinguia na POSE -- quem era cortado reagia como quem
+ * tinha levado um gancho.
+ *
+ * O corte no peito e o no tronco caem na mesma pose de proposito: a diferenca
+ * entre eles e de altura da ferida, e o corpo dobra em volta dela do mesmo
+ * jeito. Ja o corte alto joga a cabeca, que e outra leitura.
+ */
+export const POSE_DA_REACAO_CORTADA: Record<TipoDeReacao, PoseName> = {
+  headHit: "cortadoAlto",
+  chestHit: "cortadoTronco",
+  bodyHit: "cortadoTronco",
+  legHit: "cortadoPerna",
+};
+
+/**
  * Onde a junta atacante esta, em relacao ao quadril, na pose do golpe.
  *
  * Positivo = a frente do quadril, no sentido para o qual o lutador olha.

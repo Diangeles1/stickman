@@ -190,13 +190,18 @@ const atrasoPara = (destino: PoseName): PerfilDeAtraso | undefined => {
     // corpo atingido: a forca entra no PONTO DO GOLPE e se espalha a partir
     // dele (ver ATRASO_REACAO_*)
     case "hitHead":
+    // as reacoes de corte usam os mesmos perfis: a forca nasce no ponto
+    // atingido e se espalha, e isso nao muda por ser lamina
+    case "cortadoAlto":
       return ATRASO_REACAO_CABECA;
     case "hitChest":
+    case "cortadoTronco":
       return ATRASO_REACAO_PEITO;
     case "hitBody":
     case "launched":
       return ATRASO_REACAO_TRONCO;
     case "hitLeg":
+    case "cortadoPerna":
       return ATRASO_REACAO_PERNA;
     case "knockback":
     case "groundHit":
@@ -254,6 +259,9 @@ const curvaPara = (destino: PoseName): ((t: number) => number) => {
     case "hitChest":
     case "hitBody":
     case "hitLeg":
+    case "cortadoAlto":
+    case "cortadoTronco":
+    case "cortadoPerna":
       return estalo;
     case "knockback":
     case "downed":

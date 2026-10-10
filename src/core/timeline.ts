@@ -37,6 +37,7 @@ import { esmagarNoChao } from "./tecnicas/esmagar-no-chao";
 import {
   ALVO_PADRAO,
   POSE_DA_REACAO,
+  POSE_DA_REACAO_CORTADA,
   REACAO_DO_PONTO,
   distanciaDeCombate,
   pontoDeContato,
@@ -851,7 +852,17 @@ export const compilar = (spec: FightSpec): Timeline => {
       const f2 = frameContato + s(0.16);
       const f3 = frameContato + s(0.2);
       const fim = Math.max(f3 + 4, frameContato + voo);
-      estado[alvo].pose = POSE_DA_REACAO[REACAO_DO_PONTO[ponto]];
+      /*
+        QUEM LEVA UM CORTE NAO REAGE COMO QUEM LEVA UM SOCO.
+
+        A pose de reacao vinha sempre do mesmo mapa, e aquele mapa e todo de
+        EMPURRAO -- cabeca, bracos e quadril recuando juntos. Uma lamina nao
+        empurra, ela abre. O motor ja sabia disso na forca (corte empurra 170
+        a 220 contra 620 do soco pesado) e nao sabia na pose.
+      */
+      estado[alvo].pose = def.lamina
+        ? POSE_DA_REACAO_CORTADA[REACAO_DO_PONTO[ponto]]
+        : POSE_DA_REACAO[REACAO_DO_PONTO[ponto]];
       estado[alvo].x = xAntes + direcao * empurrao * 0.1;
       chave(alvo, f1);
 

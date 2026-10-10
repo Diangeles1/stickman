@@ -1148,6 +1148,73 @@ const ESCRITAS: Record<PoseName, Pose> = {
    * para FRENTE, por cima do punho. E a leitura de "ficou sem ar", nao a de
    * "levou um tapa".
    */
+  /*
+    AS TRES REACOES DE QUEM LEVA UM CORTE.
+
+    Ate aqui quem era cortado reagia com a pose de quem leva um SOCO. As duas
+    coisas nao se parecem: um soco EMPURRA -- e por isso `hitHead` e
+    `hitChest` levam a cabeca, os bracos e o quadril todos para -x -- e uma
+    lamina nao empurra, ela ABRE. O empurrao dos cortes ja refletia isso no
+    motor (knockback 170 a 220 contra 620 do soco pesado); so a pose nao.
+
+    O que muda nestas tres, contra as de soco:
+
+      O QUADRIL QUASE NAO ANDA. O corpo nao foi deslocado, foi aberto.
+      OS BRACOS ABREM PARA FORA, um para cada lado, em vez de recuarem
+      juntos: e o reflexo de quem foi cortado, nao de quem foi empurrado.
+      O TRONCO DOBRA EM TORNO DA LINHA DO CORTE -- para tras no corte alto,
+      para a frente no corte no tronco, e para baixo no corte na perna.
+
+    Elas usam os mesmos perfis de atraso das reacoes de soco (a forca nasce
+    no ponto atingido e se espalha) e a mesma curva `estalo`, porque isso
+    nao e o que estava errado.
+  */
+
+  /** corte alto: a cabeca e jogada para tras e para cima, o peito abre */
+  cortadoAlto: p({
+    hip: { x: -8, y: 6 },
+    neck: { x: -14, y: -58 },
+    head: { x: -56, y: -96 },
+    elbowFront: { x: 16, y: -44 },
+    handFront: { x: 44, y: -72 },
+    elbowBack: { x: -46, y: -40 },
+    handBack: { x: -82, y: -58 },
+    kneeFront: { x: 28, y: 52 },
+    footFront: { x: 48, y: 92 },
+    kneeBack: { x: -30, y: 54 },
+    footBack: { x: -58, y: 90 },
+  }),
+
+  /** corte no tronco: o corpo dobra em volta da ferida, os bracos saem */
+  cortadoTronco: p({
+    hip: { x: -18, y: 20 },
+    neck: { x: -6, y: -40 },
+    head: { x: 16, y: -66 },
+    elbowFront: { x: 20, y: -26 },
+    handFront: { x: 52, y: -30 },
+    elbowBack: { x: -34, y: -22 },
+    handBack: { x: -66, y: -26 },
+    kneeFront: { x: 22, y: 58 },
+    footFront: { x: 42, y: 92 },
+    kneeBack: { x: -36, y: 56 },
+    footBack: { x: -68, y: 90 },
+  }),
+
+  /** corte na perna: ela cede e o corpo afunda daquele lado */
+  cortadoPerna: p({
+    hip: { x: -10, y: 34 },
+    neck: { x: -4, y: -28 },
+    head: { x: 6, y: -62 },
+    elbowFront: { x: 22, y: -20 },
+    handFront: { x: 48, y: -6 },
+    elbowBack: { x: -30, y: -14 },
+    handBack: { x: -56, y: 4 },
+    kneeFront: { x: 34, y: 62 },
+    footFront: { x: 30, y: 92 },
+    kneeBack: { x: -30, y: 60 },
+    footBack: { x: -62, y: 90 },
+  }),
+
   hitChest: p({
     hip: { x: -26, y: 16 },
     neck: { x: -20, y: -44 },
