@@ -776,58 +776,55 @@ const ROTEIROS: Record<string, Roteiro> = {
       /*
         UM DUELO DE ESPADA E FEITO DE APARAS, e nao de golpes alternados.
 
-        A primeira versao deste roteiro tinha UM bloqueio em catorze beats:
-        os dois revezavam cortes que sempre entravam, e o resultado lia como
-        dois bonecos se acertando em turnos. Lamina contra lamina e a imagem
-        que define uma luta de espada, e o motor ja sabe faze-la -- ha
-        tratamento proprio para corte alto aparado acima da cabeca (ver
-        core/contact).
+        A primeira versao tinha UM bloqueio em catorze beats: os dois
+        revezavam cortes que sempre entravam, e aquilo lia como turnos, nao
+        como troca. Lamina contra lamina e a imagem que define uma luta de
+        espada, e o motor ja sabe faze-la -- ha tratamento proprio para corte
+        alto aparado acima da cabeca (ver core/contact).
 
-        Agora sao quatro defesas em dezesseis beats, e cada uma abre a acao
-        de quem defendeu (ver scripts/defesa.mts). A luta vira pergunta e
-        resposta.
+        E ELE PRECISA SAIR DO CHAO, que foi a segunda coisa que faltava.
+        Medido com scripts/palco.mts, este era o roteiro mais achatado e mais
+        apertado do canal: 2405 unidades de largura contra 5443 do `vale`,
+        464 de altura contra 777, e UM POR CENTO dos quadros no ar contra
+        sete. Dois caras em pe, na mesma linha, por cinquenta segundos. As
+        cenas que ele tinha -- encarar, corte a distancia, cerco -- sao todas
+        rasteiras.
+
+        Agora a luta sobe duas vezes: a esquiva com pulo que leva a
+        perseguicao no ar, e o corte em MERGULHO, que e o unico golpe do
+        motor em que a altura e a carga e que nunca tinha sido usado.
       */
       { type: "tecnica", tecnica: "encarar", gelo: A, fogo: B },
       /*
-        A ENCARADA E UM PAR DE PLANOS, um em cada rosto.
-
-        Guias de montagem de luta descrevem a estrutura como aproximacao,
-        ENCARADA, primeira troca e virada -- e a encarada e feita cortando de
-        um rosto para o outro, nao com os dois no quadro. "O plano da
-        encarada tem que parecer lento."
-
-        Ate aqui a luta inteira era um plano continuo: a camera acompanhava,
-        fechava e abria, mas nunca CORTAVA. Isto e a primeira montagem do
-        canal.
+        A ENCARADA E UM PAR DE PLANOS, um em cada rosto. Guias de montagem
+        descrevem a estrutura como aproximacao, ENCARADA, primeira troca e
+        virada -- e a encarada e feita cortando de um rosto para o outro.
       */
       { type: "plano", who: A, duration: 34, escala: "rosto" },
       { type: "plano", who: B, duration: 30, escala: "rosto" },
       /*
-        O CORTE NA CARA ABRE A LUTA. Nenhum dos quinze cortes dos roteiros
-        declarava alvo, entao nenhum ia no rosto -- e o corte ascendente no
-        rosto e a imagem mais reconhecivel de um duelo de katana. Conferido
-        em `contato`: ele fecha.
+        O CORTE NA CARA ABRE A LUTA. Nenhum corte dos roteiros declarava
+        alvo, entao nenhum ia no rosto -- e o corte ascendente no rosto e a
+        imagem mais reconhecivel de um duelo de katana.
       */
       { type: "attack", attacker: A, target: B, move: "corteSobe", targetPoint: "head" },
       { type: "blocked", attacker: B, target: A, move: "corteDesce" },
-      /*
-        O PLANO FECHADO PERTENCE A QUEM RECEBEU, e nao a quem deu -- e a
-        regra que os guias de montagem repetem. Aqui B acabou de ser cortado
-        no rosto e aparou o contra-golpe; o rosto dele e o que interessa.
-      */
+      // o plano fechado pertence a quem RECEBEU, e nao a quem deu
       { type: "plano", who: B, duration: 26, escala: "rosto" },
       { type: "attack", attacker: A, target: B, move: "corteLateral" },
-      { type: "blocked", attacker: A, target: B, move: "corteRapido" },
-      { type: "attack", attacker: B, target: A, move: "corteDesce" },
-      { type: "tecnica", tecnica: "corteADistancia", gelo: B, fogo: A },
-      { type: "recover", who: A, duration: 30 },
-      { type: "dodged", attacker: B, target: A, move: "corteSobe" },
-      { type: "attack", attacker: A, target: B, move: "corteLateral" },
+      // a esquiva com PULO e o que tira a luta do chao, e ela emenda na
+      // perseguicao: quem saltou ja esta no ar quando a cena comeca
+      { type: "dodged", attacker: A, target: B, move: "corteRapido", pulo: true },
+      { type: "tecnica", tecnica: "perseguicaoNoAr", gelo: B, fogo: A },
+      { type: "recover", who: A, duration: 34 },
       { type: "blocked", attacker: A, target: B, move: "corteSobe" },
       { type: "attack", attacker: B, target: A, move: "corteRapido" },
-      { type: "tecnica", tecnica: "cercoEmProfundidade", gelo: A, fogo: B },
-      { type: "attack", attacker: A, target: B, move: "corteSobe", targetPoint: "head" },
+      { type: "tecnica", tecnica: "corteADistancia", gelo: A, fogo: B },
+      { type: "recover", who: B, duration: 30 },
+      // O CORTE EM MERGULHO: o unico golpe do motor carregado pela ALTURA
+      { type: "attack", attacker: A, target: B, move: "corteMergulho" },
       { type: "tecnica", tecnica: "azulVermelho", gelo: A, fogo: B },
+      { type: "attack", attacker: A, target: B, move: "corteSobe", targetPoint: "head" },
       { type: "attack", attacker: B, target: A, move: "corteSobe" },
     ],
   },
