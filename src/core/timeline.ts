@@ -572,6 +572,20 @@ export const compilar = (spec: FightSpec): Timeline => {
     const alem = opcoes.esquivado ? 2.2 : 1;
     estado[atacante].x += lado * RECUO_DA_CARGA * 0.2 * perfil.seguimento * alem;
     chave(atacante, frameContato + parada, 1 + 0.18 * perfil.seguimento * alem);
+    /*
+      A LAMINA TERMINA O GOLPE DEPOIS DO CONTATO.
+
+      O `avanco` do AimEvent, que leva o punho alem do alvo, nao vale para
+      arma: a cinematica inversa nao entra em golpe de lamina. Sem isto a
+      espada para exatamente onde a pose do corte a deixa -- medido na ponta,
+      742 unidades num quadro e 18 no do contato, depois 0, 2, 7. Ela morre
+      na pele do adversario, que e o que guias de animacao de espada apontam
+      como a causa de corte sem peso.
+    */
+    if (def.poseDeSeguimento) {
+      estado[atacante].pose = def.poseDeSeguimento;
+      chave(atacante, frameContato + parada + Math.max(2, Math.round(recover * 0.35)));
+    }
     if (aereo) {
       // pousa um pouco a frente, agachado: o pouso absorve a queda
       estado[atacante].pose = "land";

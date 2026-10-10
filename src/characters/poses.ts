@@ -327,6 +327,72 @@ const ESCRITAS: Record<PoseName, Pose> = {
     footFront: { x: 52, y: 75 },
   }),
 
+  /*
+    AS TRES POSES DE SEGUIMENTO DA LAMINA.
+
+    Guias de animacao de luta com espada sao diretos: "evite animacao fraca
+    garantindo seguimento de verdade (NAO parar no contato), com a inercia
+    levando a arma alem do alvo", e o corte horizontal passa de 30 a 60 graus
+    alem do centro enquanto o descendente "segue em direcao ao chao antes de
+    reverter".
+
+    Medido na ponta da lamina antes destas poses existirem: 226, 742 e entao
+    18 no quadro do contato, com 0, 2 e 7 nos seguintes. A espada parava na
+    pele do adversario.
+
+    DUAS SAIDAS MAIS BARATAS FORAM TENTADAS E NAO FUNCIONARAM. O `avanco` do
+    AimEvent, que e o que leva um PUNHO alem do alvo, nao vale para arma (a
+    cinematica inversa nao entra em golpe de lamina). E o exagero da chave
+    pos-contato nao move a ponta: varrido em 0.18, 0.5 e 0.9, a ponta fez
+    exatamente os mesmos 18, 0, 2, 7 nos tres. Esticar um braco que ja esta
+    estendido nao gira a lamina.
+
+    O que gira a lamina e a pose. Em todas as tres as DUAS MAOS continuam no
+    cabo: um greatsword nao larga uma mao no meio do golpe.
+  */
+
+  /** o corte que sobe continua subindo, e o tronco acompanha para tras */
+  corteSobeFim: p({
+    neck: { x: 16, y: -66 },
+    head: { x: 20, y: -104 },
+    elbowFront: { x: 40, y: -70 },
+    handFront: { x: 62, y: -96 },
+    elbowBack: { x: 22, y: -52 },
+    handBack: { x: 46, y: -84 },
+    kneeBack: { x: -12, y: 48 },
+    footBack: { x: -54, y: 74 },
+    kneeFront: { x: 42, y: 27 },
+    footFront: { x: 52, y: 74 },
+  }),
+
+  /** o corte que desce segue em direcao ao chao, e o corpo afunda atras dele */
+  corteDesceFim: p({
+    neck: { x: 26, y: -60 },
+    head: { x: 40, y: -94 },
+    elbowFront: { x: 50, y: -44 },
+    handFront: { x: 58, y: -14 },
+    elbowBack: { x: 34, y: -36 },
+    handBack: { x: 46, y: -12 },
+    kneeBack: { x: -8, y: 50 },
+    footBack: { x: -50, y: 74 },
+    kneeFront: { x: 44, y: 30 },
+    footFront: { x: 54, y: 74 },
+  }),
+
+  /** o corte lateral passa alem do centro e arrasta o tronco junto */
+  corteLateralFim: p({
+    neck: { x: 6, y: -70 },
+    head: { x: 10, y: -108 },
+    elbowFront: { x: 36, y: -52 },
+    handFront: { x: 70, y: -36 },
+    elbowBack: { x: -16, y: -50 },
+    handBack: { x: 52, y: -34 },
+    kneeBack: { x: -14, y: 49 },
+    footBack: { x: -56, y: 75 },
+    kneeFront: { x: 40, y: 28 },
+    footFront: { x: 50, y: 75 },
+  }),
+
   /**
    * ABSORVER O BLOQUEIO. O golpe parou na guarda, mas a forca nao sumiu: ela
    * entra pelo braco e desce ate o pe.

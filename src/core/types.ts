@@ -103,6 +103,9 @@ export type PoseName =
   | "corteSobe"
   | "corteDesce"
   | "corteLateral"
+  | "corteSobeFim"
+  | "corteDesceFim"
+  | "corteLateralFim"
   | "corteRapido"
   | "corteMergulho"
   // poderes
@@ -329,6 +332,16 @@ export type AttackDef = {
    * esticava na horizontal e o golpe lia como jab.
    */
   seguimento?: Vec2;
+  /**
+   * A pose em que o golpe TERMINA, depois do contato.
+   *
+   * Existe para a lamina. Num golpe de mao o seguimento vem do `avanco` do
+   * AimEvent, que empurra a ponta do membro alem do alvo pela cinematica
+   * inversa -- e a IK nao entra em golpe de arma. Sem uma pose depois do
+   * contato, a espada para exatamente onde a pose do corte a deixa, que e em
+   * cima do adversario.
+   */
+  poseDeSeguimento?: PoseName;
   /**
    * Golpe AEREO: quanto o quadril esta acima do apoio normal no quadro do
    * contato. Sem isto a distancia era calculada como se o golpe fosse dado

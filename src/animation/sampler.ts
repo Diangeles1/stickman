@@ -277,6 +277,33 @@ const curvaPara = (destino: PoseName): ((t: number) => number) => {
     case "knee":
     case "elbow":
     case "charge":
+    /*
+      OS CORTES DE KATANA FALTAVAM AQUI, e e a diferenca entre corte com peso
+      e corte que morre no alvo.
+
+      Todo golpe de mao estava nesta lista e os cinco cortes caiam no
+      `default: suave`, que e uma curva que DESACELERA no fim. O
+      `atrasoPara` logo acima sempre teve caso para eles (ATRASO_DO_CORTE),
+      entao o esquecimento foi so aqui.
+
+      Medido na ponta da lamina, quadro a quadro ate o contato: 107, 568,
+      396, 32. Ela chega ao alvo ja freando e fica em 2, 5, 2 nos quadros
+      seguintes -- a lamina para na pele do adversario. Guias de animacao de
+      luta com lamina sao diretos sobre isso: "evite animacao fraca
+      garantindo seguimento de verdade (nao parar no contato), com a inercia
+      levando a arma ALEM do alvo".
+
+      `disparo` acelera ate o contato e pode passar de 1, que e o que o
+      seguimento precisa. Para a lamina isso importa mais do que para o
+      punho: o avanco do `AimEvent` nao vale para arma (a cinematica inversa
+      nao entra em golpe de lamina, ver `recuo` em core/timeline), entao a
+      unica coisa que leva a espada alem do alvo e a curva.
+    */
+    case "corteSobe":
+    case "corteDesce":
+    case "corteLateral":
+    case "corteRapido":
+    case "corteMergulho":
       return disparo;
     // lancamento de poder: o corpo empurra e a energia sai; com a curva suave
     // o gesto chegava ja desacelerando, sem forca nenhuma no fim

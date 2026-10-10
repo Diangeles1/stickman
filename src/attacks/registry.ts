@@ -48,6 +48,7 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     somBloqueio: "clang",
     lamina: 100,
     seguimento: { x: 0.6, y: -1 },
+      poseDeSeguimento: "corteSobeFim",
   }),
 /*
   A PREPARACAO DE UM CORTE E LONGA, E ISSO VEIO DE REFERENCIA.
@@ -94,6 +95,7 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     somBloqueio: "clang",
     lamina: 100,
     seguimento: { x: 0.5, y: 1 },
+      poseDeSeguimento: "corteDesceFim",
   }),
   /**
    * CORTE RAPIDO: a carga dele E a guarda. Sem preparacao propria, ele sai em
@@ -155,6 +157,7 @@ export const ATAQUES: Record<AttackName, AttackDef> = {
     sound: "corte",
     somBloqueio: "clang",
     lamina: 100,
+      poseDeSeguimento: "corteLateralFim",
   }),
 
   punch: def({
