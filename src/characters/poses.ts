@@ -264,8 +264,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
     head: { x: -2, y: -112 },
     elbowFront: { x: 40, y: -72 },
     handFront: { x: 72, y: -72 },
-    elbowBack: { x: 22, y: -50 },
-    handBack: { x: 48, y: -62 },
+    elbowBack: { x: 22, y: -74 },
+    handBack: { x: 64, y: -66 },
     kneeBack: { x: -9, y: 49 },
     footBack: { x: -50, y: 76 },
     kneeFront: { x: 42, y: 28 },
@@ -281,8 +281,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
     head: { x: 34, y: -100 },
     elbowFront: { x: 44, y: -50 },
     handFront: { x: 64, y: -30 },
-    elbowBack: { x: 28, y: -40 },
-    handBack: { x: 50, y: -26 },
+    elbowBack: { x: 26, y: -52 },
+    handBack: { x: 56, y: -24 },
     kneeBack: { x: -10, y: 49 },
     footBack: { x: -52, y: 74 },
     kneeFront: { x: 43, y: 26 },
@@ -301,8 +301,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
     head: { x: 16, y: -110 },
     elbowFront: { x: 30, y: -56 },
     handFront: { x: 56, y: -56 },
-    elbowBack: { x: 4, y: -44 },
-    handBack: { x: 28, y: -50 },
+    elbowBack: { x: 12, y: -58 },
+    handBack: { x: 48, y: -50 },
     kneeBack: { x: -5, y: 50 },
     footBack: { x: -44, y: 80 },
     kneeFront: { x: 37, y: 32 },
@@ -319,13 +319,39 @@ const ESCRITAS: Record<PoseName, Pose> = {
     head: { x: 22, y: -108 },
     elbowFront: { x: 42, y: -58 },
     handFront: { x: 66, y: -58 },
-    elbowBack: { x: -10, y: -52 },
-    handBack: { x: -32, y: -42 },
+    elbowBack: { x: 24, y: -60 },
+    handBack: { x: 58, y: -52 },
     kneeBack: { x: -11, y: 49 },
     footBack: { x: -52, y: 75 },
     kneeFront: { x: 42, y: 27 },
     footFront: { x: 52, y: 75 },
   }),
+
+  /*
+    A PEGADA DE DUAS MAOS NAS POSES DE CORTE, medida e corrigida.
+
+    Uma katana e arma de DUAS MAOS, e guias de animacao de lamina pedem as
+    duas no cabo o golpe inteiro, sem soltar no meio. Medida a distancia
+    entre as duas maos em cada pose, em unidades de pose:
+
+      guardaKatana, bloqueio, carga, absorver   13 a 17   certas
+      corteDesce, corteMergulho                 31 a 32   frouxas
+      corteSobe, corteRapido                    40        frouxas
+      corteLateralFim                           59        frouxa
+      corteLateral                              97        UMA MAO SO
+
+    E o `corteLateral` e o corte mais usado dos roteiros. A mao de tras
+    estava a noventa e sete unidades do cabo: o lutador dava um golpe de
+    espada de duas maos com uma so, e com a outra para tras.
+
+    A correcao segue o padrao da `guardaKatana`, que ja estava certa: a mao
+    de tras agarra o cabo DEZESSEIS unidades abaixo da da frente, na direcao
+    do cotovelo, e o cotovelo de tras fica atras e um pouco abaixo do da
+    frente.
+
+    CORRIDA E POUSO FICARAM DE FORA de proposito (65 a 76 unidades): ninguem
+    corre nem aterrissa segurando o cabo com as duas maos.
+  */
 
   /*
     AS TRES POSES DE SEGUIMENTO DA LAMINA.
@@ -357,8 +383,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
     head: { x: 20, y: -104 },
     elbowFront: { x: 40, y: -70 },
     handFront: { x: 62, y: -96 },
-    elbowBack: { x: 22, y: -52 },
-    handBack: { x: 46, y: -84 },
+    elbowBack: { x: 22, y: -72 },
+    handBack: { x: 54, y: -90 },
     kneeBack: { x: -12, y: 48 },
     footBack: { x: -54, y: 74 },
     kneeFront: { x: 42, y: 27 },
@@ -371,8 +397,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
     head: { x: 40, y: -94 },
     elbowFront: { x: 50, y: -44 },
     handFront: { x: 58, y: -14 },
-    elbowBack: { x: 34, y: -36 },
-    handBack: { x: 46, y: -12 },
+    elbowBack: { x: 32, y: -46 },
+    handBack: { x: 50, y: -8 },
     kneeBack: { x: -8, y: 50 },
     footBack: { x: -50, y: 74 },
     kneeFront: { x: 44, y: 30 },
@@ -385,8 +411,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
     head: { x: 10, y: -108 },
     elbowFront: { x: 36, y: -52 },
     handFront: { x: 70, y: -36 },
-    elbowBack: { x: -16, y: -50 },
-    handBack: { x: 52, y: -34 },
+    elbowBack: { x: 18, y: -54 },
+    handBack: { x: 62, y: -30 },
     kneeBack: { x: -14, y: 49 },
     footBack: { x: -56, y: 75 },
     kneeFront: { x: 40, y: 28 },
@@ -526,8 +552,8 @@ const ESCRITAS: Record<PoseName, Pose> = {
     head: { x: 40, y: -100 },
     elbowFront: { x: 48, y: -40 },
     handFront: { x: 66, y: -14 },
-    elbowBack: { x: 26, y: -40 },
-    handBack: { x: 48, y: -18 },
+    elbowBack: { x: 30, y: -42 },
+    handBack: { x: 58, y: -8 },
     kneeFront: { x: 43, y: 26 },
     footFront: { x: 52, y: 74 },
     kneeBack: { x: -10, y: 49 },
