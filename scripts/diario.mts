@@ -124,6 +124,9 @@ const descricao = (d: Duelo) => {
 
 if (!existsSync(SAIDA)) mkdirSync(SAIDA, { recursive: true });
 
+/** dias que renderizaram mas nao subiram (ver o veredito no fim do arquivo) */
+const naoPublicados: string[] = [];
+
 for (let k = 0; k < Math.max(1, proximos); k++) {
   const data = new Date(base.getTime() + k * 86400000);
   const iso = data.toISOString().slice(0, 10);
@@ -216,17 +219,26 @@ for (let k = 0; k < Math.max(1, proximos); k++) {
     que nao aparece em lugar nenhum ate o video estar publicado.
   */
   /*
-    O RENDER TEM UMA SEGUNDA TENTATIVA, e isto nasceu de uma falha de verdade.
+    O RENDER TEM TRES TENTATIVAS, e isto nasceu de falhas de verdade.
 
     O duelo de 2026-10-05 morreu com status 1 e nenhuma saida; rodando o MESMO
-    comando em seguida, funcionou. O Remotion derruba o render quando o
-    navegador headless demora mais que o limite para subir ("Timed out after
-    30000ms while setting up the headless browser"), e isso depende da maquina
-    estar ocupada, nao do video.
+    comando em seguida, funcionou. Numa execucao manual isso e um
+    aborrecimento: roda de novo. Numa tarefa diaria e um dia sem video, e
+    ninguem fica sabendo ate olhar o canal.
 
-    Numa execucao manual isso e um aborrecimento: roda de novo. Numa tarefa
-    diaria e um dia sem video, e ninguem fica sabendo ate olhar o canal. Dai o
-    limite maior e a repeticao.
+    E NAO E O `--timeout` ABAIXO QUE RESOLVE ISSO -- aqui estava escrito que
+    era, e o log do agendador desmente: a flag vai em 180000 e o erro continua
+    sendo "Timed out after 25000 ms while trying to connect to the browser".
+    Sao dois limites diferentes. `--timeout` e o de delayRender; o que estoura
+    e o de CONECTAR no Chrome, que esta fixo em 25000 dentro de
+    @remotion/renderer (open-browser.js) e nao tem flag nem variavel de
+    ambiente. Nao da para levantar sem remendar a dependencia.
+
+    Entao a repeticao e a unica alavanca, e ela e medida: em sete dias de
+    agendador, CINCO primeiras tentativas estouraram esse limite e quatro
+    foram salvas pela segunda. A que nao foi, 09/10, perdeu o dia inteiro --
+    ficou so o .txt na pasta, sem mp4. Com tres tentativas aquele dia teria
+    saido; o custo quando nada trava continua sendo zero.
   */
   const renderizar = () =>
     execFileSync(
@@ -241,18 +253,26 @@ for (let k = 0; k < Math.max(1, proximos); k++) {
         // shell come as aspas do JSON e o render morre sem explicar
         `--props=${propsJson}`,
         "--concurrency=4",
-        // o padrao e 30s e nao chega para subir o navegador com a maquina
-        // ocupada; o custo de um limite alto e zero quando nada trava
+        // limite do delayRender: o padrao de 30s nao chega com a maquina
+        // ocupada, e o custo de um limite alto e zero quando nada trava.
+        // (NAO e este o limite que derruba o render aqui -- ver a nota acima)
         "--timeout=180000",
         "--log=error",
       ],
       { cwd: RAIZ, stdio: "inherit" },
     );
-  try {
-    renderizar();
-  } catch {
-    console.log("    o render falhou; tentando uma segunda vez...");
-    renderizar();
+  const TENTATIVAS = 3;
+  for (let tentativa = 1; ; tentativa++) {
+    try {
+      renderizar();
+      break;
+    } catch (erro) {
+      if (tentativa >= TENTATIVAS) {
+        console.error(`    o render falhou ${TENTATIVAS} vezes; ${nome} ficou sem video.`);
+        throw erro;
+      }
+      console.log(`    o render falhou; tentativa ${tentativa + 1} de ${TENTATIVAS}...`);
+    }
   }
 
   /*
@@ -295,11 +315,57 @@ for (let k = 0; k < Math.max(1, proximos); k++) {
   if (temFlag("publicar")) {
     console.log("    publicando...");
     const extra = args.filter((a) => a === "--privado" || a.startsWith("--agendar="));
-    spawnSync(node, comTsx([join("scripts", "youtube.mts"), "publicar", mp4, ...extra]), {
-      cwd: RAIZ,
-      stdio: "inherit",
-    });
+    const envio = spawnSync(
+      node,
+      comTsx([join("scripts", "youtube.mts"), "publicar", mp4, ...extra]),
+      { cwd: RAIZ, stdio: "inherit" },
+    );
+    /*
+      UM ENVIO QUE FALHA TEM QUE DOER.
+
+      O resultado deste spawnSync era descartado, e `youtube.mts` sai com 2
+      quando nao consegue nem renovar o acesso. O produtor seguia em frente e
+      terminava com "codigo 0": o log do agendador dizia que o dia tinha dado
+      certo logo abaixo da linha que dizia que o token estava revogado.
+
+      Custou SEIS DIAS sem post. O refresh token foi criado em 02/10 e expirou
+      em 09/10 -- sete dias, que e o prazo do Google para app com a tela de
+      consentimento em "Testing". Os dias 10, 11 e 13 renderizaram, falharam
+      ao subir e foram registrados como sucesso; ninguem tinha motivo para
+      abrir o log.
+
+      Render que falha se descarta e se tenta de novo. ENVIO que falha deixa o
+      canal sem post naquele dia, e e a unica etapa aqui cujo prejuizo nao da
+      para recuperar depois sem alguem perceber. Entao ela grita, e o codigo
+      de saida leva a falha para quem chamou -- inclusive para o agendador.
+    */
+    if (envio.status !== 0) {
+      console.error(
+        `    FALHOU AO PUBLICAR ${nome}.mp4 (codigo ${envio.status ?? "?"}).` +
+          `
+    O video esta pronto em out/diario/${nome}.mp4 e NAO foi para o canal.`,
+      );
+      naoPublicados.push(nome);
+    }
   }
+}
+
+/*
+  O VEREDITO FINAL, depois de todos os dias.
+
+  Vem no fim e nao no meio do laco porque `--proximos=7` produz uma semana: o
+  que importa saber e quantos dias ficaram sem subir, nao parar no primeiro.
+*/
+if (naoPublicados.length > 0) {
+  console.error(
+    `
+${naoPublicados.length} video(s) NAO foram publicados: ${naoPublicados.join(", ")}` +
+      `
+Os arquivos estao em out/diario/. Se a causa foi o acesso do Google,` +
+      `
+reautorize com: npx tsx scripts/youtube.mts autorizar`,
+  );
+  process.exitCode = 1;
 }
 
 console.log(`\nTextos e instrucoes de cada dia em out/diario/*.txt`);
