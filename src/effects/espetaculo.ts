@@ -403,7 +403,7 @@ const montar = (t: Timeline): Espetaculo => {
     }
   }
 
-  const falas = narrar(t, rotulos, abertura.lute, real);
+  const falas = narrar(t, real);
   if (inicioDoFecho !== undefined) {
     // o pedido entra junto com a lona, e depois do anuncio do vencedor
     falas.push({ real: inicioDoFecho + ESPERA_DA_PERGUNTA + 40, fala: "like" });
@@ -469,82 +469,27 @@ const atingidoAnterior = (e: Espetaculo, id: FighterId, r: number): number => {
 
 // ---- narrador ---------------------------------------------------------------
 
-/** a fala entra logo DEPOIS do golpe: o impacto soa limpo e o locutor reage */
-const REACAO = 8;
 /** folga minima entre o fim de uma fala e o comeco da proxima */
 const RESPIRO = 8;
-/** falas que nunca sao cortadas por outra: os momentos da historia */
-/**
- * A FALA DE VITORIA SO EXISTE PARA QUEM TEM FALA GRAVADA.
- *
- * O narrador tem duas: "O Preto venceu!" e "O Vermelho venceu!". O codigo
- * escolhia entre as duas com um ternario -- `vencedor === "red" ? ... : ...`
- * -- e portanto QUALQUER outro lutador caia em "O Preto venceu!".
- *
- * No duelo do vale isso virava um erro na cara do espectador: a placa na tela
- * escrevia "RAVI VENCE!" e o narrador dizia "O Preto venceu!", num video onde
- * nao existe nenhum preto. O ternario nasceu num mundo de dois lutadores e
- * ninguem o revisou quando o motor passou a ter sete.
- *
- * Sem fala para o vencedor, o certo e o SILENCIO: a placa ja diz quem ganhou,
- * e narracao errada e pior que narracao nenhuma. Quando houver gravacao para
- * os outros lutadores (ver scripts/narrar.py), basta acrescentar aqui.
- */
-const FALA_DE_VITORIA: Partial<Record<FighterId, Fala>> = {
-  black: "venceu_black",
-  red: "venceu_red",
-};
-
-const IMPORTANTES = new Set<Fala>(["nocaute", "venceu_black", "venceu_red", "like"]);
 
 /**
- * Escolhe as falas do narrador a partir dos letreiros. Ele nao comenta tudo:
- * so a primeira de cada coisa e os momentos grandes, e nunca fala por cima
- * de si mesmo. Locutor que fala sem parar vira ruido.
+ * Escolhe as falas do narrador.
+ *
+ * O NARRADOR NAO ENTRA NA LUTA. Nem no comeco ("Lutem!"), nem no fim
+ * ("Nocaute!", "O Preto venceu!"): durante a briga quem fala sao os sons
+ * (ver efeitosDe) e a imagem. Voz por cima de golpe faz duas coisas ruins de
+ * uma vez: tapa o impacto, que e o que da peso ao golpe, e conta com palavra
+ * o que a tela ja mostrou, o que deixa a cena mais lenta do que ela e.
+ *
+ * Sobra para ele o que a imagem NAO diz sozinha: a abertura (a tela de
+ * escolha, em TelaDeEscolha), a pergunta do final e a chamada da placa de
+ * like. Ai a voz nao compete com nada.
  */
 const narrar = (
   t: Timeline,
-  rotulos: Rotulo[],
-  lute: number,
   real: (logico: number) => number,
 ): { real: number; fala: Fala }[] => {
-  /*
-    A CHAMADA DO INICIO ESTA MUDA, e nao por esquecimento.
-
-    A gravacao de "Lutem!" nao diz "lutem": diz algo como "luterie". O script
-    manda a pronuncia certa em IPA -- `lˈutẽj!`, que e o brasileiro correto --
-    e o sintetizador le o `j` final como silaba propria em vez de ditongo
-    nasal. O defeito esta na voz, nao na fonetica escrita.
-
-    A tela ja diz a mesma coisa nesse instante, em letras garrafais
-    vermelhas ("LUTE!", ver EspetaculoNaTela). Entao calar nao custa
-    informacao nenhuma -- e narracao que diz outra palavra custa a confianca
-    do espectador no video inteiro.
-
-    Para devolver a fala: regerar com scripts/narrar.py (Kokoro) e, de
-    quebra, gerar o anuncio do vencedor com os nomes de verdade, que hoje
-    tambem esta mudo pelo mesmo motivo de principio.
-  */
   const candidatas: { real: number; fala: Fala }[] = [];
-  void lute;
-  for (const r of [...rotulos].sort((a, b) => a.inicio - b.inicio)) {
-    // Os golpes da luta nao sao narrados: cada um tem o seu efeito sonoro
-    // (ver efeitosDe). O narrador fica com a abertura e o desfecho.
-    let fala: Fala | null = null;
-    if (r.texto === "K.O.!") fala = "nocaute";
-    else if (r.texto.endsWith("VENCE!")) {
-      /*
-        Procura tambem entre os nomes DO SPEC: sem isso, uma luta que
-        renomeia os lutadores tinha o letreiro de vitoria escrito com o nome
-        novo e esta busca procurando pelo antigo -- e nao achava ninguem.
-      */
-      const tabela = { ...NOMES, ...(t.spec.nomes ?? {}) };
-      const vencedor = Object.entries(tabela).find(([, n]) => r.texto.startsWith(n as string))?.[0];
-      fala = vencedor ? (FALA_DE_VITORIA[vencedor as FighterId] ?? null) : null;
-    }
-    if (!fala) continue;
-    candidatas.push({ real: r.inicio + REACAO, fala });
-  }
   const placa = t.scheduled.find((b) => b.beat.type === "placa");
   if (placa) candidatas.push({ real: real(placa.from + PUXA) + 4, fala: "like" });
 
@@ -553,14 +498,8 @@ const narrar = (
     c.real + Math.ceil(FALAS[c.fala].segundos * 60) + RESPIRO;
   const aceitas: { real: number; fala: Fala }[] = [];
   for (const c of candidatas) {
-    const choca = aceitas.filter((a) => c.real < fim(a) && a.real < fim(c));
-    if (choca.length === 0) {
-      aceitas.push(c);
-    } else if (IMPORTANTES.has(c.fala) && choca.every((a) => !IMPORTANTES.has(a.fala))) {
-      // o momento grande tira a fala pequena do caminho
-      for (const a of choca) aceitas.splice(aceitas.indexOf(a), 1);
-      aceitas.push(c);
-    }
+    if (aceitas.some((a) => c.real < fim(a) && a.real < fim(c))) continue;
+    aceitas.push(c);
   }
   return aceitas.sort((a, b) => a.real - b.real);
 };
@@ -685,28 +624,27 @@ const montarCinematico = (
     O intervalo entre as duas e o comprimento da primeira mais folga: falas
     sobrepostas viram ruido e nenhuma das duas e entendida.
   */
+  /*
+    O RESULTADO NAO E NARRADO, e isso vem do `main`: o narrador saiu da luta e
+    saiu do desfecho (ver o commit "Narrador sai da luta"). Antes aqui se
+    escolhia entre a fala de vitoria do vencedor e a pergunta; agora fica
+    sempre a PERGUNTA, que e o fecho de uma luta posta em aberto para o
+    espectador responder nos comentarios -- e e ela que a chamada do canal
+    pede.
+
+    O pedido de like continua, porque ele nao e narracao da luta: e a chamada
+    do canal. O atraso dele sai da duracao da fala que de fato toca, e nao de
+    uma que talvez nao tocasse, que era a complicacao que a versao anterior
+    carregava.
+  */
   const falas: { real: number; fala: Fala }[] = [];
   if (final !== undefined) {
     const anuncio = final + ESPERA_DA_PERGUNTA + 6;
-    /*
-      Sem K.O. a pergunta fica no ar ("Quem deve vencer?"), que e o fecho de
-      uma luta em aberto. Com K.O. mas sem fala gravada para o vencedor, nao
-      entra nada: a placa na tela ja anunciou.
-    */
-    const resultado: Fala | undefined = ko
-      ? FALA_DE_VITORIA[ko.vencedor]
-      : "quem";
-    if (resultado) falas.push({ real: anuncio, fala: resultado });
-    /*
-      O PEDIDO DE LIKE ENTRA MESMO SEM O ANUNCIO.
-      Sem fala de vitoria nao ha o que esperar terminar, entao ele so respeita
-      a espera da propria placa. Calcular o atraso a partir de uma fala que
-      nao tocou deixaria o pedido cedo ou tarde demais.
-    */
-    const depoisDoAnuncio = resultado
-      ? Math.round(FALAS[resultado].segundos * 60) + 26
-      : 30;
-    falas.push({ real: anuncio + depoisDoAnuncio, fala: "like" });
+    falas.push({ real: anuncio, fala: "quem" });
+    falas.push({
+      real: anuncio + Math.round(FALAS.quem.segundos * 60) + 26,
+      fala: "like",
+    });
   }
   return {
     ko,

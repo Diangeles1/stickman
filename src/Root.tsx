@@ -28,6 +28,11 @@ import { DUELO_DO_VALE, DUELO_DO_VALE_2 } from "./data/fights/duelo-do-vale";
 import { duelo, dueloDoDia } from "./data/fights/diario";
 import { NINJAS } from "./data/fights/ninjas";
 import { DUELO } from "./data/fights/duelo";
+import {
+  AvatarDoCanal,
+  BannerDoCanal,
+  CapaDoVideo,
+} from "./compositions/ArteDoCanal";
 import { UM_SOCO } from "./data/fights/um-soco";
 import type { PoseName } from "./core/types";
 
@@ -469,6 +474,19 @@ export const RemotionRoot: React.FC = () => {
         width={UM_SOCO.width}
         height={UM_SOCO.height}
         defaultProps={{ spec: UM_SOCO, debug: true }}
+      />
+
+      {/* ARTE DO CANAL: um quadro so cada, para exportar como imagem */}
+      <Composition id="Banner" component={BannerDoCanal} durationInFrames={1} fps={30} width={2048} height={1152} />
+      <Composition id="Avatar" component={AvatarDoCanal} durationInFrames={1} fps={30} width={800} height={800} />
+      <Composition
+        id="CapaDoVideo"
+        component={CapaDoVideo}
+        durationInFrames={1}
+        fps={30}
+        width={1280}
+        height={720}
+        defaultProps={{ titulo: "GELO vs FOGO", subtitulo: "QUEM VENCE?" }}
       />
 
       <Composition
