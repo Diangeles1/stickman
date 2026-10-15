@@ -85,14 +85,14 @@ const lerCliente = (): Cliente => {
         "",
       ].join("\n"),
     );
-    process.exit(2);
+    throw new Desistir(2);
   }
   const bruto = JSON.parse(readFileSync(CLIENTE, "utf8"));
   // o Google entrega o JSON embrulhado em "installed" ou "web"
   const c = bruto.installed ?? bruto.web ?? bruto;
   if (!c.client_id || !c.client_secret) {
     console.error("O JSON nao tem client_id/client_secret. Baixou o arquivo certo?");
-    process.exit(2);
+    throw new Desistir(2);
   }
   return { client_id: c.client_id, client_secret: c.client_secret };
 };
@@ -184,7 +184,7 @@ const login = async () => {
   const dados = (await r.json()) as { refresh_token?: string; error_description?: string };
   if (!dados.refresh_token) {
     console.error("O Google nao devolveu refresh_token:", dados.error_description ?? dados);
-    process.exit(2);
+    throw new Desistir(2);
   }
   if (!existsSync(PASTA)) mkdirSync(PASTA, { recursive: true });
   writeFileSync(TOKEN, JSON.stringify({ refresh_token: dados.refresh_token }, null, 2), "utf8");
@@ -196,7 +196,7 @@ const login = async () => {
 const acessar = async (): Promise<string> => {
   if (!existsSync(TOKEN)) {
     console.error("\nFalta autorizar. Rode primeiro:\n  npx tsx scripts/youtube.mts login\n");
-    process.exit(2);
+    throw new Desistir(2);
   }
   const cliente = lerCliente();
   const { refresh_token } = JSON.parse(readFileSync(TOKEN, "utf8"));
@@ -213,7 +213,7 @@ const acessar = async (): Promise<string> => {
   const d = (await r.json()) as { access_token?: string; error_description?: string };
   if (!d.access_token) {
     console.error("Nao consegui renovar o acesso:", d.error_description ?? d);
-    process.exit(2);
+    throw new Desistir(2);
   }
   return d.access_token;
 };
@@ -244,7 +244,7 @@ const lerPacote = (video: string) => {
 const publicar = async (video: string) => {
   if (!existsSync(video)) {
     console.error(`nao achei ${video}`);
-    process.exit(2);
+    throw new Desistir(2);
   }
   const args = process.argv.slice(2);
   const privado = args.includes("--privado");
@@ -293,7 +293,7 @@ const publicar = async (video: string) => {
   const destino = inicio.headers.get("location");
   if (!inicio.ok || !destino) {
     console.error("falhou ao abrir o envio:", inicio.status, await inicio.text());
-    process.exit(1);
+    throw new Desistir(1);
   }
 
   // 2. manda os bytes
@@ -307,7 +307,7 @@ const publicar = async (video: string) => {
   const resposta = (await envio.json()) as { id?: string; error?: { message?: string } };
   if (!envio.ok || !resposta.id) {
     console.error("falhou no envio:", envio.status, resposta.error?.message ?? resposta);
-    process.exit(1);
+    throw new Desistir(1);
   }
   const id = resposta.id;
   console.log(`enviado: https://youtube.com/shorts/${id}`);
@@ -332,20 +332,62 @@ const publicar = async (video: string) => {
   else console.log("publicado");
 };
 
+/**
+ * DESISTIR COM UM CODIGO, em vez de derrubar o processo na hora.
+ *
+ * Aqui estava `process.exit(n)` em oito lugares, e quatro deles ficam logo
+ * depois de um `fetch`. Em Windows isso QUEBRAVA o processo:
+ *
+ *   Assertion failed: !(handle->flags & UV_HANDLE_CLOSING),
+ *   file src\\win\\async.c, line 94
+ *
+ * `process.exit` nao espera nada: ele arranca o processo com os handles do
+ * libuv no meio do fechamento, e o socket que o fetch ainda estava soltando
+ * dispara essa assertion. O codigo que chega ao sistema deixa de ser o que se
+ * pediu e passa a ser 3221226505 (0xC0000409, o estouro de pilha do Windows)
+ * -- foi isso que o agendador registrou em 14 e 15/10, no lugar do 2 que
+ * significa "o acesso do Google caducou".
+ *
+ * E codigo errado nao e detalhe: `diario.mts` le este numero, e quem depura le
+ * para saber O QUE falhou. Crash generico no lugar de "token expirado" manda a
+ * investigacao para o lugar errado.
+ *
+ * Lancar e tratar no topo resolve as duas coisas: a mensagem sai igual, o
+ * codigo sai inteiro, e o processo termina sozinho quando o loop de eventos
+ * drena -- que e como um programa Node deve acabar.
+ */
+class Desistir extends Error {
+  constructor(readonly codigo: number) {
+    super(`saindo com ${codigo}`);
+    this.name = "Desistir";
+  }
+}
+
 const comando = process.argv[2];
-if (comando === "login") await login();
-else if (comando === "publicar" && process.argv[3]) await publicar(process.argv[3]);
-else {
-  console.log(
-    [
-      "",
-      "uso:",
-      "  npx tsx scripts/youtube.mts login",
-      "  npx tsx scripts/youtube.mts publicar <video.mp4> [--privado] [--agendar=ISO]",
-      "",
-      "O cabecalho deste arquivo explica o cadastro de 3 minutos no Google Cloud",
-      "que precisa ser feito uma unica vez.",
-      "",
-    ].join("\n"),
-  );
+try {
+  if (comando === "login") await login();
+  else if (comando === "publicar" && process.argv[3]) await publicar(process.argv[3]);
+  else {
+    console.log(
+      [
+        "",
+        "uso:",
+        "  npx tsx scripts/youtube.mts login",
+        "  npx tsx scripts/youtube.mts publicar <video.mp4> [--privado] [--agendar=ISO]",
+        "",
+        "O cabecalho deste arquivo explica o cadastro de 3 minutos no Google Cloud",
+        "que precisa ser feito uma unica vez.",
+        "",
+      ].join("\n"),
+    );
+  }
+} catch (erro) {
+  /*
+    A mensagem ja foi impressa onde a falha aconteceu, com o contexto dela;
+    aqui so falta o codigo. E `exitCode` em vez de `exit` porque o processo tem
+    que terminar pelo fim do loop de eventos, e nao por arrancamento -- era o
+    arrancamento que disparava a assertion do libuv.
+  */
+  if (erro instanceof Desistir) process.exitCode = erro.codigo;
+  else throw erro;
 }
