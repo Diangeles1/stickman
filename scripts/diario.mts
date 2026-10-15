@@ -363,7 +363,7 @@ ${naoPublicados.length} video(s) NAO foram publicados: ${naoPublicados.join(", "
       `
 Os arquivos estao em out/diario/. Se a causa foi o acesso do Google,` +
       `
-reautorize com: npx tsx scripts/youtube.mts autorizar`,
+reautorize com: npx tsx scripts/youtube.mts login`,
   );
   process.exitCode = 1;
 }
