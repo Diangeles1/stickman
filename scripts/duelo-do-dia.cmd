@@ -22,5 +22,19 @@ if not exist "out\diario" mkdir "out\diario"
 echo. >> "out\diario\agendador.log"
 echo ==== %DATE% %TIME% >> "out\diario\agendador.log"
 call npx tsx scripts\diario.mts --publicar >> "out\diario\agendador.log" 2>&1
-echo ---- fim, codigo %ERRORLEVEL% >> "out\diario\agendador.log"
-endlocal
+set "CODIGO=%ERRORLEVEL%"
+echo ---- fim, codigo %CODIGO% >> "out\diario\agendador.log"
+REM ============================================================
+REM  O CODIGO DE SAIDA TEM QUE CHEGAR AO AGENDADOR.
+REM
+REM  Sem a linha final abaixo este .cmd devolvia o codigo do
+REM  ultimo `echo`, que e sempre 0. Em 14/10 o produtor terminou
+REM  em 1 porque o envio falhou, o log registrou "codigo 1" -- e
+REM  o Agendador de Tarefas anotou "Ultimo resultado: 0".
+REM
+REM  Quem olha o painel do Windows em vez do log via sucesso num
+REM  dia em que o canal nao recebeu post. E o mesmo defeito que
+REM  diario.mts tinha com o envio: a falha existia e nao chegava
+REM  a ninguem. Registrar nao basta; tem que PROPAGAR.
+REM ============================================================
+endlocal & exit /b %CODIGO%
