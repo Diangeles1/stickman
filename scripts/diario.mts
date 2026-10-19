@@ -27,7 +27,7 @@
  */
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { compilar } from "../src/core/timeline";
 import { duelo, dueloDoDia, historiaDe, type Duelo } from "../src/data/fights/diario";
@@ -71,6 +71,29 @@ const dataPedida = args.find((a) => /^\d{4}-\d{2}-\d{2}$/.test(a));
 const base = dataPedida ? new Date(`${dataPedida}T12:00:00Z`) : new Date();
 
 /*
+  DUELO AVULSO: um video fora do calendario.
+
+  O produtor existe para o duelo DO DIA, que e sorteado da data -- e isso e o
+  que faz o canal ter um video por dia sem ninguem decidir nada. Mas de vez em
+  quando o canal quer um especial com nomes escolhidos a dedo, e sem isto a
+  unica saida seria duplicar a cadeia inteira (auditoria, render, normalizacao
+  de audio, capa, textos, envio) num script paralelo que iria envelhecer
+  sozinho.
+
+  O avulso entra por arquivo JSON porque sao oito campos: passar isso em flags
+  de linha de comando daria um comando ilegivel e, pior, sem registro do que
+  foi publicado. O arquivo FICA, e e ele que conta depois por que aquele video
+  existe.
+
+  Uso:
+    npx tsx scripts/diario.mts --avulso=especiais/messi-cr7.json
+*/
+const avulsoPedido = opcao("avulso", "");
+const avulso: (Duelo & { arquivo: string; titulo?: string }) | null = avulsoPedido
+  ? JSON.parse(readFileSync(join(RAIZ, avulsoPedido), "utf8"))
+  : null;
+
+/*
   NADA AQUI PASSA POR SHELL, e isso nao e preferencia de estilo.
 
   As chamadas eram `npx.cmd ... { shell: true }` e morriam com
@@ -88,8 +111,24 @@ const node = process.execPath;
 /** o CLI do Remotion e dependencia do projeto: da para chamar o arquivo */
 const REMOTION = join(RAIZ, "node_modules", "@remotion", "cli", "remotion-cli.js");
 /** o tsx vem pelo npx, e o npx tambem e um .js ao lado do node */
-const NPX = join(dirname(node), "node_modules", "npm", "bin", "npx-cli.js");
-const comTsx = (args: string[]) => [NPX, "tsx", ...args];
+/*
+  O TSX VEM DO PROJETO, E NAO DO CACHE DO NPX.
+
+  Isto passava por `npx tsx`, e `npx` resolvia um tsx baixado no cache global
+  (D:/tools/npm-cache/_npx/...). Duas coisas de errado com isso:
+
+  1. `tsx` nao estava declarado no package.json, embora TODO script do projeto
+     dependa dele. Um clone novo com `npm ci` nao teria tsx e a tarefa diaria
+     quebraria no primeiro dia -- com um erro que nao diz "falta dependencia".
+
+  2. O cache do npx acrescenta uma camada de processo, e foi ela que falhou
+     com `ERR_WORKER_INIT_FAILED` e `spawn UNKNOWN` com a maquina sob pressao
+     de memoria. O mesmo script rodando pelo tsx LOCAL funcionou na hora.
+
+  Agora o binario vem de node_modules/.bin, que e o que `npm ci` instala.
+*/
+const TSX = join(RAIZ, "node_modules", "tsx", "dist", "cli.mjs");
+const comTsx = (args: string[]) => [TSX, ...args];
 
 const audita = (chave: string, validador: string) => {
   const r = spawnSync(node, comTsx([join("scripts", `${validador}.mts`), chave]), {
@@ -101,7 +140,14 @@ const audita = (chave: string, validador: string) => {
   return { ok: /APROVADO/.test(linha), linha: linha.trim() };
 };
 
-const titulo = (d: Duelo) => `${d.nomeA} vs ${d.nomeB} — quem vence? #shorts`;
+const titulo = (d: Duelo) =>
+  /*
+    O TITULO DO AVULSO PODE SER ESCRITO A MAO. O do dia e formula, porque sao
+    nomes sorteados e nao ha nada a dizer alem de quem luta contra quem; um
+    especial costuma ter uma piada ou um gancho que so quem escreveu sabe.
+  */
+  (d as Duelo & { titulo?: string }).titulo ??
+  `${d.nomeA} vs ${d.nomeB} — quem vence? #shorts`;
 /*
   A DESCRICAO CONTA A HISTORIA DO DIA, e nao "o Duelo do Vale" sempre.
 
@@ -130,7 +176,7 @@ const naoPublicados: string[] = [];
 for (let k = 0; k < Math.max(1, proximos); k++) {
   const data = new Date(base.getTime() + k * 86400000);
   const iso = data.toISOString().slice(0, 10);
-  const q = dueloDoDia(data);
+  const q = avulso ?? dueloDoDia(data);
   const spec = duelo(q);
   const t = compilar(spec);
   const dur = duracaoDoPrototipo(spec, { escolha: true }) / spec.fps;
@@ -175,7 +221,7 @@ for (let k = 0; k < Math.max(1, proximos); k++) {
     console.log(`    nota  ${v.padEnd(12)} ${linha}`);
   }
 
-  const nome = `palitanos-${iso}`;
+  const nome = avulso ? `palitanos-${avulso.arquivo}` : `palitanos-${iso}`;
   writeFileSync(
     join(SAIDA, `${nome}.txt`),
     [
