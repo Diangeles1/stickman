@@ -34,6 +34,7 @@ import {
   CapaDoVideo,
 } from "./compositions/ArteDoCanal";
 import { UM_SOCO } from "./data/fights/um-soco";
+import { Arena3D } from "./3d/Arena3D";
 import type { PoseName } from "./core/types";
 
 /** a luta completa com os papeis invertidos: o vermelho vence */
@@ -474,6 +475,22 @@ export const RemotionRoot: React.FC = () => {
         width={UM_SOCO.width}
         height={UM_SOCO.height}
         defaultProps={{ spec: UM_SOCO, debug: true }}
+      />
+
+      {/*
+        MIGRACAO 3D, etapa 1. A MESMA luta do benchmark, desenhada em
+        Three.js em vez de SVG: nenhuma linha de coreografia foi reescrita
+        (ver src/3d/Arena3D). Existe ao lado das composicoes 2D de proposito
+        -- a versao 2D continua sendo a que publica ate esta ser validada.
+      */}
+      <Composition
+        id="Arena3D"
+        component={Arena3D}
+        durationInFrames={duracaoDoPrototipo(DUELO_DO_VALE)}
+        fps={DUELO_DO_VALE.fps}
+        width={DUELO_DO_VALE.width}
+        height={DUELO_DO_VALE.height}
+        defaultProps={{ spec: DUELO_DO_VALE }}
       />
 
       {/* ARTE DO CANAL: um quadro so cada, para exportar como imagem */}

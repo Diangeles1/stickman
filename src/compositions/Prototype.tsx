@@ -38,6 +38,17 @@ export type PrototypeProps = {
   segundos?: number;
   /** abre com a tela "ESCOLHA UM PERSONAGEM!" e a contagem de 5 segundos */
   escolha?: boolean;
+  /**
+   * Nao pinta ceu nem chao: o fundo vem de outra camada, por baixo (ver
+   * FightSceneProps.semFundo e src/3d/Arena3D).
+   *
+   * Fica AQUI, e nao so no FightScene, porque o placar, a marca d'agua e os
+   * nomes sao do `Espetaculo`, que mora nesta composicao. Compor direto sobre
+   * o FightScene perde os tres -- foi o que aconteceu na primeira versao da
+   * cena 3D, e so apareceu comparando o render dela com o render 2D lado a
+   * lado.
+   */
+  semFundo?: boolean;
 };
 
 export const Prototype: React.FC<PrototypeProps> = ({
@@ -47,6 +58,7 @@ export const Prototype: React.FC<PrototypeProps> = ({
   seed = 1,
   segundos = 30,
   escolha = false,
+  semFundo = false,
 }) => {
   // sem spec, a luta vem da semente: e o caminho da composicao gerada
   const usado = React.useMemo(
@@ -56,7 +68,12 @@ export const Prototype: React.FC<PrototypeProps> = ({
   const timeline = React.useMemo(() => compilar(usado), [usado]);
   const luta = (
     <>
-      <FightScene timeline={timeline} debug={debug} semEfeitos={semEfeitos} />
+      <FightScene
+        timeline={timeline}
+        debug={debug}
+        semEfeitos={semEfeitos}
+        semFundo={semFundo}
+      />
       {semEfeitos ? null : <Espetaculo timeline={timeline} />}
       {semEfeitos ? null : <FightAudio timeline={timeline} />}
     </>

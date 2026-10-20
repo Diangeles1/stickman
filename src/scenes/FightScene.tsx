@@ -59,6 +59,18 @@ export type FightSceneProps = {
   debug?: boolean;
   /** so os corpos: sem efeitos, sem tremor, camera neutra (ver Prototype) */
   semEfeitos?: boolean;
+  /**
+   * NAO PINTA CEU NEM CHAO: o fundo vem de outra camada, por baixo.
+   *
+   * Existe para o cenario 3D (ver src/3d/Arena3D): o Three desenha o mundo
+   * atras e este SVG desenha a luta na frente, transparente. Sem isto o
+   * retangulo de ceu cobriria a cena 3D inteira.
+   *
+   * O que sai sao so o CENARIO e o fundo do <svg>: os obstaculos continuam
+   * (a coreografia bate neles -- ver a tecnica arremesso-no-paredao), e
+   * efeitos, poderes, katana, placas e marca d'agua continuam todos.
+   */
+  semFundo?: boolean;
 };
 
 
@@ -120,6 +132,7 @@ export const FightScene: React.FC<FightSceneProps> = ({
   timeline,
   debug = false,
   semEfeitos = false,
+  semFundo = false,
 }) => {
   const frameReal = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
@@ -323,7 +336,17 @@ export const FightScene: React.FC<FightSceneProps> = ({
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      style={{ background: limpo ? "#ffffff" : neve ? "#c6d6e6" : deserto ? "#3b2a52" : "#06070a" }}
+      style={{
+        background: semFundo
+          ? "transparent"
+          : limpo
+            ? "#ffffff"
+            : neve
+              ? "#c6d6e6"
+              : deserto
+                ? "#3b2a52"
+                : "#06070a",
+      }}
     >
       <defs>
         <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
@@ -337,7 +360,7 @@ export const FightScene: React.FC<FightSceneProps> = ({
         baixo nao faria mal, mas pintar por CIMA do horizonte deles faria --
         e e por isso que a condicao esta aqui e nao no estilo.
       */}
-      {!proprios && (
+      {!proprios && !semFundo && (
         <rect
           width={width}
           height={height}
@@ -346,6 +369,13 @@ export const FightScene: React.FC<FightSceneProps> = ({
       )}
 
       <g transform={transformDaCamera(cam, width, height)}>
+        {/*
+          TODO O CENARIO FICA NESTE BLOCO, e e so ele que `semFundo` desliga.
+          O que vem depois -- obstaculo, poderes, corpos, efeitos, katana,
+          placas, marca d'agua -- vale nos dois modos.
+        */}
+        {!semFundo && (
+          <>
         {(scenario === "vilarejo" || scenario === "cidade") && (
           <Rabisco
             seed={seed}
@@ -416,6 +446,8 @@ export const FightScene: React.FC<FightSceneProps> = ({
             frame={frameReal}
             parte="chao"
           />
+        )}
+          </>
         )}
         {/*
           A MASSA EXISTE EM TODO PALCO, e nao so no vale.

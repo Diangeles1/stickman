@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arena 3D — tempo real</title>
+    <!--
+      HTML ESTATICO, sem ferramenta de build de desenvolvimento.
+
+      O bundle e gerado por scripts/arena-tempo-real.mjs com o esbuild que ja
+      vem dentro do Remotion: nenhuma dependencia nova entrou no package.json
+      para esta pagina existir. Este arquivo e copiado para out/tempo-real/ ao
+      lado do bundle, entao o caminho do script e relativo e simples.
+    -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #05070b;
+        color: #c8d2e4;
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        overflow: hidden;
+      }
+      /* o canvas do Three nasce inline e deixaria uma faixa de alguns pixels */
+      canvas {
+        display: block;
+      }
+      #semJs {
+        padding: 24px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="raiz"><div id="semJs">carregando a arena…</div></div>
+    <script src="./arena.js"></script>
+  </body>
+</html>
