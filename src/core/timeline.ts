@@ -517,6 +517,10 @@ export const compilar = (spec: FightSpec): Timeline => {
       aproximar(atacante, alvo, distancia + RECUO_DA_CARGA);
     }
 
+    // Onde a PREPARACAO comeca. Guardado aqui porque `cursor` anda com o
+    // windup logo abaixo e a mira so e escrita depois do disparo.
+    const inicioDaPreparacao = cursor;
+
     // ---- 1. ANTECIPACAO ---------------------------------------------------
     // Tres tempos, e e a ordem que um lutador segue:
     //
@@ -700,6 +704,7 @@ export const compilar = (spec: FightSpec): Timeline => {
       // entra durante o disparo e sai depois de segurar o contato
       from: cursor,
       to: frameContato + parada + s(0.1),
+      preparo: inicioDaPreparacao,
       direcao,
       // golpe mais pesado passa mais alem: e a massa do membro que continua
       avanco: def.tier === "extreme" ? 54 : def.tier === "medium" ? 34 : 20,

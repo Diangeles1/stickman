@@ -14,6 +14,7 @@
  */
 
 import {
+  GIRO_MINIMO_PARA_APOIAR,
   POSES_DE_APOIO,
   corpoNoQuadro,
   juntasDoCorpo,
@@ -101,6 +102,31 @@ const PE_DA_FRENTE_GOLPEIA = new Set<string>([
 const apoiaDeVerdade = (pe: JointName, pose: string): boolean =>
   !(pe === "footFront" && PE_DA_FRENTE_GOLPEIA.has(pose));
 
+/**
+ * O CORPO GIRANDO NO EIXO VERTICAL NAO TEM PE APOIADO: ele PIVOTA.
+ *
+ * O planejador nao prega pe nenhum abaixo de GIRO_MINIMO_PARA_APOIAR -- nao
+ * ha onde pregar, o pe gira em torno do eixo do corpo (ver `girando` e
+ * `podeApoiar` em animation/corpo). Este medidor nao tinha a mesma isencao e
+ * cobrava que o pe ficasse parado durante a volta do chute giratorio, que e
+ * exatamente o movimento que o golpe e.
+ *
+ * MEDIDO no duelo do vale, gold footBack, chute giratorio com contato em
+ * 2546: entre os quadros 2530 e 2531 o `giro` vai de 0.81 para 0.26 -- 39
+ * graus num quadro -- e o pe, a ~45 unidades do eixo, anda 31. E o arco do
+ * pivo, nao um teleporte: r * dteta da exatamente essa ordem de grandeza.
+ *
+ * E ELE JA ESTAVA LA ANTES DE O MEDIDOR ACUSAR. Com a preparacao em 2s o
+ * mesmo pivo andava 47 unidades por desenho contra um limite de 60 (porque o
+ * limite e 30 por quadro vezes o passo) e passava; com a preparacao em 1s ele
+ * anda 31 contra 30 e reprova. O movimento ficou MAIS suave por desenho --
+ * 47 virou 31 -- e o veredito piorou. Era a regua mudando de tamanho, nao o
+ * pe piorando.
+ *
+ * A isencao e so para o giro: fora dele o pe continua cobrado como antes.
+ */
+const pivotando = (giro: number): boolean => giro < GIRO_MINIMO_PARA_APOIAR;
+
 let totalRuim = 0;
 
 /**
@@ -139,6 +165,8 @@ for (const id of [spec.fighterA, spec.fighterB] as FighterId[]) {
       if (!POSES_DE_APOIO.has(a.poseNome) || !POSES_DE_APOIO.has(b.poseNome)) continue;
       // o pe que GOLPEIA nao apoia (ver PE_DA_FRENTE_GOLPEIA)
       if (!apoiaDeVerdade(pe, a.poseNome) || !apoiaDeVerdade(pe, b.poseNome)) continue;
+      // o pe PIVOTA quando o corpo gira: o planejador nao o prega (ver acima)
+      if (pivotando(a.giro) || pivotando(b.giro)) continue;
       if (Math.abs(b.velocidade) > ARRASTO) continue;
       const pa = juntasDoCorpo(a)[pe];
       const pb = juntasDoCorpo(b)[pe];
@@ -173,6 +201,9 @@ for (const id of [spec.fighterA, spec.fighterB] as FighterId[]) {
       if (!POSES_DE_APOIO.has(a.poseNome) || !POSES_DE_APOIO.has(b.poseNome)) continue;
       // o pe que GOLPEIA nao apoia (ver PE_DA_FRENTE_GOLPEIA)
       if (!apoiaDeVerdade(pe, a.poseNome) || !apoiaDeVerdade(pe, b.poseNome)) continue;
+      // nem o pe que PIVOTA: a mesma isencao do laco de estalo, pelo mesmo
+      // motivo -- o planejador nao prega pe nenhum durante a volta
+      if (pivotando(a.giro) || pivotando(b.giro)) continue;
       const pa = juntasDoCorpo(a)[pe];
       const pb = juntasDoCorpo(b)[pe];
       if (pa.y < -NO_CHAO || pb.y < -NO_CHAO) continue;

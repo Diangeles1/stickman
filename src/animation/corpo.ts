@@ -529,10 +529,99 @@ export const quadroDoDesenho = (
   /*
     DURANTE UM GOLPE, TODO QUADRO GANHA DESENHO.
 
-    A janela e a da MIRA (o AimEvent), e nao a do nome da pose: ela comeca na
-    preparacao e termina depois do contato, cobrindo o golpe inteiro. Pelo
-    nome da pose o inicio ficava de fora, porque nos primeiros quadros o
-    lutador ainda esta rotulado "guard" enquanto o braco ja saiu.
+    A janela e a da MIRA (o AimEvent), e nao a do nome da pose: ela vai da
+    preparacao ate depois do contato, cobrindo o golpe inteiro. Pelo nome da
+    pose o inicio ficava de fora, porque nos primeiros quadros o lutador
+    ainda esta rotulado "guard" enquanto o braco ja saiu.
+
+    E A PREPARACAO SO ENTROU AQUI DEPOIS. Este comentario dizia que a janela
+    comecava na preparacao, mas `from` e o DISPARO (ver aims.push em
+    core/timeline: `from: cursor`, ja depois de `cursor += windup`). A carga
+    ficava do lado de fora, em 2s -- e a carga e onde o braco recua mais
+    rapido de toda a acao.
+
+    Medido no duelo do vale, golpe com contato no 403: no quadro 396, em
+    `coil` e em 2s, o punho andava 267 unidades e o cotovelo 208 num desenho
+    so, enquanto quadril e pescoco andavam 7 e 30. O pico do punho na janela
+    inteira caia ali, na RETRACAO, e nao no disparo -- era por isso que
+    scripts/cadeia.mts acusava "cadeia invertida" em tres golpes com a mesma
+    assinatura: a ponta picava dois quadros antes do quadril porque o pico
+    dela era a carga, nao o soco.
+
+    E a mesma classe de defeito que ja aparecera duas vezes na elevacao da
+    espada e na decolagem do golpe aereo: teleporte de pose no PREPARO, nunca
+    no disparo.
+
+    MEDIDO, e o resultado e uma TROCA, nao um ganho limpo.
+
+    No mesmo golpe (contato 403): o pulo do punho na carga caiu de 267 para
+    226 unidades e a translacao do corpo, que fazia 65 unidades num desenho
+    com TODAS as juntas andando o mesmo tanto, virou 32 por quadro.
+
+    scripts/cadeia.mts, somando as nove lutas: 25 -> 14 reprovacoes.
+      vale 5->2, vale2 6->2, ninjas 9->5; as outras seis nao mudaram
+      (benchmark 0, benchmark2 1, dominio 0, completa 1, gelofogo 0, duelo 3).
+
+    scripts/antecipacao.mts PIOROU, e o quanto so ficou claro depois de
+    consertar a janela DELE (ver o comentario em scripts/antecipacao.mts: ela
+    ia 26 quadros para tras do disparo, alcancava o golpe anterior e o
+    intervalo parado, e misturava trechos em 1s com trechos em 2s).
+
+    Medido nos quatro cruzamentos, somando as nove lutas:
+
+                          janela antiga   janela nova (a preparacao)
+      sem esta mudanca         14               2
+      com esta mudanca         18               5
+
+    Ou seja: o par 14 -> 18 que eu havia registrado era de uma regua quebrada.
+    O custo honesto e 2 -> 5 -- tres preparacoes a mais concentram o
+    movimento num quadro so.
+
+    Parte disso ainda e resolucao: medido no golpe `gold -> green guarda` do
+    vale, a MESMA motion reamostrada de dois em dois da razao 5.01 contra
+    6.39 em todo quadro, porque media de dois quadros achata pico. Nao da
+    para separar as duas parcelas com o que existe hoje, entao fica contado
+    inteiro como custo.
+
+    scripts/arcos.mts ganhou uma reprovacao em `ninjas` (0 -> 1/21): um chute
+    `blue footFront -> legs` com curvatura 0.06, reta demais.
+
+    scripts/pes.mts ACUSOU UM ESTALO que acabou sendo do MEDIDOR, e a
+    investigacao vale mais que o numero.
+
+    Com a preparacao em 1s, `vale` passou a reprovar com um estalo de 31
+    unidades (gold footBack, quadro 2531). Dissecado quadro a quadro, o
+    `giro` do corpo vai de 0.81 para 0.26 ali -- 39 graus num quadro, que e o
+    chute giratorio virando. O pe esta a ~45 unidades do eixo, e r * dteta da
+    justamente ~31: aquilo e o ARCO DO PIVO, nao um teleporte. O planejador
+    sabe disso e nao prega pe nenhum durante a volta (ver `girando` e
+    GIRO_MINIMO_PARA_APOIAR acima); o medidor e que nao tinha a isencao.
+
+    E o pivo JA EXISTIA. Com a preparacao em 2s ele andava 47 unidades por
+    desenho contra um limite de 60 (o limite e 30 por quadro vezes o passo) e
+    passava; em 1s anda 31 contra 30 e reprova. O movimento ficou MAIS suave
+    por desenho -- 47 virou 31 -- e o veredito piorou. Era a regua encolhendo.
+
+    Com a isencao do pivo em scripts/pes.mts, somando as nove lutas:
+
+      patinacao   64 (antes) -> 44 (com preparo) -> 24 (com a isencao)
+      estalos      1          ->  2              ->  0
+
+      luta        antes            depois
+      vale        27, sem estalo   7, sem estalo
+      vale2       24, sem estalo   5, sem estalo
+      ninjas       8, sem estalo   7, sem estalo
+      benchmark    5, sem estalo   5, sem estalo
+      benchmark2   0, UM ESTALO    0, sem estalo  <- era pivo tambem, e ja
+                                                     estava la antes disto
+      as outras quatro: 0 e sem estalo nos dois lados
+
+    O QUE SE PERDE COM A ISENCAO, e precisa ser dito: nada mais mede a
+    qualidade do pe durante um pivo. O medidor agora confia no planejador ali.
+    Se um dia o pe deslizar feio numa volta, nenhum script vai apontar.
+
+    Desfazer a mudanca da preparacao e uma linha: trocar
+    `(m.preparo ?? m.from)` por `m.from` abaixo.
 
     E O MOTIVO E QUE O BRACO JA ESTAVA EM 1s. A cinematica inversa da mira e
     aplicada sobre o quadro CRU, enquanto o corpo vinha do quadro quantizado:
@@ -569,7 +658,7 @@ export const quadroDoDesenho = (
   if (timeline.spec.armas?.[id]) return frame;
 
   const golpeando = timeline.aims.some(
-    (m) => m.who === id && frame >= m.from && frame <= m.to,
+    (m) => m.who === id && frame >= (m.preparo ?? m.from) && frame <= m.to,
   );
   if (golpeando) return frame;
   // e quem LEVA nao tem mira: para ele vale a pose de reacao
@@ -903,6 +992,22 @@ const PASSO_MINIMO = 18;
  * continua aprovando, e e ele que reprovaria um osso mudando de tamanho.
  */
 const ALCANCE_UTIL = 1.01;
+/**
+ * Giro minimo (1 de frente, 0 de perfil) para o pe PISAR em vez de PIVOTAR.
+ *
+ * Abaixo disto o corpo esta girando no eixo vertical e o pe gira junto, em
+ * torno do proprio eixo do corpo: nao ha onde pregar, e o planejador deixa os
+ * pes seguirem a pose (ver `girando` abaixo).
+ *
+ * EXPORTADO PORQUE O MEDIDOR PRECISA DO MESMO NUMERO. `scripts/pes.mts` cobra
+ * que o pe apoiado fique parado; cobrar isso de um pe que o planejador
+ * deliberadamente NAO pregou e cobrar do medidor uma regra que o motor nao
+ * segue. E a mesma correcao que PE_DA_FRENTE_GOLPEIA ja recebeu: o planejador
+ * nao prega aquele pe e o medidor nao cobra dele. Dois valores separados
+ * divergem; este e um so.
+ */
+export const GIRO_MINIMO_PARA_APOIAR = 0.75;
+
 /** Perto do chao (unidades de mundo) o pe esta sujeito ao limite abaixo. */
 const ALTURA_DO_ESTALO = 20;
 /** O mais longe que um pe anda num quadro rente ao chao. */
@@ -1060,7 +1165,7 @@ const planejarPes = (timeline: Timeline, id: FighterId): PlanoDosPes => {
     // da perna se debatia. Durante a volta os pes seguem a pose.
     // (com o corpo pelo menos 75% de frente a conversao ja e estavel, e e
     // melhor os pes voltarem a pisar: o fim da volta vira um passo)
-    const girando = c.giro < 0.75;
+    const girando = c.giro < GIRO_MINIMO_PARA_APOIAR;
     const podeApoiar =
       !c.noAr &&
       POSES_DE_APOIO.has(c.poseNome) &&

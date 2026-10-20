@@ -675,6 +675,16 @@ export type AimEvent = {
   from: number;
   /** e sai completamente aqui */
   to: number;
+  /**
+   * Quadro em que a PREPARACAO comeca -- antes de `from`, que e o disparo.
+   *
+   * Nao serve a cinematica inversa (essa so entra no disparo): serve a quem
+   * precisa saber que o golpe JA COMECOU. O caso concreto e o desenho em 1s
+   * (ver quadroDoDesenho em animation/corpo): a carga e onde o braco recua
+   * mais rapido, e segurar a pose de dois em dois quadros ali joga a
+   * retracao inteira num desenho so.
+   */
+  preparo?: number;
   /** +1 quando o golpe vai para a direita, -1 para a esquerda */
   direcao: number;
   /**

@@ -90,7 +90,37 @@ for (const mira of t.aims) {
   const anterior = t.aims
     .filter((m) => m.who === mira.who && m !== mira && m.to < mira.from)
     .reduce<number>((maior, m) => Math.max(maior, m.to), 0);
-  const de = Math.max(1, anterior, mira.from - 26);
+  /*
+    A JANELA COMECA ONDE A PREPARACAO COMECA, e nao 26 quadros antes do
+    disparo.
+
+    O 26 era um chute, e ele custou caro. A janela alcancava o fim do golpe
+    ANTERIOR e o intervalo parado entre os dois, e isso misturava trechos
+    desenhados em resolucoes DIFERENTES: a preparacao e o disparo ganham
+    desenho em todo quadro, o intervalo entre golpes nao (ver quadroDoDesenho
+    em animation/corpo). Numa janela mista, `/passo` compara delta de um
+    quadro com MEDIA de dois -- e media achata pico.
+
+    Medido no duelo do vale, golpe `gold -> green guarda` com disparo em 1038:
+    a janela 1012..1038 tinha 1013-1020 em 1s, 1022-1032 em 2s e 1033-1038 em
+    1s. Razao 6.39, reprovado. A MESMA motion reamostrada de dois em dois da
+    5.01, aprovado. O veredito estava decidindo pela resolucao da medida, nao
+    pelo corpo.
+
+    `AimEvent.preparo` existe exatamente para isto (ver core/types) e da a
+    janela que este script sempre disse medir: a preparacao, inteira e so ela.
+
+    O QUE A TROCA DE JANELA FEZ COM O TOTAL, somando as nove lutas:
+
+                              janela antiga   janela nova
+      motor sem `preparo`          14              2
+      motor com `preparo`          18              5
+
+    A janela antiga inflava os dois lados. O numero que vale e a coluna da
+    direita, e ela continua mostrando um custo real da mudanca de `preparo`
+    (2 -> 5): a janela nova conserta a REGUA, nao o movimento.
+  */
+  const de = Math.max(1, anterior, mira.preparo ?? mira.from - 26);
   const ate = mira.from;
   const desenhos: number[] = [];
   for (let f = de; f <= ate; f++) if (ehQuadroDeDesenho(t, mira.who, f)) desenhos.push(f);

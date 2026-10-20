@@ -28,7 +28,7 @@
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { compilar } from "../src/core/timeline";
 import { duelo, dueloDoDia, historiaDe, type Duelo } from "../src/data/fights/diario";
 import { duracaoDoPrototipo } from "../src/compositions/Prototype";
