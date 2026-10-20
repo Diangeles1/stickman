@@ -23,6 +23,41 @@
  *     Eles precisam responder ao sol -- e deles que sai a leitura de volume --
  *     mas em bandas duras, nao em degrade.
  *
+ * ESTE PALCO DEPENDE DO CONTORNO PRETO DO STICKMAN. Medido, e precisa
+ * estar escrito aqui.
+ *
+ * scripts/contraste.mts compara cada cor com o fundo DOMINANTE da imagem, e
+ * por esse criterio o palco passa folgado (laranja 3.99 a 5.80, ciano 5.64 a
+ * 8.19, contra um minimo de 3.0). Mas o fundo dominante e o chao escuro --
+ * e nao e contra o chao que a silhueta de um lutador se recorta na metade de
+ * cima do quadro.
+ *
+ * Contra o que ele de fato cruza, com a mesma formula de razao:
+ *
+ *                       laranja  ciano
+ *   sol (disco)            2.53   1.79
+ *   halo do sol            1.78   1.26
+ *   ceu no horizonte       1.36   1.04
+ *   serra distante         1.39   1.02
+ *   chao                   3.16   4.47
+ *   franja                 5.61   7.92
+ *
+ * Ou seja: da linha do horizonte para cima, a COR DO CORPO sozinha nao
+ * alcanca o minimo. Quem separa ali e o contorno preto (ver `contorno` em
+ * characters/Stickman), e os presets em characters/presets foram calibrados
+ * contra fundos escuros, onde a cor bastava.
+ *
+ * DUAS CONSEQUENCIAS PRATICAS:
+ *
+ *   - O quadro de impacto anime desenha os corpos com `contorno={false}`
+ *     (ver scenes/FightScene). Ele troca o cenario inteiro por uma chapa de
+ *     alto contraste, entao hoje nao ha problema -- mas qualquer caminho
+ *     novo que desligue o contorno sobre ESTE palco lava os dois lutadores.
+ *
+ *   - Clarear mais o ceu ou subir o sol piora a conta. Se for preciso, o que
+ *     se mexe e a cor do corpo (como ja foi feito duas vezes em presets),
+ *     nao a do ceu.
+ *
  * A PERSPECTIVA AEREA E O QUE DA PROFUNDIDADE, e ela e invertida em relacao
  * ao que a intuicao pede: o que esta LONGE e mais CLARO e menos saturado,
  * porque o ar entre o olho e a montanha espalha luz. Serra distante pintada
