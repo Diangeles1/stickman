@@ -179,8 +179,11 @@ export type NomeDoPalco = "entardecer" | "blocos";
 export const MundoDoCenario3D: React.FC<{
   semente: number;
   palco?: NomeDoPalco;
-}> = ({ semente, palco = "entardecer" }) => {
-  if (palco === "entardecer") return <Entardecer semente={semente} />;
+  /** 0 a 1: quanto o paredao ja foi trincado pela cena */
+  trincado?: number;
+}> = ({ semente, palco = "entardecer", trincado = 0 }) => {
+  if (palco === "entardecer")
+    return <Entardecer semente={semente} trincado={trincado} />;
   return <PalcoDeBlocos semente={semente} />;
 };
 
@@ -256,7 +259,8 @@ export const Cenario3D: React.FC<{
   altura: number;
   semente: number;
   palco?: NomeDoPalco;
-}> = ({ cam, largura, altura, semente, palco = "entardecer" }) => {
+  trincado?: number;
+}> = ({ cam, largura, altura, semente, palco = "entardecer", trincado = 0 }) => {
   return (
     <ThreeCanvas
       width={largura}
@@ -266,7 +270,7 @@ export const Cenario3D: React.FC<{
       camera={CAMERA_INICIAL}
     >
       <CameraCasada cam={cam} altura={altura} />
-      <MundoDoCenario3D semente={semente} palco={palco} />
+      <MundoDoCenario3D semente={semente} palco={palco} trincado={trincado} />
     </ThreeCanvas>
   );
 };

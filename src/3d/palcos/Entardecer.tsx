@@ -67,6 +67,7 @@
 import React, { useMemo } from "react";
 import * as THREE from "three";
 import { hashRng } from "../../core/rng";
+import { Paredao3D } from "./Paredao3D";
 import { FranjaDaFrente, texturaDoChao } from "./Terreno";
 
 /** Cor do ceu no alto, e o fundo do canvas quando nada mais e desenhado. */
@@ -376,7 +377,11 @@ const CaminhoDeTorii: React.FC<{ rampa: THREE.DataTexture }> = ({ rampa }) => (
   </>
 );
 
-export const Entardecer: React.FC<{ semente: number }> = ({ semente }) => {
+export const Entardecer: React.FC<{
+  semente: number;
+  /** 0 a 1: quanto o paredao ja foi trincado (ver Paredao3D) */
+  trincado?: number;
+}> = ({ semente, trincado = 0 }) => {
   const rampa = useMemo(() => rampaDeDegraus([0.35, 0.72, 1]), []);
 
   return (
@@ -423,6 +428,26 @@ export const Entardecer: React.FC<{ semente: number }> = ({ semente }) => {
         shadow-camera-bottom={-5000}
         shadow-camera-near={10}
         shadow-camera-far={16000}
+      />
+
+      {/*
+        PREENCHIMENTO VINDO DA CAMERA, fraco e quente.
+
+        O sol esta a ESQUERDA (x = -2600) e o paredao tem a face virada
+        para a DIREITA -- de onde vem a luta. Com uma luz so, essa face
+        caia no degrau mais baixo da rampa toon e lia quase preta, e e
+        justamente nela que o corpo arremessado bate. A versao 2D pintava
+        essa face mais clara de proposito (`face` nas paletas de
+        backgrounds/Obstaculo); aqui o equivalente honesto e uma luz, nao
+        uma cor pintada a mao.
+
+        Fraca para nao desfazer o contraluz de entardecer, que e o que da
+        o clima do palco.
+      */}
+      <directionalLight
+        position={[3200, 1100, 4200]}
+        intensity={0.95}
+        color="#f0b89e"
       />
 
       {/* o chao passa pelo z = 0, que e o plano dos lutadores */}
@@ -474,6 +499,8 @@ export const Entardecer: React.FC<{ semente: number }> = ({ semente }) => {
           depthWrite={false}
         />
       </mesh>
+
+      <Paredao3D rampa={rampa} trincado={trincado} />
 
       <CaminhoDeTorii rampa={rampa} />
 

@@ -465,6 +465,13 @@ export const FightScene: React.FC<FightSceneProps> = ({
           de alguem bater. Proximidade nao e causa; o que sabe que a massa foi
           atingida e a cena que a atingiu. E a fenda FICA depois de aberta.
         */}
+        {/*
+          O OBSTACULO SAI JUNTO COM O CENARIO quando o fundo vem de baixo:
+          em `semFundo` quem desenha a massa e o palco 3D, com o MESMO
+          perfil e a MESMA face (ver 3d/palcos/Paredao3D). Desenhar os dois
+          poria uma laje chapada por cima da rocha que tem perspectiva.
+        */}
+        {!semFundo && (
         <Obstaculo
           scenario={scenario}
           trincado={
@@ -479,6 +486,7 @@ export const FightScene: React.FC<FightSceneProps> = ({
               : 0
           }
         />
+        )}
 
         {poderesAtivos && (
           <CamadaDePoderes timeline={timeline} frame={frame} parte="chao" corpos={corpos} xDe={xDe} />

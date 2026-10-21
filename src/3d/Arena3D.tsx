@@ -31,6 +31,7 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { quadroEfetivo } from "../animation/sampler";
+import { OBSTACULO_X } from "../backgrounds/Obstaculo";
 import { CAMERA_PADRAO, cameraNoQuadro } from "../camera/camera";
 import { ALTURA_QUADRIL } from "../characters/skeleton";
 import { Prototype } from "../compositions/Prototype";
@@ -64,6 +65,28 @@ export const Arena3D: React.FC<{ spec: FightSpec }> = ({ spec }) => {
     enquanto a luta para no impacto, que e exatamente o que o hit stop existe
     para evitar.
   */
+  /*
+    O TRINCADO E CALCULADO AQUI com a MESMA conta do FightScene.
+
+    A massa fica marcada depois que a cena bate nela, e quem sabe que
+    alguem bateu e a coreografia -- nao a proximidade de um impacto
+    qualquer (ver a nota longa em scenes/FightScene). Em `semFundo` quem
+    desenha a massa e o palco 3D, entao e esta camada que precisa saber.
+
+    Repetir a conta em vez de extrair: ela tem cinco linhas e uma delas e
+    uma coordenada magica; extrair agora criaria uma terceira definicao de
+    'a massa foi atingida' antes de existir a segunda de verdade.
+  */
+  const trincado = timeline.poderes.some(
+    (p) =>
+      p.tipo === "pedrasFlutuantes" &&
+      p.a !== undefined &&
+      Math.abs(p.a.x - (OBSTACULO_X + 120)) < 40 &&
+      frame >= p.from,
+  )
+    ? 1
+    : 0;
+
   const cam = cameraNoQuadro(timeline, frame, CAMERA_PADRAO, {
     largura: width,
     alturaQuadril: -ALTURA_QUADRIL,
@@ -72,7 +95,13 @@ export const Arena3D: React.FC<{ spec: FightSpec }> = ({ spec }) => {
   return (
     <AbsoluteFill>
       {/* camada de tras: o mundo, com camera de verdade */}
-      <Cenario3D cam={cam} largura={width} altura={height} semente={spec.seed} />
+      <Cenario3D
+        cam={cam}
+        largura={width}
+        altura={height}
+        semente={spec.seed}
+        trincado={trincado}
+      />
       {/*
         camada da frente: a composicao INTEIRA, sem ceu nem chao proprios.
 
