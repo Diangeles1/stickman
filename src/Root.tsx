@@ -490,7 +490,31 @@ export const RemotionRoot: React.FC = () => {
         fps={DUELO_DO_VALE.fps}
         width={DUELO_DO_VALE.width}
         height={DUELO_DO_VALE.height}
-        defaultProps={{ spec: DUELO_DO_VALE }}
+        defaultProps={{ spec: DUELO_DO_VALE, palco: "entardecer" as const }}
+      />
+      {/*
+        A MESMA LUTA EM CADA PALCO. Os tres recebem o mesmo spec de
+        proposito: e assim que da para julgar o PALCO, porque tudo o mais e
+        igual. Trocar o palco e uma prop, nao uma composicao nova -- estas
+        existem so para o estudio listar os tres lado a lado.
+      */}
+      <Composition
+        id="Arena3D-Telhados"
+        component={Arena3D}
+        durationInFrames={duracaoDoPrototipo(DUELO_DO_VALE)}
+        fps={DUELO_DO_VALE.fps}
+        width={DUELO_DO_VALE.width}
+        height={DUELO_DO_VALE.height}
+        defaultProps={{ spec: DUELO_DO_VALE, palco: "telhados" as const }}
+      />
+      <Composition
+        id="Arena3D-Campo"
+        component={Arena3D}
+        durationInFrames={duracaoDoPrototipo(DUELO_DO_VALE)}
+        fps={DUELO_DO_VALE.fps}
+        width={DUELO_DO_VALE.width}
+        height={DUELO_DO_VALE.height}
+        defaultProps={{ spec: DUELO_DO_VALE, palco: "campo" as const }}
       />
 
       {/* ARTE DO CANAL: um quadro so cada, para exportar como imagem */}

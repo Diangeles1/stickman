@@ -47,7 +47,9 @@ import * as THREE from "three";
 import { DISTANCIA_DA_CAMERA } from "../animation/corpo";
 import type { EstadoCamera } from "../camera/camera";
 import { hashRng } from "../core/rng";
-import { COR_DO_ALTO, Entardecer } from "./palcos/Entardecer";
+import { COR_DO_ALTO as ALTO_DO_CAMPO, CampoAberto } from "./palcos/CampoAberto";
+import { COR_DO_ALTO as ALTO_DO_ENTARDECER, Entardecer } from "./palcos/Entardecer";
+import { COR_DO_ALTO as ALTO_DOS_TELHADOS, Telhados } from "./palcos/Telhados";
 
 /**
  * A configuracao inicial e constante de MODULO, nao objeto inline.
@@ -174,7 +176,7 @@ const Blocos: React.FC<{ semente: number }> = ({ semente }) => {
  * "blocos" e o palco generico de cidade noturna que veio antes dele, mantido
  * porque e o unico que ja foi visto em movimento numa luta inteira.
  */
-export type NomeDoPalco = "entardecer" | "blocos";
+export type NomeDoPalco = "entardecer" | "telhados" | "campo" | "blocos";
 
 export const MundoDoCenario3D: React.FC<{
   semente: number;
@@ -184,6 +186,10 @@ export const MundoDoCenario3D: React.FC<{
 }> = ({ semente, palco = "entardecer", trincado = 0 }) => {
   if (palco === "entardecer")
     return <Entardecer semente={semente} trincado={trincado} />;
+  if (palco === "telhados")
+    return <Telhados semente={semente} trincado={trincado} />;
+  if (palco === "campo")
+    return <CampoAberto semente={semente} trincado={trincado} />;
   return <PalcoDeBlocos semente={semente} />;
 };
 
@@ -250,8 +256,15 @@ const PalcoDeBlocos: React.FC<{ semente: number }> = ({ semente }) => (
  * nao o ceu: o "entardecer" pinta o proprio ceu numa chapa, e se esta cor
  * discordasse dela, uma borda da cor errada apareceria no zoom mais aberto.
  */
+const ALTO_POR_PALCO: Record<NomeDoPalco, string> = {
+  entardecer: ALTO_DO_ENTARDECER,
+  telhados: ALTO_DOS_TELHADOS,
+  campo: ALTO_DO_CAMPO,
+  blocos: "#10172e",
+};
+
 export const corDoFundo = (palco: NomeDoPalco = "entardecer"): string =>
-  palco === "entardecer" ? COR_DO_ALTO : "#10172e";
+  ALTO_POR_PALCO[palco];
 
 export const Cenario3D: React.FC<{
   cam: EstadoCamera;

@@ -67,35 +67,28 @@
 import React, { useMemo } from "react";
 import * as THREE from "three";
 import { hashRng } from "../../core/rng";
+import {
+  BandasDoHorizonte,
+  CeuEmDegrade,
+  rampaDeDegraus,
+  type Banda,
+  type ParadaDoCeu,
+} from "./comum";
 import { Paredao3D } from "./Paredao3D";
 import { FranjaDaFrente, texturaDoChao } from "./Terreno";
 
 /** Cor do ceu no alto, e o fundo do canvas quando nada mais e desenhado. */
 export const COR_DO_ALTO = "#2a2d64";
 /** Cor do ceu na linha do horizonte. */
-const COR_DO_HORIZONTE = "#f0a071";
-const COR_DO_MEIO = "#b96a86";
+/** O degrade do ceu, de cima (0) para o horizonte (1). */
+const CEU: ParadaDoCeu[] = [
+  [0, COR_DO_ALTO],
+  // noite chegando -> malva -> brasa no horizonte
+  [0.45, "#b96a86"],
+  [0.8, "#f0a071"],
+  [1, "#ffd9a0"],
+];
 
-/**
- * Rampa de degraus para o meshToonMaterial.
- *
- * O material toon nao decide sozinho quantas bandas usar: ele consulta esta
- * textura. Sem ela o Three usa uma rampa de dois degraus e tudo fica preto ou
- * branco. NearestFilter e obrigatorio -- com filtro linear os degraus se
- * misturam e volta a ser degrade, que e exatamente o que este palco evita.
- */
-const rampaDeDegraus = (degraus: number[]): THREE.DataTexture => {
-  const dados = new Uint8Array(degraus.length * 4);
-  degraus.forEach((v, i) => {
-    const c = Math.round(v * 255);
-    dados.set([c, c, c, 255], i * 4);
-  });
-  const t = new THREE.DataTexture(dados, degraus.length, 1);
-  t.minFilter = THREE.NearestFilter;
-  t.magFilter = THREE.NearestFilter;
-  t.needsUpdate = true;
-  return t;
-};
 
 /**
  * Mascara de opacidade da faixa de bruma: opaca ao fundo, zero de perto.
@@ -123,40 +116,6 @@ const mascaraDeBruma = (): THREE.CanvasTexture | null => {
   return mascaraGuardada;
 };
 
-/** O ceu: uma chapa enorme ao fundo, com degrade vertical pintado. */
-const Ceu: React.FC = () => {
-  const textura = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 4;
-    canvas.height = 512;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    const grad = ctx.createLinearGradient(0, 0, 0, 512);
-    // de cima para baixo: noite chegando -> malva -> brasa no horizonte
-    grad.addColorStop(0, COR_DO_ALTO);
-    grad.addColorStop(0.45, COR_DO_MEIO);
-    grad.addColorStop(0.8, COR_DO_HORIZONTE);
-    grad.addColorStop(1, "#ffd9a0");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 4, 512);
-    const t = new THREE.CanvasTexture(canvas);
-    t.colorSpace = THREE.SRGBColorSpace;
-    return t;
-  }, []);
-
-  if (!textura) return null;
-  /*
-    O ceu fica a 26000 de distancia e e ENORME. Ele precisa cobrir o quadro
-    inteiro no zoom mais aberto da camera, e a camera abre bastante quando os
-    dois lutadores se separam (ver enquadrarDois em camera/camera).
-  */
-  return (
-    <mesh position={[0, 3000, -26000]}>
-      <planeGeometry args={[80000, 34000]} />
-      <meshBasicMaterial map={textura} fog={false} depthWrite={false} />
-    </mesh>
-  );
-};
 
 /** O sol baixo: disco chapado, com um halo maior e translucido em volta. */
 const Sol: React.FC = () => (
@@ -178,46 +137,6 @@ const Sol: React.FC = () => (
   </group>
 );
 
-/**
- * Uma banda de serra: silhueta recortada, chapada, numa distancia so.
- *
- * O recorte sai de `hashRng` com a semente do palco, entao o mesmo palco sai
- * igual em todo quadro -- o Remotion desenha cada quadro isolado e um
- * Math.random aqui tremeria a montanha inteira a 60 Hz.
- */
-const Serra: React.FC<{
-  semente: number;
-  indice: number;
-  z: number;
-  altura: number;
-  cor: string;
-  largura: number;
-}> = ({ semente, indice, z, altura, cor, largura }) => {
-  const geometria = useMemo(() => {
-    const forma = new THREE.Shape();
-    const picos = 9;
-    const passo = largura / picos;
-    forma.moveTo(-largura / 2, -4000);
-    forma.lineTo(-largura / 2, 0);
-    for (let i = 0; i <= picos; i++) {
-      const r = hashRng(`serra-${indice}-${i}`, semente);
-      const x = -largura / 2 + i * passo;
-      // picos alternados alto/baixo: cume isolado le melhor que serrote
-      const h = altura * (0.45 + r * 0.55) * (i % 2 === 0 ? 1 : 0.62);
-      forma.lineTo(x + passo * 0.5, h);
-      forma.lineTo(x + passo, h * 0.4);
-    }
-    forma.lineTo(largura / 2, -4000);
-    forma.closePath();
-    return new THREE.ShapeGeometry(forma);
-  }, [semente, indice, altura, largura]);
-
-  return (
-    <mesh geometry={geometria} position={[0, 0, z]}>
-      <meshBasicMaterial color={cor} fog={false} />
-    </mesh>
-  );
-};
 
 /**
  * As bandas, da mais distante para a mais proxima.
@@ -226,7 +145,7 @@ const Serra: React.FC<{
  * aerea (ver a nota no topo). A banda mais proxima e quase a cor da
  * silhueta, e e ela que encosta no chao onde a luta acontece.
  */
-const BANDAS: { z: number; altura: number; cor: string; largura: number }[] = [
+const BANDAS: Banda[] = [
   /*
     A BANDA MAIS DISTANTE E BAIXA DE PROPOSITO (3400 e nao 5200): e por cima
     dela que o sol aparece. Com 5200 o disco ficava inteiro atras da serra e
@@ -393,20 +312,10 @@ export const Entardecer: React.FC<{
         numa linha reta de plano infinito.
       */}
       <fog attach="fog" args={["#8a5f78", 3000, 15000]} />
-      <Ceu />
+      <CeuEmDegrade paradas={CEU} />
       <Sol />
       <Nuvens semente={semente} />
-      {BANDAS.map((b, i) => (
-        <Serra
-          key={i}
-          semente={semente}
-          indice={i}
-          z={b.z}
-          altura={b.altura}
-          cor={b.cor}
-          largura={b.largura}
-        />
-      ))}
+      <BandasDoHorizonte semente={semente} bandas={BANDAS} />
 
       {/*
         LUZ. O sol esta baixo e a ESQUERDA, igual ao disco desenhado: luz que

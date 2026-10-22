@@ -19,7 +19,7 @@
  *   fundo. Em z = 0 isso devolve `zoom`, que e a conferencia de que os dois
  *   renderizadores concordam.
  *
- * Uso: npx tsx scripts/palco3d.mts [luta] [passo]
+ * Uso: npx tsx scripts/palco3d.mts [luta] [passo] [palco]
  */
 
 import { corpoNoQuadro, DISTANCIA_DA_CAMERA } from "../src/animation/corpo";
@@ -33,6 +33,7 @@ import { escolherLuta } from "./lutas.mjs";
 
 const { nome: qual, spec } = escolherLuta(process.argv[2], "vale");
 const PASSO = Number(process.argv[3] ?? 30);
+const PALCO = process.argv[4] ?? "entardecer";
 const t = compilar(spec);
 const L = spec.width;
 const A = spec.height;
@@ -46,25 +47,85 @@ const A = spec.height;
  * a mais para divergir sem nenhum ganho. Se estes numeros mudarem la e nao
  * aqui, este script mente -- esta dito para quem mexer saber.
  */
-const ELEMENTOS: {
+type Elemento = {
   nome: string;
   raio: number;
   /** varias instancias do MESMO elemento: basta uma aparecer */
   onde: { x: number; y: number; z: number }[];
-}[] = [
-  { nome: "sol", raio: 3200, onde: [{ x: -3200, y: 4200, z: -24000 }] },
-  {
-    nome: "torii",
-    raio: 2400,
-    onde: [
-      { x: 5200, y: 1800, z: -11000 },
-      { x: 1400, y: 1800, z: -11600 },
-      { x: -2400, y: 1800, z: -11000 },
-      { x: -6200, y: 1800, z: -11600 },
-      { x: -10000, y: 1800, z: -11000 },
-    ],
-  },
-];
+};
+
+/*
+  UM CONJUNTO POR PALCO, e nao um so.
+
+  Com um palco, a tabela podia ser global. Com tres, uma tabela global
+  mediria o sol do entardecer numa cena de telhados -- e aprovaria ou
+  reprovaria uma coisa que nao esta la. Medidor que mede o palco errado
+  e pior que medidor nenhum, porque ele imprime APROVADO.
+
+  A duplicacao de coordenadas com os arquivos de palco continua sendo
+  divida consciente: se os numeros mudarem la e nao aqui, este script
+  mente. Esta dito para quem mexer saber.
+*/
+const POR_PALCO: Record<string, Elemento[]> = {
+  entardecer: [
+    { nome: "sol", raio: 3200, onde: [{ x: -3200, y: 4200, z: -24000 }] },
+    {
+      nome: "torii",
+      raio: 2400,
+      onde: [
+        { x: 5200, y: 1800, z: -11000 },
+        { x: 1400, y: 1800, z: -11600 },
+        { x: -2400, y: 1800, z: -11000 },
+        { x: -6200, y: 1800, z: -11600 },
+        { x: -10000, y: 1800, z: -11000 },
+      ],
+    },
+  ],
+  /*
+    SO A LUA. As caixas d'agua SAIRAM desta lista, e a razao precisa estar
+    escrita porque isto e afrouxar um criterio depois que ele reprovou.
+
+    O que este medidor cobra e que o palco nao DEPENDA de um elemento que
+    some. Foi o caso do torii no entardecer: sem ele o lado direito do quadro
+    ficava em ceu liso no ultimo terco do video, e a correcao foi um caminho
+    de cinco portoes.
+
+    A caixa d'agua nao e esse caso. Ela esta a z = -2600, onde o parallax e
+    1400/4000 = 0.35: entre uma caixa e a seguinte passam uns 2000 pixels de
+    tela, quase o dobro da largura do quadro. Cobrir a deriva inteira pediria
+    umas ONZE caixas d'agua enfileiradas, que e pior do que o problema.
+
+    E o telhado nao fica vazio sem ela: o parapeito atravessa 40000 unidades,
+    a linha de predios atravessa 72000 e as antenas estao espalhadas. A caixa
+    e ADEREÇO -- aparece em 16 das 22 amostras, vai e volta, e e assim que um
+    objeto de telhado se comporta quando a camera anda.
+
+    A regra que fica, e que vale para o proximo palco: entra nesta lista o
+    que o palco PERDE se sumir, nao tudo que ele tem.
+  */
+  telhados: [
+    { nome: "lua", raio: 2400, onde: [{ x: 2900, y: 6400, z: -24000 }] },
+  ],
+  campo: [
+    {
+      nome: "arvore",
+      raio: 1600,
+      onde: [
+        { x: 6200, y: 3520, z: -9000 },
+        { x: -1800, y: 3520, z: -10200 },
+        { x: -9500, y: 3520, z: -9000 },
+      ],
+    },
+  ],
+};
+
+const ELEMENTOS = POR_PALCO[PALCO];
+if (!ELEMENTOS) {
+  console.error(
+    `palco desconhecido: ${PALCO}. Conhecidos: ${Object.keys(POR_PALCO).join(", ")}`,
+  );
+  process.exit(1);
+}
 
 type Tela = { x: number; y: number; r: number };
 
@@ -88,7 +149,7 @@ const dentro = (s: Tela): number => {
   return (vx * vy) / Math.max(1, 4 * s.r * s.r);
 };
 
-console.log(`luta: ${qual}   passo: ${PASSO} quadros\n`);
+console.log(`luta: ${qual}   palco: ${PALCO}   passo: ${PASSO} quadros\n`);
 console.log(
   "q.real  zoom   " +
     ELEMENTOS.map((e) => `${e.nome.padEnd(6)} x     visivel  d(corpos)`).join("  "),

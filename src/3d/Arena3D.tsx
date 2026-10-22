@@ -37,9 +37,13 @@ import { ALTURA_QUADRIL } from "../characters/skeleton";
 import { Prototype } from "../compositions/Prototype";
 import { compilar } from "../core/timeline";
 import type { FightSpec } from "../core/types";
-import { Cenario3D } from "./Cenario3D";
+import { Cenario3D, type NomeDoPalco } from "./Cenario3D";
 
-export const Arena3D: React.FC<{ spec: FightSpec }> = ({ spec }) => {
+export const Arena3D: React.FC<{
+  spec: FightSpec;
+  /** qual palco montar atras da luta (ver 3d/palcos) */
+  palco?: NomeDoPalco;
+}> = ({ spec, palco = "entardecer" }) => {
   const frameReal = useCurrentFrame();
   const { width, height } = useVideoConfig();
 
@@ -101,6 +105,7 @@ export const Arena3D: React.FC<{ spec: FightSpec }> = ({ spec }) => {
         altura={height}
         semente={spec.seed}
         trincado={trincado}
+        palco={palco}
       />
       {/*
         camada da frente: a composicao INTEIRA, sem ceu nem chao proprios.
